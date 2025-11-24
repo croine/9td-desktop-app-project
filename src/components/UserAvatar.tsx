@@ -35,6 +35,7 @@ import { toast } from 'sonner'
 interface UserAvatarProps {
   session: any
   onOpenSettings?: () => void
+  onOpenAccountSettings?: () => void
 }
 
 interface UserPreferences {
@@ -43,7 +44,7 @@ interface UserPreferences {
   blurEmail: boolean
 }
 
-export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
+export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -132,7 +133,9 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
 
   const handleAccountSettings = () => {
     setIsOpen(false)
-    if (onOpenSettings) {
+    if (onOpenAccountSettings) {
+      onOpenAccountSettings()
+    } else if (onOpenSettings) {
       onOpenSettings()
     } else {
       router.push('/settings')

@@ -76,6 +76,13 @@ export const userPreferences = sqliteTable('user_preferences', {
   customTitle: text('custom_title').default('Account Secured'),
   showEmail: integer('show_email', { mode: 'boolean' }).default(false),
   blurEmail: integer('blur_email', { mode: 'boolean' }).default(false),
+  avatarUrl: text('avatar_url'),
+  avatarShape: text('avatar_shape').default('circle'),
+  avatarColorScheme: text('avatar_color_scheme').default('gradient'),
+  avatarBorderColor: text('avatar_border_color').default('#6366f1'),
+  showPassword: integer('show_password', { mode: 'boolean' }).default(false),
+  accountVisibility: text('account_visibility').default('private'),
+  twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' }).default(false),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),

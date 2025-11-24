@@ -1,3 +1,8 @@
+/* Updated: 2025-11-24T18:16:26.942Z */
+/* Updated: 2025-11-11T10:54:30.817Z */
+/* Updated: 2025-11-10T16:29:36.475Z */
+/* Updated: 2025-11-05T14:29:30.382Z */
+/* Updated: 2025-11-05T14:28:24.353Z */
 /* Updated: 2025-11-05T13:48:07.516Z */
 /* Updated: 2025-11-05T13:46:52.313Z */
 /* Updated: 2025-11-05T13:31:45.385Z */
@@ -307,6 +312,30 @@
   }
 }
 
+@keyframes rainbow {
+  0% {
+    --tw-ring-color: #ef4444;
+  }
+  16.66% {
+    --tw-ring-color: #f97316;
+  }
+  33.33% {
+    --tw-ring-color: #eab308;
+  }
+  50% {
+    --tw-ring-color: #22c55e;
+  }
+  66.66% {
+    --tw-ring-color: #3b82f6;
+  }
+  83.33% {
+    --tw-ring-color: #a855f7;
+  }
+  100% {
+    --tw-ring-color: #ef4444;
+  }
+}
+
 /* Animation Classes */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -334,6 +363,10 @@
 
 .animate-shake {
   animation: shake 3s ease-in-out infinite;
+}
+
+.animate-rainbow {
+  animation: rainbow 3s linear infinite;
 }
 
 /* Legacy animation classes for backwards compatibility */

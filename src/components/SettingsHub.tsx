@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Settings } from '@/components/Settings'
+import { AccountSettings } from '@/components/AccountSettings'
 import { AppearanceSettings } from '@/components/AppearanceSettings'
 import { NotificationsSettings } from '@/components/NotificationsSettings'
 import { DefaultsSettings } from '@/components/DefaultsSettings'
@@ -26,6 +27,7 @@ import { Archive } from '@/components/Archive'
 import { Task, Tag, Category, TaskTemplate, AppSettings } from '@/types/task'
 import { 
   Settings as SettingsIcon, 
+  UserCircle,
   FileText, 
   Clock,
   Columns3,
@@ -129,6 +131,7 @@ export function SettingsHub({
     'inbox': 'productivity',
     'templates': 'management',
     'analytics': 'management',
+    'account': 'settings',
     'general': 'settings',
     'appearance': 'settings',
     'notifications': 'settings',
@@ -167,7 +170,7 @@ export function SettingsHub({
         setActiveSubTab('templates')
         break
       case 'settings':
-        setActiveSubTab('general')
+        setActiveSubTab('account')
         break
       case 'archive':
         setActiveSubTab('archive')
@@ -788,11 +791,26 @@ export function SettingsHub({
             </Tabs>
           </TabsContent>
 
-          {/* NEW SETTINGS CATEGORY WITH 8 SUB-TABS */}
+          {/* NEW SETTINGS CATEGORY WITH 9 SUB-TABS (ADDED ACCOUNT) */}
           <TabsContent value="settings" className="mt-0">
             <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-0">
               <div className="px-6 pt-6 pb-4 flex justify-center">
                 <TabsList className="h-auto p-1 bg-muted/20 backdrop-blur-sm rounded-lg inline-flex gap-0.5 flex-wrap justify-center max-w-4xl">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger 
+                        value="account" 
+                        className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background/80 data-[state=active]:shadow-sm bg-transparent hover:bg-background/60 transition-all text-xs group"
+                      >
+                        <UserCircle className="h-3 w-3 text-muted-foreground group-data-[state=active]:text-primary transition-colors" />
+                        <span className="text-muted-foreground group-data-[state=active]:text-foreground transition-colors">Account</span>
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Profile, avatar, and account security</p>
+                    </TooltipContent>
+                  </Tooltip>
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <TabsTrigger 
@@ -916,6 +934,10 @@ export function SettingsHub({
               </div>
 
               <div className="p-6 pt-2">
+                <TabsContent value="account" className="mt-0">
+                  <AccountSettings />
+                </TabsContent>
+
                 <TabsContent value="general" className="mt-0">
                   <Settings
                     settings={settings}

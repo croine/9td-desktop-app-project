@@ -437,6 +437,11 @@ export default function Home() {
     setCurrentView('settings')
   }
 
+  const handleOpenAccountSettings = () => {
+    setSettingsInitialTab('account')
+    setCurrentView('settings')
+  }
+
   const handleViewTasksClick = () => {
     setCurrentView('your-tasks')
   }
@@ -708,7 +713,8 @@ export default function Home() {
                   onOpenSettings={() => {
                     setSettingsInitialTab('general')
                     setCurrentView('settings')
-                  }} 
+                  }}
+                  onOpenAccountSettings={handleOpenAccountSettings}
                 />
                 <QuickLinksDropdown onOpenSettings={handleOpenQuickLinksSettings} />
                 <ThemeToggle />
