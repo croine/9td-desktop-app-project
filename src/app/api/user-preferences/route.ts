@@ -9,42 +9,43 @@ const DEFAULT_PREFERENCES = {
   blurEmail: false,
 };
 
-export async function GET(request: NextRequest) {
+// Helper function to get user ID from bearer token
+async function getUserIdFromToken(request: NextRequest): Promise<string | null> {
   try {
-    // Get user ID from cookie - extract session token
-    const cookieHeader = request.headers.get('cookie');
-    if (!cookieHeader) {
-      return NextResponse.json(
-        { error: 'Authentication required', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
     }
 
-    // Extract session token from cookie
-    const sessionTokenMatch = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
-    if (!sessionTokenMatch) {
-      return NextResponse.json(
-        { error: 'Authentication required', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    const sessionToken = sessionTokenMatch[1];
-
-    // Get user ID from session table using Drizzle
+    // Get user ID from session table using the token
     const sessionData = await db.select()
       .from(session)
-      .where(eq(session.token, sessionToken))
+      .where(eq(session.token, token))
       .limit(1);
 
     if (sessionData.length === 0) {
+      return null;
+    }
+
+    return sessionData[0].userId;
+  } catch (error) {
+    console.error('Error getting user ID from token:', error);
+    return null;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const userId = await getUserIdFromToken(request);
+    
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Invalid session', code: 'UNAUTHORIZED' },
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
         { status: 401 }
       );
     }
-
-    const userId = sessionData[0].userId;
 
     // Get user preferences
     const preferences = await db.select()
@@ -70,40 +71,14 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Get user ID from cookie - extract session token
-    const cookieHeader = request.headers.get('cookie');
-    if (!cookieHeader) {
+    const userId = await getUserIdFromToken(request);
+    
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required', code: 'UNAUTHORIZED' },
         { status: 401 }
       );
     }
-
-    // Extract session token from cookie
-    const sessionTokenMatch = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
-    if (!sessionTokenMatch) {
-      return NextResponse.json(
-        { error: 'Authentication required', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
-    const sessionToken = sessionTokenMatch[1];
-
-    // Get user ID from session table using Drizzle
-    const sessionData = await db.select()
-      .from(session)
-      .where(eq(session.token, sessionToken))
-      .limit(1);
-
-    if (sessionData.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid session', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
-    const userId = sessionData[0].userId;
 
     // Parse request body
     const body = await request.json();

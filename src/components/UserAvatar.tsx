@@ -63,8 +63,17 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
 
   const fetchPreferences = async () => {
     try {
+      const token = localStorage.getItem("bearer_token");
+      if (!token) {
+        console.error('No bearer token found');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/user-preferences', {
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       })
       
       if (response.ok) {
@@ -82,12 +91,18 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
 
   const updatePreferences = async (updates: Partial<UserPreferences>) => {
     try {
+      const token = localStorage.getItem("bearer_token");
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+
       const response = await fetch('/api/user-preferences', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify(updates),
       })
 
@@ -95,7 +110,8 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
         toast.success('Preferences updated')
         await fetchPreferences()
       } else {
-        toast.error('Failed to update preferences')
+        const errorData = await response.json()
+        toast.error(errorData.error || 'Failed to update preferences')
       }
     } catch (error) {
       console.error('Failed to update preferences:', error)
