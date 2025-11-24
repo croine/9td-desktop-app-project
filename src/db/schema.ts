@@ -66,3 +66,20 @@ export const verification = sqliteTable("verification", {
     () => new Date(),
   ),
 });
+
+export const userPreferences = sqliteTable('user_preferences', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  customTitle: text('custom_title').default('Account Secured'),
+  showEmail: integer('show_email', { mode: 'boolean' }).default(false),
+  blurEmail: integer('blur_email', { mode: 'boolean' }).default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
