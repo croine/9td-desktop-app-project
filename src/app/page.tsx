@@ -56,6 +56,7 @@ import { toast } from 'sonner'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
 import { Card } from '@/components/ui/card'
+import { UserAvatar } from '@/components/UserAvatar'
 
 // ========================================================================
 // VERSION v7.0 - ALL ADVANCED FEATURES INTEGRATED
@@ -702,6 +703,13 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-2">
+                <UserAvatar 
+                  session={session} 
+                  onOpenSettings={() => {
+                    setSettingsInitialTab('general')
+                    setCurrentView('settings')
+                  }} 
+                />
                 <QuickLinksDropdown onOpenSettings={handleOpenQuickLinksSettings} />
                 <ThemeToggle />
               </div>
