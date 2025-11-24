@@ -54,20 +54,6 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [showPrivacySettings, setShowPrivacySettings] = useState(false)
 
-  if (!session?.user) {
-    return null
-  }
-
-  const user = session.user
-  const initials = user.name
-    ? user.name
-        .split(' ')
-        .map((n: string) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : user.email?.charAt(0).toUpperCase() || 'U'
-
   // Fetch user preferences
   useEffect(() => {
     if (session?.user) {
@@ -160,6 +146,21 @@ export function UserAvatar({ session, onOpenSettings }: UserAvatarProps) {
     setTempTitle(customTitle)
     setIsEditingTitle(true)
   }
+
+  // Early return AFTER all hooks
+  if (!session?.user) {
+    return null
+  }
+
+  const user = session.user
+  const initials = user.name
+    ? user.name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : user.email?.charAt(0).toUpperCase() || 'U'
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
