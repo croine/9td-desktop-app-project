@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession } from '@/lib/auth-client'
 import { Task, Tag, Category, ActivityLog, TaskTemplate } from '@/types/task'
 import {
   getTasks,
@@ -48,7 +50,7 @@ import { QuickLinksDropdown } from '@/components/QuickLinksDropdown'
 import { Logo } from '@/components/Logo'
 import { DashboardTitle } from '@/components/DashboardTitle'
 import { Button } from '@/components/ui/button'
-import { Plus, Menu, X, MessageSquare } from 'lucide-react'
+import { Plus, Menu, X, MessageSquare, Lock } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -62,6 +64,8 @@ const APP_VERSION = "v7.0-ALL-FEATURES-" + Date.now()
 const FORCE_RELOAD_KEY = "9td-v7.0-all-features"
 
 export default function Home() {
+  const router = useRouter()
+  const { data: session, isPending: sessionPending } = useSession()
   const [currentView, setCurrentView] = useState<SidebarView>('dashboard')
   const [tasks, setTasks] = useState<Task[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -304,6 +308,10 @@ export default function Home() {
   }
 
   const handleSaveTask = (task: Task) => {
+    if (!session?.user) {
+      toast.error('Please sign in to save tasks')
+      return
+    }
     if (editingTask) {
       updateTask(task.id, task)
       toast.success('Task updated successfully')
@@ -317,11 +325,20 @@ export default function Home() {
   }
 
   const handleEditTask = (task: Task) => {
+    if (!session?.user) {
+      toast.error('Please sign in to edit tasks')
+      router.push('/login')
+      return
+    }
     setEditingTask(task)
     setCreateModalOpen(true)
   }
 
   const handleDeleteTask = (taskId: string) => {
+    if (!session?.user) {
+      toast.error('Please sign in to delete tasks')
+      return
+    }
     deleteTask(taskId)
     toast.success('Task deleted successfully')
     refreshData()
@@ -381,11 +398,35 @@ export default function Home() {
   }
 
   const handleCreateTaskClick = () => {
+    if (!session?.user) {
+      toast.error('Please sign in to create tasks')
+      router.push('/login')
+      return
+    }
     setEditingTask(null)
     setCreateModalOpen(true)
   }
 
   const handleViewChange = (view: SidebarView) => {
+    // Check if view requires authentication
+    const protectedViews: SidebarView[] = [
+      'your-tasks',
+      'calendar',
+      'kanban', 
+      'gantt',
+      'analytics',
+      'activity-logs',
+      'owner-panel',
+      'settings',
+      'message-system'
+    ]
+    
+    if (protectedViews.includes(view) && !session?.user) {
+      toast.error('Please sign in to access this feature')
+      router.push('/login')
+      return
+    }
+    
     setCurrentView(view)
     setMobileMenuOpen(false)
   }
@@ -469,6 +510,35 @@ export default function Home() {
     toast.success('Task rescheduled successfully')
     refreshData()
   }
+
+  // Protected View Component
+  const ProtectedViewPlaceholder = ({ viewName }: { viewName: string }) => (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Card className="glass-card p-12 max-w-md">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+            <Lock className="h-10 w-10 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-display text-xl font-semibold">
+              Sign In Required
+            </h3>
+            <p className="text-muted-foreground">
+              Please sign in to access {viewName}
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button onClick={() => router.push('/login')}>
+              Sign In
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/register')}>
+              Create Account
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
 
   const filteredTasks = tasks.filter(task => {
     if (filters.query) {
@@ -558,9 +628,11 @@ export default function Home() {
         <div className="glass-sidebar h-full">
           <NavigationSidebar
             currentView={currentView}
-            onViewChange={setCurrentView}
+            onViewChange={handleViewChange}
             taskCount={tasks.length}
             inboxCount={inboxItems.length}
+            session={session}
+            sessionPending={sessionPending}
           />
         </div>
       </div>
@@ -592,6 +664,8 @@ export default function Home() {
             onViewChange={handleViewChange}
             taskCount={tasks.length}
             inboxCount={inboxItems.length}
+            session={session}
+            sessionPending={sessionPending}
           />
         </div>
       </div>
@@ -651,217 +725,253 @@ export default function Home() {
             )}
 
             {currentView === 'your-tasks' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
-                    <p className="text-muted-foreground">
-                      Manage and organize all your tasks
-                    </p>
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Your Tasks" />
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
+                      <p className="text-muted-foreground">
+                        Manage and organize all your tasks
+                      </p>
+                    </div>
+                    <Button
+                      className="gap-2"
+                      onClick={() => {
+                        setEditingTask(null)
+                        setCreateModalOpen(true)
+                      }}
+                    >
+                      <Plus className="h-5 w-5" />
+                      Create Task
+                    </Button>
                   </div>
-                  <Button
-                    className="gap-2"
-                    onClick={() => {
-                      setEditingTask(null)
-                      setCreateModalOpen(true)
-                    }}
-                  >
-                    <Plus className="h-5 w-5" />
-                    Create Task
-                  </Button>
-                </div>
 
-                <TaskList
-                  tasks={sortedTasks}
-                  tags={tags}
-                  categories={categories}
-                  onEdit={handleEditTask}
-                  onDelete={handleDeleteTask}
-                  onStatusChange={handleStatusChange}
-                  onArchive={handleArchiveTask}
-                  onBulkArchive={handleBulkArchive}
-                  onBulkDelete={handleBulkDelete}
-                  onBulkStatusChange={handleBulkStatusChange}
-                  emptyMessage={
-                    filters.query || filters.priority || filters.status || 
-                    filters.tags.length > 0 || filters.categories.length > 0
-                      ? "No tasks match your filters"
-                      : "No tasks yet"
-                  }
-                />
-              </div>
+                  <TaskList
+                    tasks={sortedTasks}
+                    tags={tags}
+                    categories={categories}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                    onStatusChange={handleStatusChange}
+                    onArchive={handleArchiveTask}
+                    onBulkArchive={handleBulkArchive}
+                    onBulkDelete={handleBulkDelete}
+                    onBulkStatusChange={handleBulkStatusChange}
+                    emptyMessage={
+                      filters.query || filters.priority || filters.status || 
+                      filters.tags.length > 0 || filters.categories.length > 0
+                        ? "No tasks match your filters"
+                        : "No tasks yet"
+                    }
+                  />
+                </div>
+              )
             )}
 
             {currentView === 'calendar' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
-                  <p className="text-muted-foreground">
-                    View and manage tasks in calendar format
-                  </p>
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Calendar View" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
+                    <p className="text-muted-foreground">
+                      View and manage tasks in calendar format
+                    </p>
+                  </div>
+                  <CalendarView
+                    tasks={sortedTasks}
+                    tags={tags}
+                    categories={categories}
+                    onTaskClick={handleEditTask}
+                    onDateClick={(date) => {
+                      setEditingTask(null)
+                      setCreateModalOpen(true)
+                    }}
+                    onTaskReschedule={handleTaskReschedule}
+                  />
                 </div>
-                <CalendarView
+              )
+            )}
+
+            {currentView === 'kanban' && (
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Kanban Board" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
+                    <p className="text-muted-foreground">
+                      Visualize and manage tasks with drag-and-drop
+                    </p>
+                  </div>
+                  <KanbanBoard
+                    tasks={sortedTasks}
+                    tags={tags}
+                    categories={categories}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                    onStatusChange={handleStatusChange}
+                  />
+                </div>
+              )
+            )}
+
+            {currentView === 'gantt' && (
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Gantt View" />
+              ) : (
+                <GanttView
                   tasks={sortedTasks}
                   tags={tags}
                   categories={categories}
                   onTaskClick={handleEditTask}
-                  onDateClick={(date) => {
-                    setEditingTask(null)
-                    setCreateModalOpen(true)
-                  }}
-                  onTaskReschedule={handleTaskReschedule}
                 />
-              </div>
-            )}
-
-            {currentView === 'kanban' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
-                  <p className="text-muted-foreground">
-                    Visualize and manage tasks with drag-and-drop
-                  </p>
-                </div>
-                <KanbanBoard
-                  tasks={sortedTasks}
-                  tags={tags}
-                  categories={categories}
-                  onEdit={handleEditTask}
-                  onDelete={handleDeleteTask}
-                  onStatusChange={handleStatusChange}
-                />
-              </div>
-            )}
-
-            {currentView === 'gantt' && (
-              <GanttView
-                tasks={sortedTasks}
-                tags={tags}
-                categories={categories}
-                onTaskClick={handleEditTask}
-              />
+              )
             )}
 
             {currentView === 'analytics' && (
-              <Analytics
-                tasks={tasks}
-                tags={tags}
-                categories={categories}
-                onExport={handleExportJSON}
-              />
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Analytics" />
+              ) : (
+                <Analytics
+                  tasks={tasks}
+                  tags={tags}
+                  categories={categories}
+                  onExport={handleExportJSON}
+                />
+              )
             )}
 
             {currentView === 'activity-logs' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
-                  <p className="text-muted-foreground">
-                    Track all changes and updates to your tasks
-                  </p>
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Activity Logs" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
+                    <p className="text-muted-foreground">
+                      Track all changes and updates to your tasks
+                    </p>
+                  </div>
+                  <Card className="glass-card p-6">
+                    <ActivityLogComponent 
+                      logs={logs} 
+                      tags={tags}
+                      onRefresh={refreshData}
+                      onTaskClick={handleEditTask}
+                    />
+                  </Card>
                 </div>
-                <Card className="glass-card p-6">
-                  <ActivityLogComponent 
-                    logs={logs} 
-                    tags={tags}
-                    onRefresh={refreshData}
-                    onTaskClick={handleEditTask}
-                  />
-                </Card>
-              </div>
+              )
             )}
 
             {currentView === 'owner-panel' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
-                  <p className="text-muted-foreground">
-                    Manage tags, categories, and organize your workspace
-                  </p>
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Owner Panel" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
+                    <p className="text-muted-foreground">
+                      Manage tags, categories, and organize your workspace
+                    </p>
+                  </div>
+                  <Card className="glass-card p-6">
+                    <OwnerPanel
+                      tags={tags}
+                      categories={categories}
+                      tasks={tasks}
+                      onAddTag={handleAddTag}
+                      onUpdateTag={handleUpdateTag}
+                      onDeleteTag={handleDeleteTag}
+                      onAddCategory={handleAddCategory}
+                      onUpdateCategory={handleUpdateCategory}
+                      onDeleteCategory={handleDeleteCategory}
+                    />
+                  </Card>
                 </div>
-                <Card className="glass-card p-6">
-                  <OwnerPanel
-                    tags={tags}
-                    categories={categories}
-                    tasks={tasks}
-                    onAddTag={handleAddTag}
-                    onUpdateTag={handleUpdateTag}
-                    onDeleteTag={handleDeleteTag}
-                    onAddCategory={handleAddCategory}
-                    onUpdateCategory={handleUpdateCategory}
-                    onDeleteCategory={handleDeleteCategory}
-                  />
-                </Card>
-              </div>
+              )
             )}
 
             {currentView === 'message-system' && (
-              <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
-                  <p className="text-muted-foreground">
-                    Team communication and collaboration hub
-                  </p>
-                </div>
-                <Card className="glass-card p-12">
-                  <div className="flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                      <MessageSquare className="h-10 w-10 text-primary" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="font-display text-xl font-semibold">
-                        Coming Soon
-                      </h3>
-                      <p className="text-muted-foreground max-w-md">
-                        Team messaging, real-time collaboration, and communication features will be available here for registered users.
-                      </p>
-                    </div>
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Message System" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
+                    <p className="text-muted-foreground">
+                      Team communication and collaboration hub
+                    </p>
                   </div>
-                </Card>
-              </div>
+                  <Card className="glass-card p-12">
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                        <MessageSquare className="h-10 w-10 text-primary" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-display text-xl font-semibold">
+                          Coming Soon
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          Team messaging, real-time collaboration, and communication features will be available here for registered users.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )
             )}
 
             {currentView === 'settings' && (
-              <SettingsHub
-                settings={settings}
-                onSettingsChange={handleSettingsChange}
-                onExportJSON={handleExportJSON}
-                onExportCSV={handleExportCSV}
-                onImport={handleImport}
-                stats={{
-                  totalTasks: tasks.length,
-                  totalTags: tags.length,
-                  totalCategories: categories.length,
-                  totalTemplates: templates.length
-                }}
-                tags={tags}
-                categories={categories}
-                templates={templates}
-                onAddTemplate={handleAddTemplate}
-                onUpdateTemplate={handleUpdateTemplate}
-                onDeleteTemplate={handleDeleteTemplate}
-                onCreateFromTemplate={handleCreateFromTemplate}
-                onTaskRestore={handleUnarchiveTask}
-                onTaskDelete={handleDeleteTask}
-                onTaskArchive={handleArchiveTask}
-                tasks={tasks}
-                onTaskClick={handleEditTask}
-                onTaskEdit={handleEditTask}
-                onTaskStatusChange={handleStatusChange}
-                onTaskUpdate={(taskId, updates) => {
-                  updateTask(taskId, updates)
-                  refreshData()
-                  if (focusTask?.id === taskId) {
-                    setFocusTask({ ...focusTask, ...updates })
-                  }
-                }}
-                onCreateTask={handleCreateTaskClick}
-                onRefresh={refreshData}
-                focusTask={focusTask}
-                onExitFocus={handleExitFocus}
-                onSelectFocusTask={handleSelectFocusTask}
-                onSaveTask={handleSaveTask}
-                initialTab={settingsInitialTab}
-              />
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Settings" />
+              ) : (
+                <SettingsHub
+                  settings={settings}
+                  onSettingsChange={handleSettingsChange}
+                  onExportJSON={handleExportJSON}
+                  onExportCSV={handleExportCSV}
+                  onImport={handleImport}
+                  stats={{
+                    totalTasks: tasks.length,
+                    totalTags: tags.length,
+                    totalCategories: categories.length,
+                    totalTemplates: templates.length
+                  }}
+                  tags={tags}
+                  categories={categories}
+                  templates={templates}
+                  onAddTemplate={handleAddTemplate}
+                  onUpdateTemplate={handleUpdateTemplate}
+                  onDeleteTemplate={handleDeleteTemplate}
+                  onCreateFromTemplate={handleCreateFromTemplate}
+                  onTaskRestore={handleUnarchiveTask}
+                  onTaskDelete={handleDeleteTask}
+                  onTaskArchive={handleArchiveTask}
+                  tasks={tasks}
+                  onTaskClick={handleEditTask}
+                  onTaskEdit={handleEditTask}
+                  onTaskStatusChange={handleStatusChange}
+                  onTaskUpdate={(taskId, updates) => {
+                    updateTask(taskId, updates)
+                    refreshData()
+                    if (focusTask?.id === taskId) {
+                      setFocusTask({ ...focusTask, ...updates })
+                    }
+                  }}
+                  onCreateTask={handleCreateTaskClick}
+                  onRefresh={refreshData}
+                  focusTask={focusTask}
+                  onExitFocus={handleExitFocus}
+                  onSelectFocusTask={handleSelectFocusTask}
+                  onSaveTask={handleSaveTask}
+                  initialTab={settingsInitialTab}
+                />
+              )
             )}
           </div>
         </main>
