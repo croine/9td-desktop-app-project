@@ -6,6 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Settings } from '@/components/Settings'
 import { AppearanceSettings } from '@/components/AppearanceSettings'
+import { NotificationsSettings } from '@/components/NotificationsSettings'
+import { DefaultsSettings } from '@/components/DefaultsSettings'
+import { DateTimeSettings } from '@/components/DateTimeSettings'
+import { PrivacySettings } from '@/components/PrivacySettings'
+import { IntegrationsSettings } from '@/components/IntegrationsSettings'
+import { AdvancedSettings } from '@/components/AdvancedSettings'
 import { Templates } from '@/components/Templates'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttView } from '@/components/GanttView'
@@ -929,69 +935,45 @@ export function SettingsHub({
                 </TabsContent>
 
                 <TabsContent value="notifications" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      🔔 Notification Center
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Configure browser notifications, email alerts, sounds, and do-not-disturb schedules. Coming soon!
-                    </p>
-                  </div>
+                  <NotificationsSettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
 
                 <TabsContent value="defaults" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      ✅ Default Task Settings
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Set default priority, status, tags, and categories for new tasks. Auto-assign rules coming soon!
-                    </p>
-                  </div>
+                  <DefaultsSettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
 
                 <TabsContent value="datetime" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      📅 Date & Time Preferences
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Configure date formats, time zones, week start day, and business hours. Coming soon!
-                    </p>
-                  </div>
+                  <DateTimeSettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
 
                 <TabsContent value="privacy" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      🔒 Privacy & Security
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Data encryption, auto-lock, backup settings, and retention policies. Coming soon!
-                    </p>
-                  </div>
+                  <PrivacySettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
 
                 <TabsContent value="integrations" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      🔌 Integrations
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Connect Google Calendar, Outlook, cloud storage, webhooks, and third-party apps. Coming soon!
-                    </p>
-                  </div>
+                  <IntegrationsSettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
 
                 <TabsContent value="advanced" className="mt-0">
-                  <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-2">
-                      ⚙️ Advanced Settings
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Developer mode, feature flags, performance settings, and debug console. Coming soon!
-                    </p>
-                  </div>
+                  <AdvancedSettings
+                    settings={settings}
+                    onSettingsChange={onSettingsChange}
+                  />
                 </TabsContent>
               </div>
             </Tabs>
