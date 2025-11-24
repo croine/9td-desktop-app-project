@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -48,6 +49,12 @@ interface NavigationSidebarProps {
   sessionPending: boolean
 }
 
+interface UserPreferences {
+  customTitle: string
+  showEmail: boolean
+  blurEmail: boolean
+}
+
 export function NavigationSidebar({ 
   currentView, 
   onViewChange, 
@@ -56,6 +63,37 @@ export function NavigationSidebar({
   sessionPending
 }: NavigationSidebarProps) {
   const router = useRouter()
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    customTitle: 'Account Secured',
+    showEmail: false,
+    blurEmail: false
+  })
+
+  // Fetch user preferences when session is available
+  useEffect(() => {
+    if (session?.user) {
+      fetchPreferences()
+    }
+  }, [session])
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await fetch('/api/user-preferences', {
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setPreferences({
+          customTitle: data.customTitle || 'Account Secured',
+          showEmail: data.showEmail || false,
+          blurEmail: data.blurEmail || false
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch preferences:', error)
+    }
+  }
 
   const handleSignOut = async () => {
     const token = localStorage.getItem("bearer_token")
@@ -143,7 +181,11 @@ export function NavigationSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{session.user.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{session.user.email}</p>
+                    {preferences.showEmail && (
+                      <p className={`text-[10px] text-muted-foreground truncate ${preferences.blurEmail ? 'blur-sm select-none' : ''}`}>
+                        {session.user.email}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button
