@@ -90,3 +90,86 @@ export const userPreferences = sqliteTable('user_preferences', {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+// Avatar gallery - multiple saved avatars per user
+export const userAvatarGallery = sqliteTable('user_avatar_gallery', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  avatarUrl: text('avatar_url').notNull(),
+  avatarShape: text('avatar_shape').notNull().default('circle'),
+  avatarColorScheme: text('avatar_color_scheme').notNull().default('gradient'),
+  avatarBorderColor: text('avatar_border_color').notNull().default('#6366f1'),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// User achievements tracking
+export const userAchievements = sqliteTable('user_achievements', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  achievementType: text('achievement_type').notNull(),
+  unlockedAt: integer('unlocked_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  isDisplayed: integer('is_displayed', { mode: 'boolean' }).notNull().default(true),
+});
+
+// User activity status
+export const userStatus = sqliteTable('user_status', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('active'),
+  customMessage: text('custom_message'),
+  autoDetect: integer('auto_detect', { mode: 'boolean' }).notNull().default(true),
+  lastActivity: integer('last_activity', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// User statistics for productivity tracking
+export const userStats = sqliteTable('user_stats', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  tasksCompletedToday: integer('tasks_completed_today').notNull().default(0),
+  tasksCompletedThisWeek: integer('tasks_completed_this_week').notNull().default(0),
+  tasksCompletedAllTime: integer('tasks_completed_all_time').notNull().default(0),
+  currentStreakDays: integer('current_streak_days').notNull().default(0),
+  longestStreakDays: integer('longest_streak_days').notNull().default(0),
+  lastTaskCompletion: integer('last_task_completion', { mode: 'timestamp' }),
+  dailyGoal: integer('daily_goal').notNull().default(5),
+  weeklyGoal: integer('weekly_goal').notNull().default(25),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Avatar frames/themes
+export const avatarFrames = sqliteTable('avatar_frames', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  frameType: text('frame_type').notNull(),
+  isUnlocked: integer('is_unlocked', { mode: 'boolean' }).notNull().default(false),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  unlockedAt: integer('unlocked_at', { mode: 'timestamp' }),
+});
