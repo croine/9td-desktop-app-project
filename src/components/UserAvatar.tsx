@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,6 +42,10 @@ interface UserPreferences {
   customTitle: string
   showEmail: boolean
   blurEmail: boolean
+  avatarUrl: string | null
+  avatarShape: 'circle' | 'square' | 'rounded'
+  avatarColorScheme: 'solid' | 'gradient' | 'rainbow' | 'fade'
+  avatarBorderColor: string
 }
 
 export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
@@ -54,6 +58,10 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   const [blurEmail, setBlurEmail] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showPrivacySettings, setShowPrivacySettings] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarShape, setAvatarShape] = useState<'circle' | 'square' | 'rounded'>('circle')
+  const [avatarColorScheme, setAvatarColorScheme] = useState<'solid' | 'gradient' | 'rainbow' | 'fade'>('gradient')
+  const [avatarBorderColor, setAvatarBorderColor] = useState('#6366f1')
 
   // Fetch user preferences
   useEffect(() => {
@@ -82,6 +90,10 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
         setCustomTitle(data.customTitle || 'Account Secured')
         setShowEmail(data.showEmail || false)
         setBlurEmail(data.blurEmail || false)
+        setAvatarUrl(data.avatarUrl || null)
+        setAvatarShape(data.avatarShape || 'circle')
+        setAvatarColorScheme(data.avatarColorScheme || 'gradient')
+        setAvatarBorderColor(data.avatarBorderColor || '#6366f1')
       }
     } catch (error) {
       console.error('Failed to fetch preferences:', error)
@@ -166,6 +178,27 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     setIsEditingTitle(true)
   }
 
+  const getAvatarBorderClass = () => {
+    const shapeClasses = {
+      circle: 'rounded-full',
+      square: 'rounded-none',
+      rounded: 'rounded-lg'
+    }
+    
+    return shapeClasses[avatarShape]
+  }
+
+  const getAvatarRingClass = () => {
+    const colorClasses = {
+      solid: 'ring-2',
+      gradient: 'ring-2',
+      rainbow: 'ring-2 animate-rainbow',
+      fade: 'ring-2 animate-pulse'
+    }
+    
+    return colorClasses[avatarColorScheme]
+  }
+
   // Early return AFTER all hooks
   if (!session?.user) {
     return null
@@ -186,9 +219,14 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 rounded-full ring-2 ring-primary/20 hover:ring-primary/40 transition-all"
+          className={`relative h-10 w-10 ${getAvatarBorderClass()} ${getAvatarRingClass()} hover:ring-primary/40 transition-all`}
+          style={{ 
+            borderColor: avatarBorderColor,
+            '--tw-ring-color': avatarBorderColor 
+          } as any}
         >
-          <Avatar className="h-10 w-10">
+          <Avatar className={`h-10 w-10 ${getAvatarBorderClass()}`}>
+            {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-sm">
               {initials}
             </AvatarFallback>
@@ -203,7 +241,14 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-3 p-2">
             <div className="flex items-center gap-3">
-              <Avatar className="h-14 w-14 ring-2 ring-primary/20">
+              <Avatar 
+                className={`h-14 w-14 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
+                style={{ 
+                  borderColor: avatarBorderColor,
+                  '--tw-ring-color': avatarBorderColor 
+                } as any}
+              >
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-lg">
                   {initials}
                 </AvatarFallback>

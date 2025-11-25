@@ -30,7 +30,8 @@ import {
   RectangleHorizontal,
   Palette,
   Save,
-  Loader2
+  Loader2,
+  Link as LinkIcon
 } from 'lucide-react'
 
 interface AccountData {
@@ -58,7 +59,7 @@ interface AccountData {
 }
 
 export function AccountSettings() {
-  const { data: session } = useSession()
+  const { data: session, refetch: refetchSession } = useSession()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [accountData, setAccountData] = useState<AccountData | null>(null)
@@ -67,6 +68,7 @@ export function AccountSettings() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarUploadMethod, setAvatarUploadMethod] = useState<'url' | 'file'>('url')
   const [avatarShape, setAvatarShape] = useState<'circle' | 'square' | 'rounded'>('circle')
   const [avatarColorScheme, setAvatarColorScheme] = useState<'solid' | 'gradient' | 'rainbow' | 'fade'>('gradient')
   const [avatarBorderColor, setAvatarBorderColor] = useState('#6366f1')
@@ -151,6 +153,7 @@ export function AccountSettings() {
       if (response.ok) {
         toast.success('Profile updated successfully')
         await fetchAccountSettings()
+        await refetchSession() // Refresh session to update navbar
       } else {
         const error = await response.json()
         toast.error(error.error || 'Failed to update profile')
@@ -158,6 +161,61 @@ export function AccountSettings() {
     } catch (error) {
       toast.error('Failed to update profile')
     } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        const base64String = reader.result as string
+        
+        // Update avatar with base64 string
+        const token = localStorage.getItem("bearer_token")
+        const response = await fetch('/api/user/avatar', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ avatarUrl: base64String }),
+        })
+
+        if (response.ok) {
+          setAvatarUrl(base64String)
+          toast.success('Avatar uploaded successfully')
+          await fetchAccountSettings()
+          await refetchSession()
+        } else {
+          toast.error('Failed to upload avatar')
+        }
+        setIsSaving(false)
+      }
+      reader.onerror = () => {
+        toast.error('Failed to read file')
+        setIsSaving(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      toast.error('Failed to upload avatar')
       setIsSaving(false)
     }
   }
@@ -178,6 +236,7 @@ export function AccountSettings() {
       if (response.ok) {
         toast.success('Avatar updated successfully')
         await fetchAccountSettings()
+        await refetchSession()
       } else {
         toast.error('Failed to update avatar')
       }
@@ -334,13 +393,16 @@ export function AccountSettings() {
 
             <div className="grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Full Name / Username</Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
+                  placeholder="Enter your name or username"
                 />
+                <p className="text-xs text-muted-foreground">
+                  This is the name that will be displayed throughout the app
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -402,22 +464,67 @@ export function AccountSettings() {
               {/* Avatar Controls */}
               <div className="flex-1 space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="avatarUrl">Avatar Image URL</Label>
+                  <Label>Upload Method</Label>
                   <div className="flex gap-2">
-                    <Input
-                      id="avatarUrl"
-                      value={avatarUrl}
-                      onChange={(e) => setAvatarUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                    <Button onClick={handleUpdateAvatar} disabled={isSaving}>
-                      <Upload className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      variant={avatarUploadMethod === 'url' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setAvatarUploadMethod('url')}
+                      className="flex-1"
+                    >
+                      <LinkIcon className="h-3 w-3 mr-2" />
+                      URL
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={avatarUploadMethod === 'file' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setAvatarUploadMethod('file')}
+                      className="flex-1"
+                    >
+                      <Upload className="h-3 w-3 mr-2" />
+                      Upload File
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Enter a direct image URL for your avatar
-                  </p>
                 </div>
+
+                {avatarUploadMethod === 'url' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="avatarUrl">Avatar Image URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="avatarUrl"
+                        value={avatarUrl}
+                        onChange={(e) => setAvatarUrl(e.target.value)}
+                        placeholder="https://example.com/avatar.jpg"
+                      />
+                      <Button onClick={handleUpdateAvatar} disabled={isSaving}>
+                        <Save className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enter a direct image URL for your avatar
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="avatarFile">Upload Image File</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="avatarFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        disabled={isSaving}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Upload an image file (max 5MB). Supports JPG, PNG, GIF, WebP
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

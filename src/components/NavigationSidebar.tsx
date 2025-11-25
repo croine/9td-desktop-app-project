@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -19,13 +20,13 @@ import {
   Loader2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { authClient } from '@/lib/auth-client'
+import { authClient, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 // ========================================================================
-// NAVIGATION SIDEBAR v6.0 - WITH AUTHENTICATION
-// Updated: DEC-20-2025 - Added Auth Integration
+// NAVIGATION SIDEBAR v6.1 - WITH LIVE PROFILE UPDATES
+// Updated: DEC-24-2025 - Added Profile Refresh & Avatar Support
 // ========================================================================
 
 export type SidebarView = 
@@ -53,6 +54,10 @@ interface UserPreferences {
   customTitle: string
   showEmail: boolean
   blurEmail: boolean
+  avatarUrl: string | null
+  avatarShape: 'circle' | 'square' | 'rounded'
+  avatarColorScheme: 'solid' | 'gradient' | 'rainbow' | 'fade'
+  avatarBorderColor: string
 }
 
 export function NavigationSidebar({ 
@@ -63,23 +68,46 @@ export function NavigationSidebar({
   sessionPending
 }: NavigationSidebarProps) {
   const router = useRouter()
+  const { refetch: refetchSession } = useSession()
   const [preferences, setPreferences] = useState<UserPreferences>({
     customTitle: 'Account Secured',
     showEmail: false,
-    blurEmail: false
+    blurEmail: false,
+    avatarUrl: null,
+    avatarShape: 'circle',
+    avatarColorScheme: 'gradient',
+    avatarBorderColor: '#6366f1'
   })
+  const [userName, setUserName] = useState('')
 
   // Fetch user preferences when session is available
   useEffect(() => {
     if (session?.user) {
+      setUserName(session.user.name)
       fetchPreferences()
     }
   }, [session])
 
+  // Poll for updates every 5 seconds when on settings page
+  useEffect(() => {
+    if (session?.user && currentView === 'settings') {
+      const interval = setInterval(() => {
+        fetchPreferences()
+        refetchSession()
+      }, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [session, currentView, refetchSession])
+
   const fetchPreferences = async () => {
     try {
+      const token = localStorage.getItem("bearer_token")
+      if (!token) return
+
       const response = await fetch('/api/user-preferences', {
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       })
       
       if (response.ok) {
@@ -87,7 +115,11 @@ export function NavigationSidebar({
         setPreferences({
           customTitle: data.customTitle || 'Account Secured',
           showEmail: data.showEmail || false,
-          blurEmail: data.blurEmail || false
+          blurEmail: data.blurEmail || false,
+          avatarUrl: data.avatarUrl || null,
+          avatarShape: data.avatarShape || 'circle',
+          avatarColorScheme: data.avatarColorScheme || 'gradient',
+          avatarBorderColor: data.avatarBorderColor || '#6366f1'
         })
       }
     } catch (error) {
@@ -112,6 +144,27 @@ export function NavigationSidebar({
       toast.success('Signed out successfully')
       router.push('/')
     }
+  }
+
+  const getAvatarBorderClass = () => {
+    const shapeClasses = {
+      circle: 'rounded-full',
+      square: 'rounded-none',
+      rounded: 'rounded-lg'
+    }
+    
+    return shapeClasses[preferences.avatarShape]
+  }
+
+  const getAvatarRingClass = () => {
+    const colorClasses = {
+      solid: 'ring-2',
+      gradient: 'ring-2',
+      rainbow: 'ring-2 animate-rainbow',
+      fade: 'ring-2 animate-pulse'
+    }
+    
+    return colorClasses[preferences.avatarColorScheme]
   }
 
   // ==========================================
@@ -163,6 +216,15 @@ export function NavigationSidebar({
     },
   ]
 
+  const initials = userName
+    ? userName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : session?.user?.email?.charAt(0).toUpperCase() || 'U'
+
   return (
     <div className="flex flex-col h-full border-r bg-sidebar/50 backdrop-blur-sm">
       <ScrollArea className="flex-1 py-4">
@@ -176,11 +238,20 @@ export function NavigationSidebar({
             ) : session?.user ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
-                  </div>
+                  <Avatar 
+                    className={`h-8 w-8 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
+                    style={{ 
+                      borderColor: preferences.avatarBorderColor,
+                      '--tw-ring-color': preferences.avatarBorderColor 
+                    } as any}
+                  >
+                    {preferences.avatarUrl && <AvatarImage src={preferences.avatarUrl} alt={userName} />}
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate">{session.user.name}</p>
+                    <p className="text-xs font-semibold truncate">{userName}</p>
                     {preferences.showEmail && (
                       <p className={`text-[10px] text-muted-foreground truncate ${preferences.blurEmail ? 'blur-sm select-none' : ''}`}>
                         {session.user.email}
@@ -324,8 +395,8 @@ export function NavigationSidebar({
       {/* Footer */}
       <div className="p-3 border-t bg-muted/30">
         <div className="text-xs text-muted-foreground text-center space-y-0.5">
-          <p className="font-semibold text-[10px]">9TD v6.0 Ultimate</p>
-          <p className="text-[9px]">With Authentication</p>
+          <p className="font-semibold text-[10px]">9TD v6.1 Ultimate</p>
+          <p className="text-[9px]">With Live Updates</p>
         </div>
       </div>
     </div>
