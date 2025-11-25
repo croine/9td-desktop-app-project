@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { authClient } from '@/lib/auth-client'
+import { authClient, useSession } from '@/lib/auth-client'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +50,7 @@ interface UserPreferences {
 
 export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
   const router = useRouter()
+  const { refetch: refetchSession } = useSession()
   const [isOpen, setIsOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [customTitle, setCustomTitle] = useState('Account Secured')
@@ -63,10 +64,20 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   const [avatarColorScheme, setAvatarColorScheme] = useState<'solid' | 'gradient' | 'rainbow' | 'fade'>('gradient')
   const [avatarBorderColor, setAvatarBorderColor] = useState('#6366f1')
 
-  // Fetch user preferences
+  // Fetch user preferences when session changes
   useEffect(() => {
     if (session?.user) {
       fetchPreferences()
+    }
+  }, [session])
+
+  // Poll for updates every 5 seconds to stay in sync
+  useEffect(() => {
+    if (session?.user) {
+      const interval = setInterval(() => {
+        fetchPreferences()
+      }, 5000)
+      return () => clearInterval(interval)
     }
   }, [session])
 
