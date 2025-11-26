@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { AvatarWithRings } from '@/components/avatar/AvatarWithRings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -48,6 +49,30 @@ interface UserPreferences {
   avatarBorderColor: string
 }
 
+interface UserStats {
+  tasksCompletedToday: number
+  tasksCompletedThisWeek: number
+  dailyGoal: number
+  weeklyGoal: number
+}
+
+interface Achievement {
+  id: number
+  achievementType: string
+  unlockedAt: string
+  isDisplayed: boolean
+}
+
+interface UserStatus {
+  status: 'active' | 'away' | 'busy' | 'offline'
+  customMessage?: string | null
+}
+
+interface ActiveFrame {
+  frameType: string
+  isActive: boolean
+}
+
 export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
   const router = useRouter()
   const { refetch: refetchSession } = useSession()
@@ -63,11 +88,15 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   const [avatarShape, setAvatarShape] = useState<'circle' | 'square' | 'rounded'>('circle')
   const [avatarColorScheme, setAvatarColorScheme] = useState<'solid' | 'gradient' | 'rainbow' | 'fade'>('gradient')
   const [avatarBorderColor, setAvatarBorderColor] = useState('#6366f1')
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [status, setStatus] = useState<UserStatus | null>(null)
+  const [activeFrame, setActiveFrame] = useState<ActiveFrame | null>(null)
 
   // Fetch user preferences when session changes
   useEffect(() => {
     if (session?.user) {
-      fetchPreferences()
+      fetchAllData()
     }
   }, [session])
 
@@ -75,29 +104,31 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   useEffect(() => {
     if (session?.user) {
       const interval = setInterval(() => {
-        fetchPreferences()
+        fetchAllData()
       }, 5000)
       return () => clearInterval(interval)
     }
   }, [session])
 
-  const fetchPreferences = async () => {
-    try {
-      const token = localStorage.getItem("bearer_token");
-      if (!token) {
-        console.error('No bearer token found');
-        setIsLoading(false);
-        return;
-      }
+  const fetchAllData = async () => {
+    const token = localStorage.getItem("bearer_token")
+    if (!token) {
+      setIsLoading(false)
+      return
+    }
 
-      const response = await fetch('/api/user-preferences', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
+    try {
+      // Fetch all data in parallel
+      const [prefsRes, statsRes, achievementsRes, statusRes, framesRes] = await Promise.all([
+        fetch('/api/user-preferences', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user-stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/achievements', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user-status', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/avatar-frames', { headers: { 'Authorization': `Bearer ${token}` } })
+      ])
+
+      if (prefsRes.ok) {
+        const data = await prefsRes.json()
         setCustomTitle(data.customTitle || 'Account Secured')
         setShowEmail(data.showEmail || false)
         setBlurEmail(data.blurEmail || false)
@@ -106,8 +137,29 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
         setAvatarColorScheme(data.avatarColorScheme || 'gradient')
         setAvatarBorderColor(data.avatarBorderColor || '#6366f1')
       }
+
+      if (statsRes.ok) {
+        const data = await statsRes.json()
+        setStats(data)
+      }
+
+      if (achievementsRes.ok) {
+        const data = await achievementsRes.json()
+        setAchievements(data)
+      }
+
+      if (statusRes.ok) {
+        const data = await statusRes.json()
+        setStatus(data)
+      }
+
+      if (framesRes.ok) {
+        const data = await framesRes.json()
+        const active = data.find((f: any) => f.isActive)
+        setActiveFrame(active || null)
+      }
     } catch (error) {
-      console.error('Failed to fetch preferences:', error)
+      console.error('Failed to fetch data:', error)
     } finally {
       setIsLoading(false)
     }
@@ -132,7 +184,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
 
       if (response.ok) {
         toast.success('Preferences updated')
-        await fetchPreferences()
+        await fetchAllData()
       } else {
         const errorData = await response.json()
         toast.error(errorData.error || 'Failed to update preferences')
@@ -189,62 +241,13 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     setIsEditingTitle(true)
   }
 
-  const getAvatarBorderClass = () => {
-    const shapeClasses = {
-      circle: 'rounded-full',
-      square: 'rounded-none',
-      rounded: 'rounded-lg'
-    }
-    
-    return shapeClasses[avatarShape]
-  }
-
-  const getAvatarRingClass = () => {
-    const shapeClasses = {
-      circle: 'rounded-full',
-      square: 'rounded-none',
-      rounded: 'rounded-lg'
-    }
-    
-    return shapeClasses[avatarShape]
-  }
-
-  const getAvatarRingStyle = () => {
-    // For rainbow and fade, use CSS animations with filters
-    if (avatarColorScheme === 'rainbow') {
-      return {
-        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px hsl(var(--primary))`,
-        animation: 'rainbow-ring 3s linear infinite'
-      }
-    }
-    
-    if (avatarColorScheme === 'fade') {
-      return {
-        '--ring-color': avatarBorderColor,
-        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`,
-        animation: 'fade-ring 2s ease-in-out infinite'
-      } as React.CSSProperties
-    }
-    
-    // For gradient
-    if (avatarColorScheme === 'gradient') {
-      return {
-        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
-      }
-    }
-    
-    // For solid
-    return {
-      boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
-    }
-  }
-
   // Early return AFTER all hooks
   if (!session?.user) {
     return null
   }
 
   const user = session.user
+  const userName = user.name || 'User'
   const initials = user.name
     ? user.name
         .split(' ')
@@ -259,17 +262,25 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`relative h-10 w-10 p-0 ${getAvatarBorderClass()}`}
+          className="relative h-12 w-12 p-0 rounded-full"
         >
-          <Avatar 
-            className={`h-10 w-10 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
-            style={getAvatarRingStyle()}
-          >
-            {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
-            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-sm">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <AvatarWithRings
+            avatarUrl={avatarUrl}
+            initials={initials}
+            userName={userName}
+            stats={stats || undefined}
+            achievements={achievements}
+            status={status || undefined}
+            activeFrame={activeFrame}
+            avatarShape={avatarShape}
+            avatarColorScheme={avatarColorScheme}
+            avatarBorderColor={avatarBorderColor}
+            size="sm"
+            showRings={true}
+            showAchievements={false}
+            showStatus={true}
+            showFrame={false}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
@@ -280,31 +291,41 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-3 p-2">
             <div className="flex items-center gap-3">
-              <Avatar 
-                className={`h-14 w-14 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
-                style={getAvatarRingStyle()}
-              >
-                {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-lg">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col space-y-1 flex-1">
+              <div className="shrink-0">
+                <AvatarWithRings
+                  avatarUrl={avatarUrl}
+                  initials={initials}
+                  userName={userName}
+                  stats={stats || undefined}
+                  achievements={achievements}
+                  status={status || undefined}
+                  activeFrame={activeFrame}
+                  avatarShape={avatarShape}
+                  avatarColorScheme={avatarColorScheme}
+                  avatarBorderColor={avatarBorderColor}
+                  size="md"
+                  showRings={true}
+                  showAchievements={true}
+                  showStatus={true}
+                  showFrame={true}
+                />
+              </div>
+              <div className="flex flex-col space-y-1 flex-1 min-w-0">
                 <p className="font-display font-semibold text-base leading-none">
-                  {user.name || 'User'}
+                  {userName}
                 </p>
                 
                 {/* Customizable Title */}
                 {!isEditingTitle ? (
                   <div className="flex items-center gap-1.5 group">
-                    <Shield className="h-3 w-3 text-primary" />
-                    <p className="text-xs text-muted-foreground flex-1">
+                    <Shield className="h-3 w-3 text-primary shrink-0" />
+                    <p className="text-xs text-muted-foreground flex-1 truncate">
                       {customTitle}
                     </p>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                       onClick={handleStartEdit}
                     >
                       <Edit2 className="h-3 w-3" />
@@ -341,7 +362,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
 
                 {/* Email Display with Privacy Controls */}
                 {showEmail && (
-                  <p className={`text-xs text-muted-foreground ${blurEmail ? 'blur-sm select-none' : ''}`}>
+                  <p className={`text-xs text-muted-foreground truncate ${blurEmail ? 'blur-sm select-none' : ''}`}>
                     {user.email}
                   </p>
                 )}
