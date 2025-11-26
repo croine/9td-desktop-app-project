@@ -57,6 +57,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
 import { Card } from '@/components/ui/card'
 import { UserAvatar } from '@/components/UserAvatar'
+import { MessageSystem } from '@/components/MessageSystem/MessageSystem'
 
 // ========================================================================
 // VERSION v7.0 - ALL ADVANCED FEATURES INTEGRATED
@@ -921,21 +922,7 @@ export default function Home() {
                       Team communication and collaboration hub
                     </p>
                   </div>
-                  <Card className="glass-card p-12">
-                    <div className="flex flex-col items-center justify-center text-center space-y-4">
-                      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                        <MessageSquare className="h-10 w-10 text-primary" />
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="font-display text-xl font-semibold">
-                          Coming Soon
-                        </h3>
-                        <p className="text-muted-foreground max-w-md">
-                          Team messaging, real-time collaboration, and communication features will be available here for registered users.
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
+                  <MessageSystem />
                 </div>
               )
             )}

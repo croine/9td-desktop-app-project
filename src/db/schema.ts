@@ -305,3 +305,54 @@ export const avatarFrames = sqliteTable('avatar_frames', {
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
   unlockedAt: integer('unlocked_at', { mode: 'timestamp' }),
 });
+
+// Real-time messaging system tables
+
+export const conversations = sqliteTable('conversations', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name'),
+  isGroup: integer('is_group', { mode: 'boolean' }).notNull().default(false),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const conversationParticipants = sqliteTable('conversation_participants', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  conversationId: integer('conversation_id')
+    .notNull()
+    .references(() => conversations.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  joinedAt: integer('joined_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  lastReadAt: integer('last_read_at', { mode: 'timestamp' }),
+});
+
+export const messages = sqliteTable('messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  conversationId: integer('conversation_id')
+    .notNull()
+    .references(() => conversations.id, { onDelete: 'cascade' }),
+  senderId: text('sender_id')
+    .notNull()
+    .references(() => user.id),
+  content: text('content').notNull(),
+  messageType: text('message_type').notNull().default('text'),
+  metadata: text('metadata', { mode: 'json' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+});
