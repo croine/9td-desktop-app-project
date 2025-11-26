@@ -104,7 +104,7 @@ export function AvatarWithRings({
       )}
 
       {/* Avatar Container - Perfectly Centered */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center" style={{ paddingLeft: '4px' }}>
         <div className="relative">
           {/* Frame */}
           {showFrame && activeFrame && (
