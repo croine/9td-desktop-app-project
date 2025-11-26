@@ -201,13 +201,25 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
 
   const getAvatarRingClass = () => {
     const colorClasses = {
-      solid: 'ring-2',
-      gradient: 'ring-2',
-      rainbow: 'ring-2 animate-rainbow',
-      fade: 'ring-2 animate-pulse'
+      solid: 'ring-2 ring-offset-2 ring-offset-background',
+      gradient: 'ring-2 ring-offset-2 ring-offset-background',
+      rainbow: 'ring-2 ring-offset-2 ring-offset-background animate-rainbow',
+      fade: 'ring-2 ring-offset-2 ring-offset-background animate-pulse'
     }
     
     return colorClasses[avatarColorScheme]
+  }
+
+  const getAvatarRingStyle = () => {
+    if (avatarColorScheme === 'gradient') {
+      return {
+        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
+      }
+    }
+    return {
+      '--tw-ring-color': avatarBorderColor,
+      boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
+    } as any
   }
 
   // Early return AFTER all hooks
@@ -230,13 +242,12 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`relative h-10 w-10 ${getAvatarBorderClass()} ${getAvatarRingClass()} hover:ring-primary/40 transition-all`}
-          style={{ 
-            borderColor: avatarBorderColor,
-            '--tw-ring-color': avatarBorderColor 
-          } as any}
+          className={`relative h-10 w-10 p-0 ${getAvatarBorderClass()}`}
         >
-          <Avatar className={`h-10 w-10 ${getAvatarBorderClass()}`}>
+          <Avatar 
+            className={`h-10 w-10 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
+            style={getAvatarRingStyle()}
+          >
             {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-sm">
               {initials}
@@ -254,10 +265,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
             <div className="flex items-center gap-3">
               <Avatar 
                 className={`h-14 w-14 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
-                style={{ 
-                  borderColor: avatarBorderColor,
-                  '--tw-ring-color': avatarBorderColor 
-                } as any}
+                style={getAvatarRingStyle()}
               >
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name} />}
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-lg">
