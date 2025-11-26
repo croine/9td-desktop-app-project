@@ -200,26 +200,43 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   }
 
   const getAvatarRingClass = () => {
-    const colorClasses = {
-      solid: 'ring-2 ring-offset-2 ring-offset-background',
-      gradient: 'ring-2 ring-offset-2 ring-offset-background',
-      rainbow: 'ring-2 ring-offset-2 ring-offset-background animate-rainbow',
-      fade: 'ring-2 ring-offset-2 ring-offset-background animate-pulse'
+    const shapeClasses = {
+      circle: 'rounded-full',
+      square: 'rounded-none',
+      rounded: 'rounded-lg'
     }
     
-    return colorClasses[avatarColorScheme]
+    return shapeClasses[avatarShape]
   }
 
   const getAvatarRingStyle = () => {
+    // For rainbow and fade, use CSS animations with filters
+    if (avatarColorScheme === 'rainbow') {
+      return {
+        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px hsl(var(--primary))`,
+        animation: 'rainbow-ring 3s linear infinite'
+      }
+    }
+    
+    if (avatarColorScheme === 'fade') {
+      return {
+        '--ring-color': avatarBorderColor,
+        boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`,
+        animation: 'fade-ring 2s ease-in-out infinite'
+      } as React.CSSProperties
+    }
+    
+    // For gradient
     if (avatarColorScheme === 'gradient') {
       return {
         boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
       }
     }
+    
+    // For solid
     return {
-      '--tw-ring-color': avatarBorderColor,
       boxShadow: `0 0 0 2px var(--background), 0 0 0 4px ${avatarBorderColor}`
-    } as any
+    }
   }
 
   // Early return AFTER all hooks

@@ -1,3 +1,6 @@
+/* Updated: 2025-11-26T22:59:58.354Z */
+/* Updated: 2025-11-25T19:54:26.078Z */
+/* Updated: 2025-11-25T01:36:50.550Z */
 /* Updated: 2025-11-24T18:16:26.942Z */
 /* Updated: 2025-11-11T10:54:30.817Z */
 /* Updated: 2025-11-10T16:29:36.475Z */
@@ -336,6 +339,41 @@
   }
 }
 
+@keyframes rainbow-ring {
+  0% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #ef4444;
+  }
+  16.66% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #f97316;
+  }
+  33.33% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #eab308;
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #22c55e;
+  }
+  66.66% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #3b82f6;
+  }
+  83.33% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #a855f7;
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px #ef4444;
+  }
+}
+
+@keyframes fade-ring {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px var(--ring-color);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 6px var(--ring-color);
+  }
+}
+
 /* Animation Classes */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -367,6 +405,14 @@
 
 .animate-rainbow {
   animation: rainbow 3s linear infinite;
+}
+
+.animate-rainbow-ring {
+  animation: rainbow-ring 3s linear infinite;
+}
+
+.animate-fade-ring {
+  animation: fade-ring 3s ease-in-out infinite;
 }
 
 /* Legacy animation classes for backwards compatibility */
