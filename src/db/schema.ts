@@ -124,6 +124,138 @@ export const userAchievements = sqliteTable('user_achievements', {
   isDisplayed: integer('is_displayed', { mode: 'boolean' }).notNull().default(true),
 });
 
+// Advanced avatar system tables
+
+export const achievements = sqliteTable('achievements', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  icon: text('icon'),
+  badgeType: text('badge_type').notNull(),
+  unlockCriteria: text('unlock_criteria', { mode: 'json' }).notNull(),
+  points: integer('points').notNull().default(0),
+  tier: text('tier').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const userAchievementsNew = sqliteTable('user_achievements_new', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  achievementId: integer('achievement_id')
+    .notNull()
+    .references(() => achievements.id, { onDelete: 'cascade' }),
+  unlockedAt: integer('unlocked_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  displayed: integer('displayed', { mode: 'boolean' }).notNull().default(true),
+  notified: integer('notified', { mode: 'boolean' }).notNull().default(false),
+});
+
+export const userStatusNew = sqliteTable('user_status_new', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('active'),
+  autoDetect: integer('auto_detect', { mode: 'boolean' }).notNull().default(true),
+  customMessage: text('custom_message'),
+  lastActivity: integer('last_activity', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const avatarCustomization = sqliteTable('avatar_customization', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  cropSettings: text('crop_settings', { mode: 'json' }),
+  filters: text('filters', { mode: 'json' }),
+  borderEffect: text('border_effect').notNull().default('none'),
+  borderColors: text('border_colors', { mode: 'json' }),
+  effect3d: text('effect_3d', { mode: 'json' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const avatarGalleryNew = sqliteTable('avatar_gallery_new', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  imageUrl: text('image_url').notNull(),
+  avatarType: text('avatar_type').notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  settings: text('settings', { mode: 'json' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const avatarPresets = sqliteTable('avatar_presets', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  presetType: text('preset_type').notNull(),
+  category: text('category'),
+  config: text('config', { mode: 'json' }).notNull(),
+  previewUrl: text('preview_url'),
+  isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
+});
+
+export const userEffects = sqliteTable('user_effects', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  moodIndicator: text('mood_indicator').notNull().default('none'),
+  focusModeActive: integer('focus_mode_active', { mode: 'boolean' }).notNull().default(false),
+  celebrationActive: integer('celebration_active', { mode: 'boolean' }).notNull().default(false),
+  effectSettings: text('effect_settings', { mode: 'json' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const avatarFramesNew = sqliteTable('avatar_frames_new', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  frameType: text('frame_type').notNull(),
+  styleConfig: text('style_config', { mode: 'json' }),
+  unlockRequirement: text('unlock_requirement', { mode: 'json' }),
+  isAnimated: integer('is_animated', { mode: 'boolean' }).notNull().default(false),
+  previewUrl: text('preview_url'),
+  season: text('season'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const userFrames = sqliteTable('user_frames', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  frameId: integer('frame_id')
+    .notNull()
+    .references(() => avatarFramesNew.id, { onDelete: 'cascade' }),
+  unlockedAt: integer('unlocked_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+});
+
 // User activity status
 export const userStatus = sqliteTable('user_status', {
   id: integer('id').primaryKey({ autoIncrement: true }),
