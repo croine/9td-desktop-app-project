@@ -356,3 +356,67 @@ export const messages = sqliteTable('messages', {
     .notNull(),
   deletedAt: integer('deleted_at', { mode: 'timestamp' }),
 });
+
+// Add new tasks table
+export const tasks = sqliteTable('tasks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  priority: text('priority').notNull().default('medium'),
+  status: text('status').notNull().default('todo'),
+  dueDate: integer('due_date', { mode: 'timestamp' }),
+  tags: text('tags', { mode: 'json' }),
+  categories: text('categories', { mode: 'json' }),
+  subtasks: text('subtasks', { mode: 'json' }),
+  timeTracking: text('time_tracking', { mode: 'json' }),
+  archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// Add task dependencies table
+export const taskDependencies = sqliteTable('task_dependencies', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  dependsOnTaskId: integer('depends_on_task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  dependencyType: text('dependency_type').notNull().default('blocks'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const taskAttachments = sqliteTable('task_attachments', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileType: text('file_type').notNull(),
+  fileSize: integer('file_size').notNull(),
+  storagePath: text('storage_path').notNull(),
+  storageBucket: text('storage_bucket').notNull().default('task-attachments'),
+  downloadUrl: text('download_url'),
+  uploadedAt: integer('uploaded_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});

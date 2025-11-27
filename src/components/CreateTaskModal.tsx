@@ -14,6 +14,7 @@ import {
 import { TaskDependencies } from "@/components/TaskDependencies";
 import { SubtaskManager } from "@/components/SubtaskManager";
 import { TaskCommentsTimeline } from "@/components/TaskCommentsTimeline";
+import { FileAttachmentManager } from "@/components/FileAttachmentManager";
 import {
   Dialog,
   DialogContent,
@@ -909,6 +910,43 @@ export function CreateTaskModal({
                     subtasks={formData.subtasks || []}
                     onChange={(subtasks) => setFormData({ ...formData, subtasks })}
                     maxDepth={2}
+                  />
+                </div>
+
+                {/* Task Dependencies */}
+                <div className="space-y-2">
+                  <TaskDependencies
+                    dependencies={formData.dependencies || []}
+                    onChange={(dependencies) => setFormData({ ...formData, dependencies })}
+                    allTasks={allTasks}
+                    currentTaskId={editTask?.id}
+                    mode={editTask ? 'edit' : 'create'}
+                  />
+                </div>
+
+                {/* File Attachments */}
+                <div className="space-y-2">
+                  <FileAttachmentManager
+                    taskId={editTask?.id ? parseInt(editTask.id) : undefined}
+                    attachments={attachments.map(a => ({
+                      id: typeof a.id === 'string' ? parseInt(a.id) || 0 : a.id || 0,
+                      fileName: a.name,
+                      fileType: a.type,
+                      fileSize: a.size,
+                      downloadUrl: a.url,
+                      uploadedAt: a.uploadedAt
+                    }))}
+                    onAttachmentsChange={(newAttachments) => {
+                      setAttachments(newAttachments.map(a => ({
+                        id: a.id.toString(),
+                        name: a.fileName,
+                        type: a.fileType,
+                        size: a.fileSize,
+                        url: a.downloadUrl || '',
+                        uploadedAt: a.uploadedAt
+                      })))
+                    }}
+                    mode={editTask ? 'edit' : 'create'}
                   />
                 </div>
               </form>

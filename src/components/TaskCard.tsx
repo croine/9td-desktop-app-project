@@ -4,7 +4,22 @@ import { Task, Tag, Category } from '@/types/task'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Calendar, User, MoreVertical, Trash2, Edit, CheckCircle2, Archive, Bell, TrendingUp } from 'lucide-react'
+import { 
+  Calendar, 
+  User, 
+  MoreVertical, 
+  Trash2, 
+  Edit, 
+  CheckCircle2, 
+  Archive, 
+  Bell, 
+  TrendingUp,
+  Link2,
+  LockKeyhole,
+  UnlockKeyhole,
+  GitBranch,
+  AlertTriangle
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +39,7 @@ interface TaskCardProps {
   onStatusChange: (taskId: string, status: Task['status']) => void
   onArchive?: (taskId: string) => void
   compact?: boolean
+  allTasks?: Task[]
 }
 
 const priorityColors = {
@@ -41,7 +57,7 @@ const statusColors = {
   'cancelled': 'bg-red-500/10 text-red-600 border-red-500/20',
 }
 
-export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusChange, onArchive, compact = false }: TaskCardProps) {
+export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusChange, onArchive, compact = false, allTasks = [] }: TaskCardProps) {
   const taskTags = tags.filter(tag => (task.tags || []).includes(tag.id))
   const taskCategories = categories.filter(cat => (task.categories || []).includes(cat.id))
   
@@ -52,6 +68,19 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
   
   const hasReminders = (task.reminders || []).length > 0
   const progress = task.progress || 0
+
+  // NEW: Dependency indicators
+  const dependencies = task.dependencies || []
+  const hasDependencies = dependencies.length > 0
+  const blockedByDeps = dependencies.filter(d => d.type === 'blocked-by')
+  const blocksDeps = dependencies.filter(d => d.type === 'blocks')
+  const relatesToDeps = dependencies.filter(d => d.type === 'relates-to')
+  
+  // Check if task is actually blocked (blocked by incomplete tasks)
+  const isBlocked = blockedByDeps.some(dep => {
+    const blockingTask = allTasks.find(t => t.id === dep.taskId)
+    return blockingTask && blockingTask.status !== 'completed'
+  })
 
   // Compact View
   if (compact) {
@@ -66,10 +95,11 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
         <Card className={cn(
           "glass-card p-3 hover:shadow-md transition-all duration-200 cursor-pointer border-l-4",
           task.status === 'completed' && "opacity-60",
-          task.priority === 'urgent' && "border-l-red-500",
-          task.priority === 'high' && "border-l-orange-500",
-          task.priority === 'medium' && "border-l-yellow-500",
-          task.priority === 'low' && "border-l-blue-500"
+          isBlocked && "border-l-orange-500 bg-orange-50/50 dark:bg-orange-950/20",
+          !isBlocked && task.priority === 'urgent' && "border-l-red-500",
+          !isBlocked && task.priority === 'high' && "border-l-orange-500",
+          !isBlocked && task.priority === 'medium' && "border-l-yellow-500",
+          !isBlocked && task.priority === 'low' && "border-l-blue-500"
         )}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 flex items-center gap-3 min-w-0">
@@ -85,6 +115,23 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
               <h3 className="font-semibold text-sm truncate flex-1">
                 {task.title}
               </h3>
+              
+              {hasDependencies && (
+                <div className="flex items-center gap-1">
+                  {isBlocked && (
+                    <Badge variant="outline" className="h-5 text-xs gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-500/30">
+                      <LockKeyhole className="h-3 w-3" />
+                      <span className="hidden sm:inline">Blocked</span>
+                    </Badge>
+                  )}
+                  {!isBlocked && hasDependencies && (
+                    <Badge variant="outline" className="h-5 text-xs gap-1">
+                      <Link2 className="h-3 w-3" />
+                      <span className="hidden sm:inline">{dependencies.length}</span>
+                    </Badge>
+                  )}
+                </div>
+              )}
               
               {progress > 0 && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -171,7 +218,10 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
       whileHover={{ y: -4, boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)' }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="glass-card p-4 md:p-5 hover:shadow-xl transition-all duration-200 cursor-pointer border-2">
+      <Card className={cn(
+        "glass-card p-4 md:p-5 hover:shadow-xl transition-all duration-200 cursor-pointer border-2",
+        isBlocked && "border-orange-500/50 bg-orange-50/30 dark:bg-orange-950/20"
+      )}>
         <div className="space-y-3 md:space-y-4">
           {/* Header */}
           <div className="flex items-start justify-between gap-2 md:gap-3">
@@ -186,6 +236,18 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
                 {isOverdue && (
                   <Badge variant="destructive" className="font-medium text-xs">
                     Overdue
+                  </Badge>
+                )}
+                {isBlocked && (
+                  <Badge variant="outline" className="font-medium text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-orange-500/30 gap-1">
+                    <LockKeyhole className="h-3 w-3" />
+                    Blocked
+                  </Badge>
+                )}
+                {hasDependencies && !isBlocked && (
+                  <Badge variant="outline" className="font-medium text-xs gap-1">
+                    <Link2 className="h-3 w-3" />
+                    {dependencies.length} {dependencies.length === 1 ? 'Dependency' : 'Dependencies'}
                   </Badge>
                 )}
                 {hasReminders && (
@@ -247,6 +309,23 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
             <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 leading-relaxed">
               {task.description}
             </p>
+          )}
+
+          {/* Dependency Warning */}
+          {isBlocked && (
+            <Card className="p-3 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+                <div className="text-xs space-y-1">
+                  <div className="font-semibold text-orange-900 dark:text-orange-300">
+                    Task is blocked by {blockedByDeps.length} {blockedByDeps.length === 1 ? 'task' : 'tasks'}
+                  </div>
+                  <div className="text-orange-700 dark:text-orange-400">
+                    Complete blocking tasks first to proceed
+                  </div>
+                </div>
+              </div>
+            </Card>
           )}
 
           {/* Progress Bar (Manual) */}
