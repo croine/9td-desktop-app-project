@@ -63,6 +63,8 @@ import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
 import { Card } from '@/components/ui/card'
 import { UserAvatar } from '@/components/UserAvatar'
 import { MessageSystem } from '@/components/MessageSystem/MessageSystem'
+import { PomodoroTaskIntegration } from '@/components/PomodoroTaskIntegration'
+import { TimeAnalytics } from '@/components/TimeAnalytics'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -941,18 +943,20 @@ export default function Home() {
                   <div>
                     <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
                     <p className="text-muted-foreground">
-                      Focus with structured work/break intervals
+                      Focus with structured work/break intervals and track time against tasks
                     </p>
                   </div>
-                  <div className="max-w-2xl mx-auto">
-                    <PomodoroTimer
+                  <div className="max-w-3xl mx-auto">
+                    <PomodoroTaskIntegration
+                      tasks={sortedTasks}
+                      onTaskUpdate={(taskId, updates) => {
+                        updateTask(taskId, updates)
+                        refreshData()
+                      }}
                       workDuration={settings.pomodoroWorkDuration || 25}
                       breakDuration={settings.pomodoroBreakDuration || 5}
                       longBreakDuration={settings.pomodoroLongBreakDuration || 15}
                       sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
-                      onSessionComplete={(duration, type) => {
-                        toast.success(`${type === 'work' ? 'Work' : 'Break'} session completed!`)
-                      }}
                     />
                   </div>
                 </div>
@@ -985,12 +989,31 @@ export default function Home() {
               !session?.user ? (
                 <ProtectedViewPlaceholder viewName="Analytics" />
               ) : (
-                <Analytics
-                  tasks={tasks}
-                  tags={tags}
-                  categories={categories}
-                  onExport={handleExportJSON}
-                />
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
+                    <p className="text-muted-foreground">
+                      Comprehensive analytics including time tracking and productivity insights
+                    </p>
+                  </div>
+                  
+                  {/* Time Analytics Section */}
+                  <div>
+                    <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
+                    <TimeAnalytics tasks={tasks} />
+                  </div>
+
+                  {/* General Analytics */}
+                  <div>
+                    <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
+                    <Analytics
+                      tasks={tasks}
+                      tags={tags}
+                      categories={categories}
+                      onExport={handleExportJSON}
+                    />
+                  </div>
+                </div>
               )
             )}
 

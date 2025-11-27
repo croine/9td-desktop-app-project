@@ -15,6 +15,7 @@ import { TaskDependencies } from "@/components/TaskDependencies";
 import { SubtaskManager } from "@/components/SubtaskManager";
 import { TaskCommentsTimeline } from "@/components/TaskCommentsTimeline";
 import { FileAttachmentManager } from "@/components/FileAttachmentManager";
+import { TimeEstimateInput } from "@/components/TimeEstimateInput";
 import {
   Dialog,
   DialogContent,
@@ -923,6 +924,18 @@ export function CreateTaskModal({
                     mode={editTask ? 'edit' : 'create'}
                   />
                 </div>
+
+                {/* Time Estimate */}
+                <TimeEstimateInput
+                  estimatedMinutes={
+                    parseInt(estimatedHours || '0') * 60 + parseInt(estimatedMinutes || '0')
+                  }
+                  onChange={(minutes) => {
+                    setEstimatedHours(Math.floor(minutes / 60).toString())
+                    setEstimatedMinutes((minutes % 60).toString())
+                  }}
+                  actualMinutes={Math.floor((editTask?.timeTracking?.totalTime || 0) / 60)}
+                />
 
                 {/* File Attachments */}
                 <div className="space-y-2">
