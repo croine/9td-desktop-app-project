@@ -14,6 +14,8 @@ import { PrivacySettings } from '@/components/PrivacySettings'
 import { IntegrationsSettings } from '@/components/IntegrationsSettings'
 import { AdvancedSettings } from '@/components/AdvancedSettings'
 import { Templates } from '@/components/Templates'
+import { EnhancedTemplateManager } from '@/components/EnhancedTemplateManager'
+import { AutomationRulesManager } from '@/components/AutomationRulesManager'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttView } from '@/components/GanttView'
 import { CalendarView } from '@/components/CalendarView'
@@ -50,6 +52,7 @@ import {
   Shield,
   Plug,
   Code,
+  Workflow,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -119,7 +122,7 @@ export function SettingsHub({
   onSaveTask,
   initialTab = "general"
 }: SettingsHubProps) {
-  // Map individual tabs to their parent categories - UPDATED WITH NEW STRUCTURE
+  // Map individual tabs to their parent categories - UPDATED WITH AUTOMATION
   const tabToCategory: { [key: string]: string } = {
     'quick-links': 'configuration',
     'projects': 'views',
@@ -131,6 +134,7 @@ export function SettingsHub({
     'inbox': 'productivity',
     'templates': 'management',
     'analytics': 'management',
+    'automation': 'management',
     'account': 'settings',
     'general': 'settings',
     'appearance': 'settings',
@@ -733,7 +737,7 @@ export function SettingsHub({
             </Tabs>
           </TabsContent>
 
-          {/* Management Sub-tabs */}
+          {/* Management Sub-tabs - UPDATED WITH AUTOMATION */}
           <TabsContent value="management" className="mt-0">
             <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-0">
               <div className="px-6 pt-6 pb-4 flex justify-center">
@@ -755,6 +759,20 @@ export function SettingsHub({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <TabsTrigger 
+                        value="automation" 
+                        className="relative flex items-center gap-2 px-5 py-2 rounded-full data-[state=active]:bg-background/80 data-[state=active]:shadow-sm bg-transparent hover:bg-background/60 transition-all text-xs group"
+                      >
+                        <Workflow className="h-3.5 w-3.5 text-muted-foreground group-data-[state=active]:text-primary transition-colors" />
+                        <span className="font-medium text-muted-foreground group-data-[state=active]:text-foreground transition-colors">Automation</span>
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Automation rules and workflows</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger 
                         value="analytics" 
                         className="relative flex items-center gap-2 px-5 py-2 rounded-full data-[state=active]:bg-background/80 data-[state=active]:shadow-sm bg-transparent hover:bg-background/60 transition-all text-xs group"
                       >
@@ -771,13 +789,17 @@ export function SettingsHub({
 
               <div className="p-6 pt-2">
                 <TabsContent value="templates" className="mt-0">
-                  <Templates
+                  <EnhancedTemplateManager
                     templates={templates}
                     onAddTemplate={onAddTemplate}
                     onUpdateTemplate={onUpdateTemplate}
                     onDeleteTemplate={onDeleteTemplate}
                     onCreateFromTemplate={onCreateFromTemplate}
                   />
+                </TabsContent>
+
+                <TabsContent value="automation" className="mt-0">
+                  <AutomationRulesManager />
                 </TabsContent>
 
                 <TabsContent value="analytics" className="mt-0">

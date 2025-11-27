@@ -31,6 +31,8 @@ import {
   getArchivedTasks,
   processRecurringTasks,
 } from '@/lib/storage'
+import { notificationService, scheduleDueDateNotifications } from '@/lib/notificationService'
+import { automationEngine } from '@/lib/automationEngine'
 import { AnimatedTitle } from '@/components/AnimatedTitle'
 import { NavigationSidebar, SidebarView } from '@/components/NavigationSidebar'
 import { Dashboard } from '@/components/Dashboard'
@@ -44,11 +46,14 @@ import { CalendarView } from '@/components/CalendarView'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { GanttView } from '@/components/GanttView'
 import { Analytics } from '@/components/Analytics'
+import { PomodoroTimer } from '@/components/PomodoroTimer'
+import { TimeBlockingCalendar } from '@/components/TimeBlockingCalendar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { QuickLinksDropdown } from '@/components/QuickLinksDropdown'
 import { Logo } from '@/components/Logo'
 import { DashboardTitle } from '@/components/DashboardTitle'
+import { NotificationCenter } from '@/components/NotificationCenter'
 import { Button } from '@/components/ui/button'
 import { Plus, Menu, X, MessageSquare, Lock } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
@@ -60,10 +65,10 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { MessageSystem } from '@/components/MessageSystem/MessageSystem'
 
 // ========================================================================
-// VERSION v7.0 - ALL ADVANCED FEATURES INTEGRATED
+// VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
 // ========================================================================
-const APP_VERSION = "v7.0-ALL-FEATURES-" + Date.now()
-const FORCE_RELOAD_KEY = "9td-v7.0-all-features"
+const APP_VERSION = "v8.0-COMPLETE-" + Date.now()
+const FORCE_RELOAD_KEY = "9td-v8.0-complete"
 
 export default function Home() {
   const router = useRouter()
@@ -112,6 +117,50 @@ export default function Home() {
   // Initialize browser notifications
   useBrowserNotifications(tasks)
 
+  // Initialize notification service and automation engine
+  useEffect(() => {
+    // Request notification permissions
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    // Schedule due date notifications
+    const notificationInterval = setInterval(() => {
+      if (session?.user) {
+        scheduleDueDateNotifications(tasks, settings.notificationTimings || [15, 60, 1440])
+      }
+    }, 60000) // Check every minute
+
+    // Process automation rules
+    const automationInterval = setInterval(() => {
+      if (session?.user) {
+        const triggeredRules = automationEngine.processAutomationRules(tasks)
+        
+        triggeredRules.forEach(({ rule, task, actions }) => {
+          const updates = automationEngine.executeActions(task, actions)
+          updateTask(task.id, updates)
+          
+          notificationService.send({
+            type: 'task_updated',
+            title: '⚡ Automation Rule Triggered',
+            message: `Rule "${rule.name}" updated task "${task.title}"`,
+            priority: 'low',
+            metadata: { taskId: task.id, ruleId: rule.id }
+          })
+        })
+
+        if (triggeredRules.length > 0) {
+          refreshData()
+        }
+      }
+    }, 5 * 60000) // Check every 5 minutes
+
+    return () => {
+      clearInterval(notificationInterval)
+      clearInterval(automationInterval)
+    }
+  }, [tasks, session, settings.notificationTimings])
+
   // Keyboard shortcuts
   const viewMap: { [key: string]: SidebarView } = {
     '1': 'dashboard',
@@ -119,11 +168,10 @@ export default function Home() {
     '3': 'calendar',
     '4': 'kanban',
     '5': 'gantt',
-    '6': 'analytics',
-    '7': 'activity-logs',
-    '8': 'owner-panel',
-    '9': 'settings',
-    '0': 'message-system',
+    '6': 'pomodoro',
+    '7': 'time-blocking',
+    '8': 'analytics',
+    '9': 'activity-logs',
   }
 
   useKeyboardShortcuts([
@@ -317,9 +365,25 @@ export default function Home() {
     if (editingTask) {
       updateTask(task.id, task)
       toast.success('Task updated successfully')
+      
+      notificationService.send({
+        type: 'task_updated',
+        title: '✏️ Task Updated',
+        message: `"${task.title}" has been updated`,
+        priority: 'low',
+        metadata: { taskId: task.id }
+      })
     } else {
       addTask(task)
       toast.success('Task created successfully')
+      
+      notificationService.send({
+        type: 'task_updated',
+        title: '✨ Task Created',
+        message: `New task: "${task.title}"`,
+        priority: 'low',
+        metadata: { taskId: task.id }
+      })
     }
     refreshData()
     setEditingTask(null)
@@ -334,6 +398,13 @@ export default function Home() {
     }
     setEditingTask(task)
     setCreateModalOpen(true)
+  }
+
+  const handleEditTaskById = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (task) {
+      handleEditTask(task)
+    }
   }
 
   const handleDeleteTask = (taskId: string) => {
@@ -359,8 +430,20 @@ export default function Home() {
   }
 
   const handleStatusChange = (taskId: string, status: Task['status']) => {
+    const task = tasks.find(t => t.id === taskId)
     updateTask(taskId, { status })
     toast.success(`Task status updated to ${status}`)
+    
+    if (status === 'completed' && task) {
+      notificationService.send({
+        type: 'task_completed',
+        title: '🎉 Task Completed',
+        message: `"${task.title}" has been completed!`,
+        priority: 'medium',
+        metadata: { taskId }
+      })
+    }
+    
     refreshData()
   }
 
@@ -416,6 +499,8 @@ export default function Home() {
       'calendar',
       'kanban', 
       'gantt',
+      'pomodoro',
+      'time-blocking',
       'analytics',
       'activity-logs',
       'owner-panel',
@@ -709,6 +794,7 @@ export default function Home() {
               </div>
               
               <div className="flex items-center gap-2">
+                <NotificationCenter tasks={tasks} onTaskClick={handleEditTaskById} />
                 <UserAvatar 
                   session={session} 
                   onOpenSettings={() => {
@@ -844,6 +930,54 @@ export default function Home() {
                   categories={categories}
                   onTaskClick={handleEditTask}
                 />
+              )
+            )}
+
+            {currentView === 'pomodoro' && (
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
+                    <p className="text-muted-foreground">
+                      Focus with structured work/break intervals
+                    </p>
+                  </div>
+                  <div className="max-w-2xl mx-auto">
+                    <PomodoroTimer
+                      workDuration={settings.pomodoroWorkDuration || 25}
+                      breakDuration={settings.pomodoroBreakDuration || 5}
+                      longBreakDuration={settings.pomodoroLongBreakDuration || 15}
+                      sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
+                      onSessionComplete={(duration, type) => {
+                        toast.success(`${type === 'work' ? 'Work' : 'Break'} session completed!`)
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
+            {currentView === 'time-blocking' && (
+              !session?.user ? (
+                <ProtectedViewPlaceholder viewName="Time Blocking" />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
+                    <p className="text-muted-foreground">
+                      Schedule and organize your tasks throughout the week
+                    </p>
+                  </div>
+                  <TimeBlockingCalendar
+                    tasks={sortedTasks}
+                    onTaskClick={handleEditTask}
+                    onBlockCreate={(block) => {
+                      toast.success('Time block created')
+                    }}
+                  />
+                </div>
               )
             )}
 
