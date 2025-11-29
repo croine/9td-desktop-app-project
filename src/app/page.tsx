@@ -713,6 +713,18 @@ export default function Home() {
     }
   })
 
+  // Show loading state while session is being checked
+  if (sessionPending) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground font-medium">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen overflow-hidden" key={APP_VERSION}>
       <Toaster position="top-right" />

@@ -46,8 +46,11 @@ class AutomationEngine {
   private checkInterval: NodeJS.Timeout | null = null
 
   private constructor() {
-    this.loadRules()
-    this.startAutomation()
+    // Only initialize in browser environment
+    if (typeof window !== 'undefined') {
+      this.loadRules()
+      this.startAutomation()
+    }
   }
 
   static getInstance(): AutomationEngine {
@@ -58,6 +61,8 @@ class AutomationEngine {
   }
 
   private loadRules(): void {
+    if (typeof window === 'undefined') return
+    
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
@@ -74,6 +79,8 @@ class AutomationEngine {
   }
 
   private saveRules(): void {
+    if (typeof window === 'undefined') return
+    
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.rules))
     } catch (error) {
@@ -179,6 +186,8 @@ class AutomationEngine {
   }
 
   processAutomationRules(tasks?: Task[]): { rule: AutomationRule; task: Task; actions: AutomationAction[] }[] {
+    if (typeof window === 'undefined') return []
+    
     if (!tasks) {
       // Load tasks from storage if not provided
       try {
@@ -314,4 +323,19 @@ class AutomationEngine {
   }
 }
 
-export const automationEngine = AutomationEngine.getInstance()
+let _automationEngineInstance: AutomationEngine | null = null;
+
+export const automationEngine = new Proxy({} as AutomationEngine, {
+  get(target, prop) {
+    if (typeof window === 'undefined') {
+      // Return no-op functions during SSR
+      if (prop === 'processAutomationRules') return () => [];
+      return () => {};
+    }
+    if (!_automationEngineInstance) {
+      _automationEngineInstance = AutomationEngine.getInstance();
+    }
+    const value = (_automationEngineInstance as any)[prop];
+    return typeof value === 'function' ? value.bind(_automationEngineInstance) : value;
+  }
+});
