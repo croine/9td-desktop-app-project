@@ -58,6 +58,7 @@ import { Button } from '@/components/ui/button'
 import { Plus, Menu, X, MessageSquare, Lock } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
+import { showToast, keyboardShortcutToast } from '@/lib/toast-utils'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useBrowserNotifications } from '@/hooks/useBrowserNotifications'
 import { Card } from '@/components/ui/card'
@@ -274,9 +275,9 @@ export default function Home() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      toast.success('Data exported successfully')
+      showToast.exportSuccess('JSON')
     } catch (error) {
-      toast.error('Failed to export data')
+      showToast.error('Failed to export data')
       console.error('Export error:', error)
     }
   }
@@ -309,9 +310,9 @@ export default function Home() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      toast.success('Tasks exported to CSV')
+      showToast.exportSuccess('CSV')
     } catch (error) {
-      toast.error('Failed to export CSV')
+      showToast.error('Failed to export CSV')
       console.error('CSV export error:', error)
     }
   }
@@ -319,54 +320,64 @@ export default function Home() {
   const handleImport = (data: any): boolean => {
     try {
       if (!data || typeof data !== 'object') {
+        showToast.importError('Invalid data format')
         return false
       }
+      
+      let itemCount = 0
       
       if (Array.isArray(data.tasks)) {
         data.tasks.forEach((task: any) => {
           addTask(task)
+          itemCount++
         })
       }
       
       if (Array.isArray(data.tags)) {
         data.tags.forEach((tag: any) => {
           addTag(tag)
+          itemCount++
         })
       }
       
       if (Array.isArray(data.categories)) {
         data.categories.forEach((category: any) => {
           addCategory(category)
+          itemCount++
         })
       }
       
       if (Array.isArray(data.templates)) {
         data.templates.forEach((template: any) => {
           addTemplate(template)
+          itemCount++
         })
       }
       
       if (data.settings) {
         saveSettings(data.settings)
         setSettings(data.settings)
+        itemCount++
       }
       
       refreshData()
+      showToast.importSuccess(itemCount)
       return true
     } catch (error) {
       console.error('Import error:', error)
+      showToast.importError('Failed to import data')
       return false
     }
   }
 
   const handleSaveTask = (task: Task) => {
     if (!session?.user) {
-      toast.error('Please sign in to save tasks')
+      showToast.error('Please sign in to save tasks')
       return
     }
     if (editingTask) {
       updateTask(task.id, task)
-      toast.success('Task updated successfully')
+      showToast.taskUpdated(task.title)
       
       notificationService.send({
         type: 'task_updated',
@@ -377,7 +388,7 @@ export default function Home() {
       })
     } else {
       addTask(task)
-      toast.success('Task created successfully')
+      showToast.taskCreated(task.title)
       
       notificationService.send({
         type: 'task_updated',
@@ -394,7 +405,7 @@ export default function Home() {
 
   const handleEditTask = (task: Task) => {
     if (!session?.user) {
-      toast.error('Please sign in to edit tasks')
+      showToast.error('Please sign in to edit tasks')
       router.push('/login')
       return
     }
@@ -411,32 +422,34 @@ export default function Home() {
 
   const handleDeleteTask = (taskId: string) => {
     if (!session?.user) {
-      toast.error('Please sign in to delete tasks')
+      showToast.error('Please sign in to delete tasks')
       return
     }
+    const task = tasks.find(t => t.id === taskId)
     deleteTask(taskId)
-    toast.success('Task deleted successfully')
+    showToast.taskDeleted(task?.title || 'Task')
     refreshData()
   }
 
   const handleArchiveTask = (taskId: string) => {
     archiveTask(taskId)
-    toast.success('Task archived successfully')
+    showToast.taskArchived(1)
     refreshData()
   }
 
   const handleUnarchiveTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId) || archivedTasks.find(t => t.id === taskId)
     unarchiveTask(taskId)
-    toast.success('Task restored successfully')
+    showToast.taskRestored(task?.title || 'Task')
     refreshData()
   }
 
   const handleStatusChange = (taskId: string, status: Task['status']) => {
     const task = tasks.find(t => t.id === taskId)
     updateTask(taskId, { status })
-    toast.success(`Task status updated to ${status}`)
     
     if (status === 'completed' && task) {
+      showToast.taskCompleted(task.title)
       notificationService.send({
         type: 'task_completed',
         title: '🎉 Task Completed',
@@ -444,6 +457,8 @@ export default function Home() {
         priority: 'medium',
         metadata: { taskId }
       })
+    } else if (task) {
+      showToast.statusChanged(task.title, status)
     }
     
     refreshData()
@@ -486,7 +501,7 @@ export default function Home() {
 
   const handleCreateTaskClick = () => {
     if (!session?.user) {
-      toast.error('Please sign in to create tasks')
+      showToast.error('Please sign in to create tasks')
       router.push('/login')
       return
     }
@@ -511,7 +526,7 @@ export default function Home() {
     ]
     
     if (protectedViews.includes(view) && !session?.user) {
-      toast.error('Please sign in to access this feature')
+      showToast.error('Please sign in to access this feature')
       router.push('/login')
       return
     }
@@ -546,19 +561,19 @@ export default function Home() {
   const handleAddTemplate = (template: TaskTemplate) => {
     addTemplate(template)
     setTemplates(getTemplates())
-    toast.success('Template created successfully')
+    showToast.templateCreated(template.name)
   }
 
   const handleUpdateTemplate = (templateId: string, updates: Partial<TaskTemplate>) => {
     updateTemplate(templateId, updates)
     setTemplates(getTemplates())
-    toast.success('Template updated successfully')
+    showToast.success('Template Updated', 'Your template has been updated successfully')
   }
 
   const handleDeleteTemplate = (templateId: string) => {
     deleteTemplate(templateId)
     setTemplates(getTemplates())
-    toast.success('Template deleted successfully')
+    showToast.success('Template Deleted', 'Template has been removed')
   }
 
   const handleCreateFromTemplate = (template: TaskTemplate) => {
@@ -576,32 +591,32 @@ export default function Home() {
       timeTracking: template.defaultValues.timeTracking,
     }
     addTask(newTask)
-    toast.success(`Task created from template: ${template.name}`)
+    showToast.templateApplied(template.name)
     refreshData()
     setCurrentView('your-tasks')
   }
 
   const handleBulkArchive = (taskIds: string[]) => {
     taskIds.forEach(id => archiveTask(id))
-    toast.success(`${taskIds.length} task${taskIds.length > 1 ? 's' : ''} archived successfully`)
+    showToast.taskArchived(taskIds.length)
     refreshData()
   }
 
   const handleBulkDelete = (taskIds: string[]) => {
     taskIds.forEach(id => deleteTask(id))
-    toast.success(`${taskIds.length} task${taskIds.length > 1 ? 's' : ''} deleted successfully`)
+    showToast.bulkOperation('deleted', taskIds.length)
     refreshData()
   }
 
   const handleBulkStatusChange = (taskIds: string[], status: Task['status']) => {
     taskIds.forEach(id => updateTask(id, { status }))
-    toast.success(`${taskIds.length} task${taskIds.length > 1 ? 's' : ''} updated to ${status}`)
+    showToast.bulkOperation(`updated to ${status}`, taskIds.length)
     refreshData()
   }
 
   const handleTaskReschedule = (taskId: string, newDate: Date) => {
     updateTask(taskId, { dueDate: newDate.toISOString() })
-    toast.success('Task rescheduled successfully')
+    showToast.success('Task Rescheduled', 'Due date has been updated successfully')
     refreshData()
   }
 
