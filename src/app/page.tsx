@@ -742,58 +742,94 @@ export default function Home() {
   if (sessionPending) {
     return (
       <div className="flex h-screen items-center justify-center bg-background relative overflow-hidden">
-        {/* Animated Background Orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        {/* Optimized Animated Background - Reduced to 2 orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div 
+            className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl"
+            style={{
+              animation: 'breathe 4s ease-in-out infinite',
+              willChange: 'transform, opacity'
+            }}
+          />
+          <div 
+            className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-3xl"
+            style={{
+              animation: 'breathe 4s ease-in-out infinite 2s',
+              willChange: 'transform, opacity'
+            }}
+          />
         </div>
 
         {/* Main Loading Content */}
         <div className="relative z-10 text-center space-y-8">
-          {/* Fancy Spinner Container */}
+          {/* Optimized Spinner - GPU accelerated */}
           <div className="relative w-32 h-32 mx-auto">
-            {/* Outer rotating ring */}
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary border-r-primary/50 animate-spin" />
+            {/* Main rotating ring - smooth and fast */}
+            <div 
+              className="absolute inset-0 rounded-full border-[6px] border-transparent border-t-primary border-r-primary/60"
+              style={{
+                animation: 'spin-smooth 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+                willChange: 'transform'
+              }}
+            />
             
-            {/* Middle rotating ring (opposite direction) */}
-            <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-purple-500 border-l-purple-500/50 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            {/* Secondary ring for depth */}
+            <div 
+              className="absolute inset-3 rounded-full border-[5px] border-transparent border-b-purple-500 border-l-purple-500/60"
+              style={{
+                animation: 'spin-smooth 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse',
+                willChange: 'transform'
+              }}
+            />
             
-            {/* Inner rotating ring */}
-            <div className="absolute inset-4 rounded-full border-4 border-transparent border-t-blue-500 border-r-blue-500/50 animate-spin" style={{ animationDuration: '1s' }} />
-            
-            {/* Center pulsing dot */}
+            {/* Center glowing core */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary via-purple-500 to-blue-500 rounded-full animate-pulse" />
-            </div>
-
-            {/* Orbiting particles */}
-            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '3s' }}>
-              <div className="absolute top-0 left-1/2 w-3 h-3 bg-primary rounded-full -translate-x-1/2 animate-pulse" />
-            </div>
-            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}>
-              <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-purple-500 rounded-full -translate-x-1/2 animate-pulse" />
-            </div>
-            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '2.5s' }}>
-              <div className="absolute left-0 top-1/2 w-3 h-3 bg-blue-500 rounded-full -translate-y-1/2 animate-pulse" />
+              <div 
+                className="w-10 h-10 bg-gradient-to-br from-primary via-purple-500 to-blue-500 rounded-full"
+                style={{
+                  animation: 'pulse-smooth 2s ease-in-out infinite',
+                  willChange: 'transform'
+                }}
+              />
             </div>
           </div>
 
-          {/* Loading Text */}
+          {/* Loading Text with smooth gradient animation */}
           <div className="space-y-3">
-            <h2 className="font-display text-2xl font-bold bg-gradient-to-r from-primary via-purple-500 to-blue-500 bg-clip-text text-transparent animate-pulse">
+            <h2 
+              className="font-display text-2xl font-bold bg-gradient-to-r from-primary via-purple-500 to-blue-500 bg-clip-text text-transparent"
+              style={{
+                animation: 'pulse-text 2s ease-in-out infinite',
+                willChange: 'opacity'
+              }}
+            >
               Loading your dashboard...
             </h2>
-            <p className="text-sm text-muted-foreground font-medium animate-pulse" style={{ animationDelay: '0.5s' }}>
+            <p 
+              className="text-sm text-muted-foreground font-medium"
+              style={{
+                animation: 'pulse-text 2s ease-in-out infinite 0.3s',
+                willChange: 'opacity'
+              }}
+            >
               Preparing your workspace
             </p>
           </div>
 
-          {/* Progress dots */}
+          {/* Smooth progress dots */}
           <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+            {[0, 0.15, 0.3].map((delay, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background: i === 0 ? 'var(--primary)' : i === 1 ? 'rgb(168, 85, 247)' : 'rgb(59, 130, 246)',
+                  animation: 'bounce-smooth 1.4s ease-in-out infinite',
+                  animationDelay: `${delay}s`,
+                  willChange: 'transform'
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>

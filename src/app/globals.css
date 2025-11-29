@@ -1,3 +1,6 @@
+/* Updated: 2025-11-29T00:41:30.263Z */
+/* Updated: 2025-11-27T19:22:38.740Z */
+/* Updated: 2025-11-27T18:40:12.210Z */
 /* Updated: 2025-11-26T22:59:58.354Z */
 /* Updated: 2025-11-25T19:54:26.078Z */
 /* Updated: 2025-11-25T01:36:50.550Z */
@@ -374,6 +377,52 @@
   }
 }
 
+@keyframes bounce-smooth {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes spin-smooth {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.6;
+  }
+}
+
+@keyframes pulse-smooth {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes pulse-text {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* Animation Classes */
 .animate-float {
   animation: float 3s ease-in-out infinite;
@@ -413,6 +462,26 @@
 
 .animate-fade-ring {
   animation: fade-ring 3s ease-in-out infinite;
+}
+
+.animate-bounce-smooth {
+  animation: bounce-smooth 3s ease-in-out infinite;
+}
+
+.animate-spin-smooth {
+  animation: spin-smooth 3s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-pulse-smooth {
+  animation: pulse-smooth 3s ease-in-out infinite;
+}
+
+.animate-pulse-text {
+  animation: pulse-text 3s ease-in-out infinite;
 }
 
 /* Legacy animation classes for backwards compatibility */
