@@ -66,6 +66,8 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { MessageSystem } from '@/components/MessageSystem/MessageSystem'
 import { PomodoroTaskIntegration } from '@/components/PomodoroTaskIntegration'
 import { TimeAnalytics } from '@/components/TimeAnalytics'
+import { PageContainer, ViewTransitionLoader } from '@/components/LoadingStates'
+import { AnimatePresence } from 'framer-motion'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -100,6 +102,9 @@ export default function Home() {
   })
 
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Add loading state for view transitions
+  const [isLoadingView, setIsLoadingView] = useState(false)
 
   // Ultimate cache clearing on mount
   useEffect(() => {
@@ -531,8 +536,13 @@ export default function Home() {
       return
     }
     
-    setCurrentView(view)
-    setMobileMenuOpen(false)
+    // Add smooth transition
+    setIsLoadingView(true)
+    setTimeout(() => {
+      setCurrentView(view)
+      setMobileMenuOpen(false)
+      setIsLoadingView(false)
+    }, 150)
   }
 
   const handleOpenQuickLinksSettings = () => {
@@ -891,323 +901,331 @@ export default function Home() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
-            {currentView === 'dashboard' && (
-              <div className="mt-0">
-                <Dashboard 
-                  tasks={sortedTasks} 
-                  tags={tags} 
-                  categories={categories}
-                  settings={settings}
-                  onCreateTask={handleCreateTaskClick}
-                  onViewTasks={handleViewTasksClick}
-                />
-              </div>
-            )}
-
-            {currentView === 'your-tasks' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Your Tasks" />
+            <AnimatePresence mode="wait">
+              {isLoadingView ? (
+                <ViewTransitionLoader key="loader" />
               ) : (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
-                      <p className="text-muted-foreground">
-                        Manage and organize all your tasks
-                      </p>
+                <PageContainer key={currentView}>
+                  {currentView === 'dashboard' && (
+                    <div className="mt-0">
+                      <Dashboard 
+                        tasks={sortedTasks} 
+                        tags={tags} 
+                        categories={categories}
+                        settings={settings}
+                        onCreateTask={handleCreateTaskClick}
+                        onViewTasks={handleViewTasksClick}
+                      />
                     </div>
-                    <Button
-                      className="gap-2"
-                      onClick={() => {
-                        setEditingTask(null)
-                        setCreateModalOpen(true)
-                      }}
-                    >
-                      <Plus className="h-5 w-5" />
-                      Create Task
-                    </Button>
-                  </div>
+                  )}
 
-                  <TaskList
-                    tasks={sortedTasks}
-                    tags={tags}
-                    categories={categories}
-                    onEdit={handleEditTask}
-                    onDelete={handleDeleteTask}
-                    onStatusChange={handleStatusChange}
-                    onArchive={handleArchiveTask}
-                    onBulkArchive={handleBulkArchive}
-                    onBulkDelete={handleBulkDelete}
-                    onBulkStatusChange={handleBulkStatusChange}
-                    emptyMessage={
-                      filters.query || filters.priority || filters.status || 
-                      filters.tags.length > 0 || filters.categories.length > 0
-                        ? "No tasks match your filters"
-                        : "No tasks yet"
-                    }
-                  />
-                </div>
-              )
-            )}
+                  {currentView === 'your-tasks' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Your Tasks" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
+                            <p className="text-muted-foreground">
+                              Manage and organize all your tasks
+                            </p>
+                          </div>
+                          <Button
+                            className="gap-2"
+                            onClick={() => {
+                              setEditingTask(null)
+                              setCreateModalOpen(true)
+                            }}
+                          >
+                            <Plus className="h-5 w-5" />
+                            Create Task
+                          </Button>
+                        </div>
 
-            {currentView === 'calendar' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Calendar View" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
-                    <p className="text-muted-foreground">
-                      View and manage tasks in calendar format
-                    </p>
-                  </div>
-                  <CalendarView
-                    tasks={sortedTasks}
-                    tags={tags}
-                    categories={categories}
-                    onTaskClick={handleEditTask}
-                    onDateClick={(date) => {
-                      setEditingTask(null)
-                      setCreateModalOpen(true)
-                    }}
-                    onTaskReschedule={handleTaskReschedule}
-                  />
-                </div>
-              )
-            )}
+                        <TaskList
+                          tasks={sortedTasks}
+                          tags={tags}
+                          categories={categories}
+                          onEdit={handleEditTask}
+                          onDelete={handleDeleteTask}
+                          onStatusChange={handleStatusChange}
+                          onArchive={handleArchiveTask}
+                          onBulkArchive={handleBulkArchive}
+                          onBulkDelete={handleBulkDelete}
+                          onBulkStatusChange={handleBulkStatusChange}
+                          emptyMessage={
+                            filters.query || filters.priority || filters.status || 
+                            filters.tags.length > 0 || filters.categories.length > 0
+                              ? "No tasks match your filters"
+                              : "No tasks yet"
+                          }
+                        />
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'kanban' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Kanban Board" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
-                    <p className="text-muted-foreground">
-                      Visualize and manage tasks with drag-and-drop
-                    </p>
-                  </div>
-                  <KanbanBoard
-                    tasks={sortedTasks}
-                    tags={tags}
-                    categories={categories}
-                    onEdit={handleEditTask}
-                    onDelete={handleDeleteTask}
-                    onStatusChange={handleStatusChange}
-                  />
-                </div>
-              )
-            )}
+                  {currentView === 'calendar' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Calendar View" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
+                          <p className="text-muted-foreground">
+                            View and manage tasks in calendar format
+                          </p>
+                        </div>
+                        <CalendarView
+                          tasks={sortedTasks}
+                          tags={tags}
+                          categories={categories}
+                          onTaskClick={handleEditTask}
+                          onDateClick={(date) => {
+                            setEditingTask(null)
+                            setCreateModalOpen(true)
+                          }}
+                          onTaskReschedule={handleTaskReschedule}
+                        />
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'gantt' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Gantt View" />
-              ) : (
-                <GanttView
-                  tasks={sortedTasks}
-                  tags={tags}
-                  categories={categories}
-                  onTaskClick={handleEditTask}
-                />
-              )
-            )}
+                  {currentView === 'kanban' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Kanban Board" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
+                          <p className="text-muted-foreground">
+                            Visualize and manage tasks with drag-and-drop
+                          </p>
+                        </div>
+                        <KanbanBoard
+                          tasks={sortedTasks}
+                          tags={tags}
+                          categories={categories}
+                          onEdit={handleEditTask}
+                          onDelete={handleDeleteTask}
+                          onStatusChange={handleStatusChange}
+                        />
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'pomodoro' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
-                    <p className="text-muted-foreground">
-                      Focus with structured work/break intervals and track time against tasks
-                    </p>
-                  </div>
-                  <div className="max-w-3xl mx-auto">
-                    <PomodoroTaskIntegration
-                      tasks={sortedTasks}
-                      onTaskUpdate={(taskId, updates) => {
-                        updateTask(taskId, updates)
-                        refreshData()
-                      }}
-                      workDuration={settings.pomodoroWorkDuration || 25}
-                      breakDuration={settings.pomodoroBreakDuration || 5}
-                      longBreakDuration={settings.pomodoroLongBreakDuration || 15}
-                      sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
-                    />
-                  </div>
-                </div>
-              )
-            )}
+                  {currentView === 'gantt' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Gantt View" />
+                    ) : (
+                      <GanttView
+                        tasks={sortedTasks}
+                        tags={tags}
+                        categories={categories}
+                        onTaskClick={handleEditTask}
+                      />
+                    )
+                  )}
 
-            {currentView === 'time-blocking' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Time Blocking" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
-                    <p className="text-muted-foreground">
-                      Schedule and organize your tasks throughout the week
-                    </p>
-                  </div>
-                  <TimeBlockingCalendar
-                    tasks={sortedTasks}
-                    onTaskClick={handleEditTask}
-                    onBlockCreate={(block) => {
-                      toast.success('Time block created')
-                    }}
-                  />
-                </div>
-              )
-            )}
+                  {currentView === 'pomodoro' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
+                          <p className="text-muted-foreground">
+                            Focus with structured work/break intervals and track time against tasks
+                          </p>
+                        </div>
+                        <div className="max-w-3xl mx-auto">
+                          <PomodoroTaskIntegration
+                            tasks={sortedTasks}
+                            onTaskUpdate={(taskId, updates) => {
+                              updateTask(taskId, updates)
+                              refreshData()
+                            }}
+                            workDuration={settings.pomodoroWorkDuration || 25}
+                            breakDuration={settings.pomodoroBreakDuration || 5}
+                            longBreakDuration={settings.pomodoroLongBreakDuration || 15}
+                            sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
+                          />
+                        </div>
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'analytics' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Analytics" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
-                    <p className="text-muted-foreground">
-                      Comprehensive analytics including time tracking and productivity insights
-                    </p>
-                  </div>
-                  
-                  {/* Time Analytics Section */}
-                  <div>
-                    <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
-                    <TimeAnalytics tasks={tasks} />
-                  </div>
+                  {currentView === 'time-blocking' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Time Blocking" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
+                          <p className="text-muted-foreground">
+                            Schedule and organize your tasks throughout the week
+                          </p>
+                        </div>
+                        <TimeBlockingCalendar
+                          tasks={sortedTasks}
+                          onTaskClick={handleEditTask}
+                          onBlockCreate={(block) => {
+                            toast.success('Time block created')
+                          }}
+                        />
+                      </div>
+                    )
+                  )}
 
-                  {/* General Analytics */}
-                  <div>
-                    <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
-                    <Analytics
-                      tasks={tasks}
-                      tags={tags}
-                      categories={categories}
-                      onExport={handleExportJSON}
-                    />
-                  </div>
-                </div>
-              )
-            )}
+                  {currentView === 'analytics' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Analytics" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
+                          <p className="text-muted-foreground">
+                            Comprehensive analytics including time tracking and productivity insights
+                          </p>
+                        </div>
+                        
+                        {/* Time Analytics Section */}
+                        <div>
+                          <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
+                          <TimeAnalytics tasks={tasks} />
+                        </div>
 
-            {currentView === 'activity-logs' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Activity Logs" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
-                    <p className="text-muted-foreground">
-                      Track all changes and updates to your tasks
-                    </p>
-                  </div>
-                  <Card className="glass-card p-6">
-                    <ActivityLogComponent 
-                      logs={logs} 
-                      tags={tags}
-                      onRefresh={refreshData}
-                      onTaskClick={handleEditTask}
-                    />
-                  </Card>
-                </div>
-              )
-            )}
+                        {/* General Analytics */}
+                        <div>
+                          <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
+                          <Analytics
+                            tasks={tasks}
+                            tags={tags}
+                            categories={categories}
+                            onExport={handleExportJSON}
+                          />
+                        </div>
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'owner-panel' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Owner Panel" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
-                    <p className="text-muted-foreground">
-                      Manage tags, categories, and organize your workspace
-                    </p>
-                  </div>
-                  <Card className="glass-card p-6">
-                    <OwnerPanel
-                      tags={tags}
-                      categories={categories}
-                      tasks={tasks}
-                      onAddTag={handleAddTag}
-                      onUpdateTag={handleUpdateTag}
-                      onDeleteTag={handleDeleteTag}
-                      onAddCategory={handleAddCategory}
-                      onUpdateCategory={handleUpdateCategory}
-                      onDeleteCategory={handleDeleteCategory}
-                    />
-                  </Card>
-                </div>
-              )
-            )}
+                  {currentView === 'activity-logs' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Activity Logs" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
+                          <p className="text-muted-foreground">
+                            Track all changes and updates to your tasks
+                          </p>
+                        </div>
+                        <Card className="glass-card p-6">
+                          <ActivityLogComponent 
+                            logs={logs} 
+                            tags={tags}
+                            onRefresh={refreshData}
+                            onTaskClick={handleEditTask}
+                          />
+                        </Card>
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'message-system' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Message System" />
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
-                    <p className="text-muted-foreground">
-                      Team communication and collaboration hub
-                    </p>
-                  </div>
-                  <MessageSystem />
-                </div>
-              )
-            )}
+                  {currentView === 'owner-panel' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Owner Panel" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
+                          <p className="text-muted-foreground">
+                            Manage tags, categories, and organize your workspace
+                          </p>
+                        </div>
+                        <Card className="glass-card p-6">
+                          <OwnerPanel
+                            tags={tags}
+                            categories={categories}
+                            tasks={tasks}
+                            onAddTag={handleAddTag}
+                            onUpdateTag={handleUpdateTag}
+                            onDeleteTag={handleDeleteTag}
+                            onAddCategory={handleAddCategory}
+                            onUpdateCategory={handleUpdateCategory}
+                            onDeleteCategory={handleDeleteCategory}
+                          />
+                        </Card>
+                      </div>
+                    )
+                  )}
 
-            {currentView === 'settings' && (
-              !session?.user ? (
-                <ProtectedViewPlaceholder viewName="Settings" />
-              ) : (
-                <SettingsHub
-                  settings={settings}
-                  onSettingsChange={handleSettingsChange}
-                  onExportJSON={handleExportJSON}
-                  onExportCSV={handleExportCSV}
-                  onImport={handleImport}
-                  stats={{
-                    totalTasks: tasks.length,
-                    totalTags: tags.length,
-                    totalCategories: categories.length,
-                    totalTemplates: templates.length
-                  }}
-                  tags={tags}
-                  categories={categories}
-                  templates={templates}
-                  onAddTemplate={handleAddTemplate}
-                  onUpdateTemplate={handleUpdateTemplate}
-                  onDeleteTemplate={handleDeleteTemplate}
-                  onCreateFromTemplate={handleCreateFromTemplate}
-                  onTaskRestore={handleUnarchiveTask}
-                  onTaskDelete={handleDeleteTask}
-                  onTaskArchive={handleArchiveTask}
-                  tasks={tasks}
-                  onTaskClick={handleEditTask}
-                  onTaskEdit={handleEditTask}
-                  onTaskStatusChange={handleStatusChange}
-                  onTaskUpdate={(taskId, updates) => {
-                    updateTask(taskId, updates)
-                    refreshData()
-                    if (focusTask?.id === taskId) {
-                      setFocusTask({ ...focusTask, ...updates })
-                    }
-                  }}
-                  onCreateTask={handleCreateTaskClick}
-                  onRefresh={refreshData}
-                  focusTask={focusTask}
-                  onExitFocus={handleExitFocus}
-                  onSelectFocusTask={handleSelectFocusTask}
-                  onSaveTask={handleSaveTask}
-                  initialTab={settingsInitialTab}
-                />
-              )
-            )}
+                  {currentView === 'message-system' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Message System" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
+                          <p className="text-muted-foreground">
+                            Team communication and collaboration hub
+                          </p>
+                        </div>
+                        <MessageSystem />
+                      </div>
+                    )
+                  )}
+
+                  {currentView === 'settings' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Settings" />
+                    ) : (
+                      <SettingsHub
+                        settings={settings}
+                        onSettingsChange={handleSettingsChange}
+                        onExportJSON={handleExportJSON}
+                        onExportCSV={handleExportCSV}
+                        onImport={handleImport}
+                        stats={{
+                          totalTasks: tasks.length,
+                          totalTags: tags.length,
+                          totalCategories: categories.length,
+                          totalTemplates: templates.length
+                        }}
+                        tags={tags}
+                        categories={categories}
+                        templates={templates}
+                        onAddTemplate={handleAddTemplate}
+                        onUpdateTemplate={handleUpdateTemplate}
+                        onDeleteTemplate={handleDeleteTemplate}
+                        onCreateFromTemplate={handleCreateFromTemplate}
+                        onTaskRestore={handleUnarchiveTask}
+                        onTaskDelete={handleDeleteTask}
+                        onTaskArchive={handleArchiveTask}
+                        tasks={tasks}
+                        onTaskClick={handleEditTask}
+                        onTaskEdit={handleEditTask}
+                        onTaskStatusChange={handleStatusChange}
+                        onTaskUpdate={(taskId, updates) => {
+                          updateTask(taskId, updates)
+                          refreshData()
+                          if (focusTask?.id === taskId) {
+                            setFocusTask({ ...focusTask, ...updates })
+                          }
+                        }}
+                        onCreateTask={handleCreateTaskClick}
+                        onRefresh={refreshData}
+                        focusTask={focusTask}
+                        onExitFocus={handleExitFocus}
+                        onSelectFocusTask={handleSelectFocusTask}
+                        onSaveTask={handleSaveTask}
+                        initialTab={settingsInitialTab}
+                      />
+                    )
+                  )}
+                </PageContainer>
+              )}
+            </AnimatePresence>
           </div>
         </main>
       </div>
