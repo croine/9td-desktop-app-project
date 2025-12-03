@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { AvatarWithRings } from '@/components/avatar/AvatarWithRings'
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -16,8 +16,15 @@ import {
   MessageSquare,
   LogIn,
   LogOut,
-  User,
   Loader2,
+  Timer,
+  Clock,
+  Calendar as CalendarIcon,
+  BarChart3,
+  Trello,
+  GanttChartSquare,
+  Trophy,
+  Palette,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { authClient, useSession } from '@/lib/auth-client'
@@ -25,8 +32,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 // ========================================================================
-// NAVIGATION SIDEBAR v6.1 - WITH LIVE PROFILE UPDATES
-// Updated: DEC-24-2025 - Added Profile Refresh & Avatar Support
+// NAVIGATION SIDEBAR v7.0 - WITH ADVANCED AVATAR FEATURES
+// Updated: JAN-2025 - Added Productivity Rings, Achievements, Status, Frames
 // ========================================================================
 
 export type SidebarView = 
@@ -40,6 +47,10 @@ export type SidebarView =
   | 'kanban'
   | 'gantt'
   | 'analytics'
+  | 'pomodoro'
+  | 'time-blocking'
+  | 'gamification'
+  | 'avatar-customization'
 
 interface NavigationSidebarProps {
   currentView: SidebarView
@@ -58,6 +69,30 @@ interface UserPreferences {
   avatarShape: 'circle' | 'square' | 'rounded'
   avatarColorScheme: 'solid' | 'gradient' | 'rainbow' | 'fade'
   avatarBorderColor: string
+}
+
+interface UserStats {
+  tasksCompletedToday: number
+  tasksCompletedThisWeek: number
+  dailyGoal: number
+  weeklyGoal: number
+}
+
+interface Achievement {
+  id: number
+  achievementType: string
+  unlockedAt: string
+  isDisplayed: boolean
+}
+
+interface UserStatus {
+  status: 'active' | 'away' | 'busy' | 'offline'
+  customMessage?: string | null
+}
+
+interface ActiveFrame {
+  frameType: string
+  isActive: boolean
 }
 
 export function NavigationSidebar({ 
@@ -79,12 +114,16 @@ export function NavigationSidebar({
     avatarBorderColor: '#6366f1'
   })
   const [userName, setUserName] = useState('')
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [status, setStatus] = useState<UserStatus | null>(null)
+  const [activeFrame, setActiveFrame] = useState<ActiveFrame | null>(null)
 
-  // Fetch user preferences when session is available
+  // Fetch all user data when session is available
   useEffect(() => {
     if (session?.user) {
       setUserName(session.user.name)
-      fetchPreferences()
+      fetchAllData()
     }
   }, [session])
 
@@ -92,26 +131,29 @@ export function NavigationSidebar({
   useEffect(() => {
     if (session?.user && currentView === 'settings') {
       const interval = setInterval(() => {
-        fetchPreferences()
+        fetchAllData()
         refetchSession()
       }, 5000)
       return () => clearInterval(interval)
     }
   }, [session, currentView, refetchSession])
 
-  const fetchPreferences = async () => {
-    try {
-      const token = localStorage.getItem("bearer_token")
-      if (!token) return
+  const fetchAllData = async () => {
+    const token = localStorage.getItem("bearer_token")
+    if (!token) return
 
-      const response = await fetch('/api/user-preferences', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
+    try {
+      // Fetch all data in parallel
+      const [prefsRes, statsRes, achievementsRes, statusRes, framesRes] = await Promise.all([
+        fetch('/api/user-preferences', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user-stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/achievements', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user-status', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/avatar-frames', { headers: { 'Authorization': `Bearer ${token}` } })
+      ])
+
+      if (prefsRes.ok) {
+        const data = await prefsRes.json()
         setPreferences({
           customTitle: data.customTitle || 'Account Secured',
           showEmail: data.showEmail || false,
@@ -122,8 +164,29 @@ export function NavigationSidebar({
           avatarBorderColor: data.avatarBorderColor || '#6366f1'
         })
       }
+
+      if (statsRes.ok) {
+        const data = await statsRes.json()
+        setStats(data)
+      }
+
+      if (achievementsRes.ok) {
+        const data = await achievementsRes.json()
+        setAchievements(data)
+      }
+
+      if (statusRes.ok) {
+        const data = await statusRes.json()
+        setStatus(data)
+      }
+
+      if (framesRes.ok) {
+        const data = await framesRes.json()
+        const active = data.find((f: any) => f.isActive)
+        setActiveFrame(active || null)
+      }
     } catch (error) {
-      console.error('Failed to fetch preferences:', error)
+      console.error('Failed to fetch data:', error)
     }
   }
 
@@ -146,29 +209,8 @@ export function NavigationSidebar({
     }
   }
 
-  const getAvatarBorderClass = () => {
-    const shapeClasses = {
-      circle: 'rounded-full',
-      square: 'rounded-none',
-      rounded: 'rounded-lg'
-    }
-    
-    return shapeClasses[preferences.avatarShape]
-  }
-
-  const getAvatarRingClass = () => {
-    const colorClasses = {
-      solid: 'ring-2',
-      gradient: 'ring-2',
-      rainbow: 'ring-2 animate-rainbow',
-      fade: 'ring-2 animate-pulse'
-    }
-    
-    return colorClasses[preferences.avatarColorScheme]
-  }
-
   // ==========================================
-  // 6 NAVIGATION TABS WITH TOOLTIPS
+  // EXPANDED NAVIGATION TABS WITH NEW FEATURES
   // ==========================================
   const navigationTabs = [
     { 
@@ -187,6 +229,62 @@ export function NavigationSidebar({
       requiresAuth: true
     },
     { 
+      id: 'calendar' as const, 
+      label: 'Calendar', 
+      icon: CalendarIcon,
+      description: 'Calendar view of your tasks',
+      requiresAuth: true
+    },
+    { 
+      id: 'kanban' as const, 
+      label: 'Kanban Board', 
+      icon: Trello,
+      description: 'Drag-and-drop task management',
+      requiresAuth: true
+    },
+    { 
+      id: 'gantt' as const, 
+      label: 'Gantt Chart', 
+      icon: GanttChartSquare,
+      description: 'Timeline and dependency visualization',
+      requiresAuth: true
+    },
+    { 
+      id: 'pomodoro' as const, 
+      label: 'Pomodoro Timer', 
+      icon: Timer,
+      description: 'Focus timer with work/break intervals',
+      requiresAuth: true
+    },
+    { 
+      id: 'time-blocking' as const, 
+      label: 'Time Blocking', 
+      icon: Clock,
+      description: 'Schedule tasks in weekly calendar',
+      requiresAuth: true
+    },
+    { 
+      id: 'analytics' as const, 
+      label: 'Analytics', 
+      icon: BarChart3,
+      description: 'Productivity insights and reports',
+      requiresAuth: true
+    },
+    { 
+      id: 'gamification' as const, 
+      label: 'Achievements', 
+      icon: Trophy,
+      description: 'Track achievements, XP, and daily streaks',
+      requiresAuth: true
+    },
+    { 
+      id: 'avatar-customization' as const, 
+      label: 'Avatar Studio', 
+      icon: Palette,
+      description: 'Customize your avatar with frames and colors',
+      requiresAuth: true
+    },
+    { 
       id: 'activity-logs' as const, 
       label: 'Activity Logs', 
       icon: History,
@@ -201,17 +299,17 @@ export function NavigationSidebar({
       requiresAuth: true
     },
     { 
-      id: 'settings' as const, 
-      label: 'Settings Hub', 
-      icon: Settings,
-      description: 'Advanced features and configuration (11 tabs)',
+      id: 'message-system' as const, 
+      label: 'Messages', 
+      icon: MessageSquare,
+      description: 'Team communication and collaboration',
       requiresAuth: true
     },
     { 
-      id: 'message-system' as const, 
-      label: 'Message System', 
-      icon: MessageSquare,
-      description: 'Team communication and collaboration',
+      id: 'settings' as const, 
+      label: 'Settings Hub', 
+      icon: Settings,
+      description: 'Advanced features and configuration',
       requiresAuth: true
     },
   ]
@@ -229,7 +327,7 @@ export function NavigationSidebar({
     <div className="flex flex-col h-full border-r bg-sidebar/50 backdrop-blur-sm">
       <ScrollArea className="flex-1 py-4">
         <div className="space-y-4 px-3">
-          {/* User Section */}
+          {/* User Section with Advanced Avatar */}
           <div className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20">
             {sessionPending ? (
               <div className="flex items-center justify-center py-2">
@@ -238,18 +336,23 @@ export function NavigationSidebar({
             ) : session?.user ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Avatar 
-                    className={`h-8 w-8 ${getAvatarBorderClass()} ${getAvatarRingClass()}`}
-                    style={{ 
-                      borderColor: preferences.avatarBorderColor,
-                      '--tw-ring-color': preferences.avatarBorderColor 
-                    } as any}
-                  >
-                    {preferences.avatarUrl && <AvatarImage src={preferences.avatarUrl} alt={userName} />}
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold text-xs">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AvatarWithRings
+                    avatarUrl={preferences.avatarUrl}
+                    initials={initials}
+                    userName={userName}
+                    stats={stats || undefined}
+                    achievements={achievements}
+                    status={status || undefined}
+                    activeFrame={activeFrame}
+                    avatarShape={preferences.avatarShape}
+                    avatarColorScheme={preferences.avatarColorScheme}
+                    avatarBorderColor={preferences.avatarBorderColor}
+                    size="sm"
+                    showRings={true}
+                    showAchievements={true}
+                    showStatus={true}
+                    showFrame={true}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{userName}</p>
                     {preferences.showEmail && (
@@ -375,17 +478,16 @@ export function NavigationSidebar({
           >
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-foreground">
-                💡 Advanced Features
+                💡 Advanced Avatar Features
               </p>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Click <span className="font-bold text-primary">Settings Hub</span> above to access:
+                Check out your new avatar features:
               </p>
               <ul className="text-[9px] text-muted-foreground space-y-0.5 pl-2">
-                <li>• Projects & Kanban Boards</li>
-                <li>• Calendar & Gantt Charts</li>
-                <li>• Time Tracker & Analytics</li>
-                <li>• Templates & Focus Mode</li>
-                <li>• And 7 more features...</li>
+                <li>• 🎯 Productivity Rings</li>
+                <li>• 🏆 Achievement Badges</li>
+                <li>• 🟢 Status Indicators</li>
+                <li>• 🖼️ Avatar Frames</li>
               </ul>
             </div>
           </motion.div>
@@ -395,8 +497,8 @@ export function NavigationSidebar({
       {/* Footer */}
       <div className="p-3 border-t bg-muted/30">
         <div className="text-xs text-muted-foreground text-center space-y-0.5">
-          <p className="font-semibold text-[10px]">9TD v6.1 Ultimate</p>
-          <p className="text-[9px]">With Live Updates</p>
+          <p className="font-semibold text-[10px]">9TD v7.0 Ultimate</p>
+          <p className="text-[9px]">With Advanced Avatars</p>
         </div>
       </div>
     </div>

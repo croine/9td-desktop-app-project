@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from '@/lib/auth-client'
+import { useCustomer } from 'autumn-js/react'
 import { Task, Tag, Category, ActivityLog, TaskTemplate } from '@/types/task'
 import {
   getTasks,
@@ -68,6 +69,11 @@ import { PomodoroTaskIntegration } from '@/components/PomodoroTaskIntegration'
 import { TimeAnalytics } from '@/components/TimeAnalytics'
 import { PageContainer, ViewTransitionLoader } from '@/components/LoadingStates'
 import { AnimatePresence } from 'framer-motion'
+import { PaymentWarning } from '@/components/PaymentWarning'
+import { FeatureGate } from '@/components/FeatureGate'
+import { PlanUsageIndicator } from '@/components/PlanUsageIndicator'
+import { GamificationDashboard } from '@/components/GamificationDashboard'
+import { AvatarCustomization } from '@/components/AvatarCustomization'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -78,6 +84,7 @@ const FORCE_RELOAD_KEY = "9td-v8.0-complete"
 export default function Home() {
   const router = useRouter()
   const { data: session, isPending: sessionPending } = useSession()
+  const { customer, check, track, refetch: refetchCustomer, isLoading: isLoadingCustomer } = useCustomer()
   const [currentView, setCurrentView] = useState<SidebarView>('dashboard')
   const [tasks, setTasks] = useState<Task[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -258,7 +265,21 @@ export default function Home() {
     setCategories(getCategories())
   }
 
-  const handleExportJSON = () => {
+  const handleExportJSON = async () => {
+    if (!session?.user) {
+      showToast.error('Please sign in to export data')
+      router.push('/login')
+      return
+    }
+
+    // Check advanced export feature
+    const { data } = await check({ featureId: 'advanced_export', requiredBalance: 1 })
+    if (!data?.allowed) {
+      showToast.error('Advanced export requires Pro plan. Please upgrade.')
+      router.push('/pricing')
+      return
+    }
+
     try {
       const data = {
         tasks: getTasks(),
@@ -280,6 +301,14 @@ export default function Home() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
+      // Track usage
+      await track({ 
+        featureId: 'advanced_export', 
+        value: 1, 
+        idempotencyKey: `export-json-${Date.now()}` 
+      })
+      await refetchCustomer()
+      
       showToast.exportSuccess('JSON')
     } catch (error) {
       showToast.error('Failed to export data')
@@ -287,7 +316,21 @@ export default function Home() {
     }
   }
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
+    if (!session?.user) {
+      showToast.error('Please sign in to export data')
+      router.push('/login')
+      return
+    }
+
+    // Check advanced export feature
+    const { data } = await check({ featureId: 'advanced_export', requiredBalance: 1 })
+    if (!data?.allowed) {
+      showToast.error('Advanced export requires Pro plan. Please upgrade.')
+      router.push('/pricing')
+      return
+    }
+
     try {
       const tasks = getTasks()
       const headers = ['Title', 'Description', 'Status', 'Priority', 'Due Date', 'Created At']
@@ -314,6 +357,14 @@ export default function Home() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      
+      // Track usage
+      await track({ 
+        featureId: 'advanced_export', 
+        value: 1, 
+        idempotencyKey: `export-csv-${Date.now()}` 
+      })
+      await refetchCustomer()
       
       showToast.exportSuccess('CSV')
     } catch (error) {
@@ -375,11 +426,22 @@ export default function Home() {
     }
   }
 
-  const handleSaveTask = (task: Task) => {
+  const handleSaveTask = async (task: Task) => {
     if (!session?.user) {
       showToast.error('Please sign in to save tasks')
       return
     }
+
+    // Check task limit before creating new task
+    if (!editingTask) {
+      const { data } = await check({ featureId: 'tasks', requiredBalance: 1 })
+      if (!data?.allowed) {
+        showToast.error('Task limit reached. Please upgrade your plan.')
+        router.push('/pricing')
+        return
+      }
+    }
+
     if (editingTask) {
       updateTask(task.id, task)
       showToast.taskUpdated(task.title)
@@ -394,6 +456,18 @@ export default function Home() {
     } else {
       addTask(task)
       showToast.taskCreated(task.title)
+      
+      // Track task creation
+      try {
+        await track({ 
+          featureId: 'tasks', 
+          value: 1, 
+          idempotencyKey: `task-create-${task.id}-${Date.now()}` 
+        })
+        await refetchCustomer()
+      } catch (error) {
+        console.error('Failed to track task creation:', error)
+      }
       
       notificationService.send({
         type: 'task_updated',
@@ -524,6 +598,8 @@ export default function Home() {
       'pomodoro',
       'time-blocking',
       'analytics',
+      'gamification',
+      'avatar-customization',
       'activity-logs',
       'owner-panel',
       'settings',
@@ -843,6 +919,13 @@ export default function Home() {
         </header>
 
         <main className="flex-1 overflow-y-auto">
+          {/* Payment Warning */}
+          {session?.user && (
+            <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
+              <PaymentWarning />
+            </div>
+          )}
+
           <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
             <AnimatePresence mode="wait">
               {isLoadingView ? (
@@ -938,22 +1021,27 @@ export default function Home() {
                     !session?.user ? (
                       <ProtectedViewPlaceholder viewName="Kanban Board" />
                     ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
-                          <p className="text-muted-foreground">
-                            Visualize and manage tasks with drag-and-drop
-                          </p>
+                      <FeatureGate 
+                        featureId="advanced_views"
+                        upgradeMessage="Upgrade to Pro to access Kanban board and advanced task views"
+                      >
+                        <div className="space-y-6">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
+                            <p className="text-muted-foreground">
+                              Visualize and manage tasks with drag-and-drop
+                            </p>
+                          </div>
+                          <KanbanBoard
+                            tasks={sortedTasks}
+                            tags={tags}
+                            categories={categories}
+                            onEdit={handleEditTask}
+                            onDelete={handleDeleteTask}
+                            onStatusChange={handleStatusChange}
+                          />
                         </div>
-                        <KanbanBoard
-                          tasks={sortedTasks}
-                          tags={tags}
-                          categories={categories}
-                          onEdit={handleEditTask}
-                          onDelete={handleDeleteTask}
-                          onStatusChange={handleStatusChange}
-                        />
-                      </div>
+                      </FeatureGate>
                     )
                   )}
 
@@ -961,12 +1049,17 @@ export default function Home() {
                     !session?.user ? (
                       <ProtectedViewPlaceholder viewName="Gantt View" />
                     ) : (
-                      <GanttView
-                        tasks={sortedTasks}
-                        tags={tags}
-                        categories={categories}
-                        onTaskClick={handleEditTask}
-                      />
+                      <FeatureGate 
+                        featureId="advanced_views"
+                        upgradeMessage="Upgrade to Pro to access Gantt charts and project timeline views"
+                      >
+                        <GanttView
+                          tasks={sortedTasks}
+                          tags={tags}
+                          categories={categories}
+                          onTaskClick={handleEditTask}
+                        />
+                      </FeatureGate>
                     )
                   )}
 
@@ -974,27 +1067,32 @@ export default function Home() {
                     !session?.user ? (
                       <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
                     ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
-                          <p className="text-muted-foreground">
-                            Focus with structured work/break intervals and track time against tasks
-                          </p>
+                      <FeatureGate 
+                        featureId="pomodoro"
+                        upgradeMessage="Upgrade to Pro to access Pomodoro timer with task integration"
+                      >
+                        <div className="space-y-6">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
+                            <p className="text-muted-foreground">
+                              Focus with structured work/break intervals and track time against tasks
+                            </p>
+                          </div>
+                          <div className="max-w-3xl mx-auto">
+                            <PomodoroTaskIntegration
+                              tasks={sortedTasks}
+                              onTaskUpdate={(taskId, updates) => {
+                                updateTask(taskId, updates)
+                                refreshData()
+                              }}
+                              workDuration={settings.pomodoroWorkDuration || 25}
+                              breakDuration={settings.pomodoroBreakDuration || 5}
+                              longBreakDuration={settings.pomodoroLongBreakDuration || 15}
+                              sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
+                            />
+                          </div>
                         </div>
-                        <div className="max-w-3xl mx-auto">
-                          <PomodoroTaskIntegration
-                            tasks={sortedTasks}
-                            onTaskUpdate={(taskId, updates) => {
-                              updateTask(taskId, updates)
-                              refreshData()
-                            }}
-                            workDuration={settings.pomodoroWorkDuration || 25}
-                            breakDuration={settings.pomodoroBreakDuration || 5}
-                            longBreakDuration={settings.pomodoroLongBreakDuration || 15}
-                            sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
-                          />
-                        </div>
-                      </div>
+                      </FeatureGate>
                     )
                   )}
 
@@ -1002,21 +1100,26 @@ export default function Home() {
                     !session?.user ? (
                       <ProtectedViewPlaceholder viewName="Time Blocking" />
                     ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
-                          <p className="text-muted-foreground">
-                            Schedule and organize your tasks throughout the week
-                          </p>
+                      <FeatureGate 
+                        featureId="advanced_views"
+                        upgradeMessage="Upgrade to Pro to access Time Blocking calendar"
+                      >
+                        <div className="space-y-6">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
+                            <p className="text-muted-foreground">
+                              Schedule and organize your tasks throughout the week
+                            </p>
+                          </div>
+                          <TimeBlockingCalendar
+                            tasks={sortedTasks}
+                            onTaskClick={handleEditTask}
+                            onBlockCreate={(block) => {
+                              toast.success('Time block created')
+                            }}
+                          />
                         </div>
-                        <TimeBlockingCalendar
-                          tasks={sortedTasks}
-                          onTaskClick={handleEditTask}
-                          onBlockCreate={(block) => {
-                            toast.success('Time block created')
-                          }}
-                        />
-                      </div>
+                      </FeatureGate>
                     )
                   )}
 
@@ -1025,20 +1128,54 @@ export default function Home() {
                       <ProtectedViewPlaceholder viewName="Analytics" />
                     ) : (
                       <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
-                          <p className="text-muted-foreground">
-                            Comprehensive analytics including time tracking and productivity insights
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
+                            <p className="text-muted-foreground">
+                              Comprehensive analytics including time tracking and productivity insights
+                            </p>
+                          </div>
+                          
+                          {/* Export Buttons with Feature Gate */}
+                          <FeatureGate
+                            featureId="advanced_export"
+                            upgradeMessage="Upgrade to Pro to export your data to JSON, CSV, and PDF formats"
+                            fallback={
+                              <div className="flex gap-2">
+                                <Button variant="outline" disabled className="gap-2">
+                                  <Lock className="h-4 w-4" />
+                                  Export JSON
+                                </Button>
+                                <Button variant="outline" disabled className="gap-2">
+                                  <Lock className="h-4 w-4" />
+                                  Export CSV
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <div className="flex gap-2">
+                              <Button variant="outline" onClick={handleExportJSON} className="gap-2">
+                                Export JSON
+                              </Button>
+                              <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+                                Export CSV
+                              </Button>
+                            </div>
+                          </FeatureGate>
                         </div>
                         
-                        {/* Time Analytics Section */}
-                        <div>
-                          <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
-                          <TimeAnalytics tasks={tasks} />
-                        </div>
+                        {/* Time Analytics Section - Requires Pro */}
+                        <FeatureGate 
+                          featureId="advanced_analytics"
+                          upgradeMessage="Upgrade to Pro to access detailed time tracking and productivity insights"
+                        >
+                          <div>
+                            <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
+                            <TimeAnalytics tasks={tasks} />
+                          </div>
+                        </FeatureGate>
 
-                        {/* General Analytics */}
+                        {/* General Analytics - Available to all */}
                         <div>
                           <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
                           <Analytics
@@ -1048,6 +1185,38 @@ export default function Home() {
                             onExport={handleExportJSON}
                           />
                         </div>
+                      </div>
+                    )
+                  )}
+
+                  {currentView === 'gamification' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Achievements & Gamification" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">🏆 Achievements & Progress</h1>
+                          <p className="text-muted-foreground">
+                            Track your productivity journey with XP, levels, streaks, and achievement badges
+                          </p>
+                        </div>
+                        <GamificationDashboard onFeatureGateRedirect={() => router.push('/pricing')} />
+                      </div>
+                    )
+                  )}
+
+                  {currentView === 'avatar-customization' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Avatar Studio" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">🎨 Avatar Studio</h1>
+                          <p className="text-muted-foreground">
+                            Personalize your profile with custom avatars, frames, and visual effects
+                          </p>
+                        </div>
+                        <AvatarCustomization />
                       </div>
                     )
                   )}
@@ -1107,15 +1276,20 @@ export default function Home() {
                     !session?.user ? (
                       <ProtectedViewPlaceholder viewName="Message System" />
                     ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
-                          <p className="text-muted-foreground">
-                            Team communication and collaboration hub
-                          </p>
+                      <FeatureGate 
+                        featureId="message_system"
+                        upgradeMessage="Upgrade to Team plan to access team messaging and collaboration features"
+                      >
+                        <div className="space-y-6">
+                          <div>
+                            <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
+                            <p className="text-muted-foreground">
+                              Team communication and collaboration hub
+                            </p>
+                          </div>
+                          <MessageSystem />
                         </div>
-                        <MessageSystem />
-                      </div>
+                      </FeatureGate>
                     )
                   )}
 
