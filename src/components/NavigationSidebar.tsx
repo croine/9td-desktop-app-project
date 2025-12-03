@@ -348,10 +348,10 @@ export function NavigationSidebar({
                     avatarColorScheme={preferences.avatarColorScheme}
                     avatarBorderColor={preferences.avatarBorderColor}
                     size="sm"
-                    showRings={true}
-                    showAchievements={true}
-                    showStatus={true}
-                    showFrame={true}
+                    showRings={false}
+                    showAchievements={false}
+                    showStatus={false}
+                    showFrame={false}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{userName}</p>

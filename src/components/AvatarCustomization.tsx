@@ -483,10 +483,10 @@ export function AvatarCustomization() {
                   avatarColorScheme={preferences.avatarColorScheme}
                   avatarBorderColor={preferences.avatarBorderColor}
                   size="lg"
-                  showRings={true}
+                  showRings={false}
                   showAchievements={false}
                   showStatus={false}
-                  showFrame={true}
+                  showFrame={false}
                 />
               </div>
             </div>
