@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient, useSession } from '@/lib/auth-client'
+import { useCustomer } from 'autumn-js/react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +30,11 @@ import {
   Check,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Crown,
+  CreditCard,
+  Star,
+  Users
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -76,6 +81,8 @@ interface ActiveFrame {
 export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
   const router = useRouter()
   const { refetch: refetchSession } = useSession()
+  const { customer, isLoading: isLoadingCustomer } = useCustomer()
+  
   const [isOpen, setIsOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [customTitle, setCustomTitle] = useState('Account Secured')
@@ -92,6 +99,47 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [status, setStatus] = useState<UserStatus | null>(null)
   const [activeFrame, setActiveFrame] = useState<ActiveFrame | null>(null)
+
+  // Get current plan
+  const currentPlan = customer?.products?.at(-1)
+  const planName = currentPlan?.name || 'Free'
+  const isPaidPlan = planName !== 'Free'
+
+  // Plan badge styling based on tier
+  const getPlanBadgeStyles = () => {
+    switch (planName.toLowerCase()) {
+      case 'pro':
+        return {
+          container: 'relative overflow-hidden bg-gradient-to-br from-violet-500/90 via-purple-500/90 to-fuchsia-500/90 dark:from-violet-400/90 dark:via-purple-400/90 dark:to-fuchsia-400/90 border-2 border-violet-300/60 dark:border-violet-400/60 shadow-2xl shadow-violet-500/50 dark:shadow-violet-400/50 hover:shadow-violet-500/70 dark:hover:shadow-violet-400/70 hover:scale-[1.08] hover:-translate-y-0.5',
+          text: 'relative z-10 text-white dark:text-white font-bold tracking-wide drop-shadow-lg',
+          icon: 'relative z-10 text-white/90 dark:text-white/90 drop-shadow-md',
+          shimmer: true,
+          particles: true,
+          iconComponent: Crown
+        }
+      case 'team':
+        return {
+          container: 'relative overflow-hidden bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 dark:from-amber-300 dark:via-yellow-400 dark:to-orange-400 border-2 border-amber-200/80 dark:border-amber-300/80 shadow-2xl shadow-amber-500/60 dark:shadow-amber-400/60 hover:shadow-amber-500/80 dark:hover:shadow-amber-400/80 hover:scale-[1.08] hover:-translate-y-0.5',
+          text: 'relative z-10 text-amber-900 dark:text-amber-950 font-bold tracking-wide drop-shadow-lg',
+          icon: 'relative z-10 text-amber-800/90 dark:text-amber-900/90 drop-shadow-md',
+          shimmer: true,
+          particles: true,
+          iconComponent: Users
+        }
+      default: // Free
+        return {
+          container: 'relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-slate-300/60 dark:border-slate-600/60 shadow-lg shadow-slate-500/20 dark:shadow-slate-900/40 hover:shadow-slate-500/30 dark:hover:shadow-slate-800/50 hover:scale-105',
+          text: 'relative z-10 text-slate-700 dark:text-slate-200 font-semibold tracking-wide',
+          icon: 'relative z-10 text-slate-600 dark:text-slate-300',
+          shimmer: false,
+          particles: false,
+          iconComponent: Star
+        }
+    }
+  }
+
+  const badgeStyles = getPlanBadgeStyles()
+  const BadgeIcon = badgeStyles.iconComponent
 
   // Fetch user preferences when session changes
   useEffect(() => {
@@ -241,6 +289,41 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     setIsEditingTitle(true)
   }
 
+  const handleViewPricing = () => {
+    setIsOpen(false)
+    router.push('/pricing')
+  }
+
+  const handleManageBilling = async () => {
+    setIsOpen(false)
+    const token = localStorage.getItem("bearer_token")
+    try {
+      const res = await fetch("/api/billing-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          returnUrl: window.location.href
+        })
+      })
+      
+      const data = await res.json()
+      if (data?.url) {
+        const isInIframe = window.self !== window.top
+        if (isInIframe) {
+          window.parent?.postMessage({ type: "OPEN_EXTERNAL_URL", data: { url: data.url } }, "*")
+        } else {
+          window.open(data.url, "_blank", "noopener,noreferrer")
+        }
+      }
+    } catch (error) {
+      console.error('Failed to open billing portal:', error)
+      toast.error('Failed to open billing portal')
+    }
+  }
+
   // Early return AFTER all hooks
   if (!session?.user) {
     return null
@@ -258,205 +341,285 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     : user.email?.charAt(0).toUpperCase() || 'U'
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-12 w-12 p-0 rounded-full"
-        >
-          <AvatarWithRings
-            avatarUrl={avatarUrl}
-            initials={initials}
-            userName={userName}
-            stats={stats || undefined}
-            achievements={achievements}
-            status={status || undefined}
-            activeFrame={activeFrame}
-            avatarShape={avatarShape}
-            avatarColorScheme={avatarColorScheme}
-            avatarBorderColor={avatarBorderColor}
-            size="sm"
-            showRings={true}
-            showAchievements={false}
-            showStatus={true}
-            showFrame={false}
-          />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        className="w-80 glass-card backdrop-blur-xl bg-background/95 dark:bg-background/98 border-2" 
-        align="end" 
-        sideOffset={8}
+    <div className="flex items-center gap-3">
+      {/* Enhanced Plan Badge - Always Visible */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleViewPricing}
+        className={`group relative h-10 px-5 gap-2.5 font-display text-sm transition-all duration-300 ${badgeStyles.container}`}
       >
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-3 p-2">
-            <div className="flex items-center gap-3">
-              <div className="shrink-0">
-                <AvatarWithRings
-                  avatarUrl={avatarUrl}
-                  initials={initials}
-                  userName={userName}
-                  stats={stats || undefined}
-                  achievements={achievements}
-                  status={status || undefined}
-                  activeFrame={activeFrame}
-                  avatarShape={avatarShape}
-                  avatarColorScheme={avatarColorScheme}
-                  avatarBorderColor={avatarBorderColor}
-                  size="md"
-                  showRings={true}
-                  showAchievements={true}
-                  showStatus={true}
-                  showFrame={true}
-                />
-              </div>
-              <div className="flex flex-col space-y-1 flex-1 min-w-0">
-                <p className="font-display font-semibold text-base leading-none">
-                  {userName}
-                </p>
-                
-                {/* Customizable Title */}
-                {!isEditingTitle ? (
-                  <div className="flex items-center gap-1.5 group">
-                    <Shield className="h-3 w-3 text-primary shrink-0" />
-                    <p className="text-xs text-muted-foreground flex-1 truncate">
-                      {customTitle}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      onClick={handleStartEdit}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 mt-1">
-                    <Input
-                      value={tempTitle}
-                      onChange={(e) => setTempTitle(e.target.value)}
-                      placeholder="Enter custom title"
-                      className="h-7 text-xs"
-                      maxLength={100}
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-green-600"
-                      onClick={handleSaveTitle}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-red-600"
-                      onClick={handleCancelEdit}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )}
+        {/* Shimmer effect for premium plans */}
+        {badgeStyles.shimmer && (
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+        )}
+        
+        {/* Animated particles for premium plans */}
+        {badgeStyles.particles && (
+          <>
+            <div className="absolute top-1 left-2 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.5s' }} />
+            <div className="absolute top-2 right-3 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '500ms', animationDuration: '1.5s' }} />
+            <div className="absolute bottom-2 left-4 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '1000ms', animationDuration: '1.5s' }} />
+          </>
+        )}
+        
+        {/* Icon - Now shown for ALL plans */}
+        <BadgeIcon className={`h-4 w-4 ${badgeStyles.icon} transition-transform duration-300 group-hover:scale-110 ${isPaidPlan ? 'group-hover:-rotate-12' : 'group-hover:rotate-12'}`} />
+        
+        {/* Text */}
+        <span className={`${badgeStyles.text} uppercase text-xs tracking-wider`}>
+          {planName}
+        </span>
+        
+        {/* Hover gradient overlay */}
+        {isPaidPlan && (
+          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        )}
+      </Button>
 
-                {/* Email Display with Privacy Controls */}
-                {showEmail && (
-                  <p className={`text-xs text-muted-foreground truncate ${blurEmail ? 'blur-sm select-none' : ''}`}>
-                    {user.email}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Privacy Settings Toggle */}
-            <Button
-              variant="ghost"
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="relative h-12 w-12 p-0 rounded-full"
+          >
+            <AvatarWithRings
+              avatarUrl={avatarUrl}
+              initials={initials}
+              userName={userName}
+              stats={stats || undefined}
+              achievements={achievements}
+              status={status || undefined}
+              activeFrame={activeFrame}
+              avatarShape={avatarShape}
+              avatarColorScheme={avatarColorScheme}
+              avatarBorderColor={avatarBorderColor}
               size="sm"
-              className="w-full justify-start text-xs h-7"
-              onClick={() => setShowPrivacySettings(!showPrivacySettings)}
-            >
-              {showPrivacySettings ? <EyeOff className="h-3 w-3 mr-2" /> : <Eye className="h-3 w-3 mr-2" />}
-              {showPrivacySettings ? 'Hide' : 'Show'} Privacy Settings
-            </Button>
-
-            {/* Privacy Settings */}
-            {showPrivacySettings && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-email" className="text-xs cursor-pointer">
-                    Show Email
-                  </Label>
-                  <Switch
-                    id="show-email"
-                    checked={showEmail}
-                    onCheckedChange={async (checked) => {
-                      setShowEmail(checked)
-                      await updatePreferences({ showEmail: checked })
-                    }}
+              showRings={false}
+              showAchievements={false}
+              showStatus={false}
+              showFrame={false}
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          className="w-80 glass-card backdrop-blur-xl bg-background/95 dark:bg-background/98 border-2" 
+          align="end" 
+          sideOffset={8}
+        >
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-3 p-2">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0">
+                  <AvatarWithRings
+                    avatarUrl={avatarUrl}
+                    initials={initials}
+                    userName={userName}
+                    stats={stats || undefined}
+                    achievements={achievements}
+                    status={status || undefined}
+                    activeFrame={activeFrame}
+                    avatarShape={avatarShape}
+                    avatarColorScheme={avatarColorScheme}
+                    avatarBorderColor={avatarBorderColor}
+                    size="md"
+                    showRings={false}
+                    showAchievements={false}
+                    showStatus={false}
+                    showFrame={false}
                   />
                 </div>
-                
-                {showEmail && (
+                <div className="flex flex-col space-y-1 flex-1 min-w-0">
+                  <p className="font-display font-semibold text-base leading-none">
+                    {userName}
+                  </p>
+                  
+                  {/* Customizable Title */}
+                  {!isEditingTitle ? (
+                    <div className="flex items-center gap-1.5 group">
+                      <Shield className="h-3 w-3 text-primary shrink-0" />
+                      <p className="text-xs text-muted-foreground flex-1 truncate">
+                        {customTitle}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        onClick={handleStartEdit}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Input
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        placeholder="Enter custom title"
+                        className="h-7 text-xs"
+                        maxLength={100}
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-green-600"
+                        onClick={handleSaveTitle}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-red-600"
+                        onClick={handleCancelEdit}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Email Display with Privacy Controls */}
+                  {showEmail && (
+                    <p className={`text-xs text-muted-foreground truncate ${blurEmail ? 'blur-sm select-none' : ''}`}>
+                      {user.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Privacy Settings Toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs h-7"
+                onClick={() => setShowPrivacySettings(!showPrivacySettings)}
+              >
+                {showPrivacySettings ? <EyeOff className="h-3 w-3 mr-2" /> : <Eye className="h-3 w-3 mr-2" />}
+                {showPrivacySettings ? 'Hide' : 'Show'} Privacy Settings
+              </Button>
+
+              {/* Privacy Settings */}
+              {showPrivacySettings && (
+                <div className="space-y-3 pt-2 border-t">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="blur-email" className="text-xs cursor-pointer">
-                      Blur Email
+                    <Label htmlFor="show-email" className="text-xs cursor-pointer">
+                      Show Email
                     </Label>
                     <Switch
-                      id="blur-email"
-                      checked={blurEmail}
+                      id="show-email"
+                      checked={showEmail}
                       onCheckedChange={async (checked) => {
-                        setBlurEmail(checked)
-                        await updatePreferences({ blurEmail: checked })
+                        setShowEmail(checked)
+                        await updatePreferences({ showEmail: checked })
                       }}
                     />
                   </div>
-                )}
+                  
+                  {showEmail && (
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="blur-email" className="text-xs cursor-pointer">
+                        Blur Email
+                      </Label>
+                      <Switch
+                        id="blur-email"
+                        checked={blurEmail}
+                        onCheckedChange={async (checked) => {
+                          setBlurEmail(checked)
+                          await updatePreferences({ blurEmail: checked })
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </DropdownMenuLabel>
+          
+          {/* Plan Info Section */}
+          <DropdownMenuSeparator />
+          <div className="px-2 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-muted-foreground">Current Plan</span>
+              <div className="flex items-center gap-1.5">
+                {isPaidPlan && <Crown className="h-3.5 w-3.5 text-yellow-500" />}
+                <span className={`text-sm font-semibold ${isPaidPlan ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
+                  {planName}
+                </span>
               </div>
+            </div>
+            {currentPlan?.current_period_end && (
+              <p className="text-xs text-muted-foreground">
+                Renews {new Date(currentPlan.current_period_end).toLocaleDateString()}
+              </p>
             )}
+            <div className="flex gap-2 mt-3">
+              {isPaidPlan ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-8 text-xs"
+                  onClick={handleManageBilling}
+                >
+                  <CreditCard className="h-3 w-3 mr-1.5" />
+                  Manage Billing
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="flex-1 h-8 text-xs"
+                  onClick={handleViewPricing}
+                >
+                  <Crown className="h-3 w-3 mr-1.5" />
+                  Upgrade Plan
+                </Button>
+              )}
+            </div>
           </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
+          
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={handleAccountSettings}
+              className="cursor-pointer py-2.5"
+            >
+              <UserCircle className="mr-3 h-4 w-4" />
+              <span>Account Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setIsOpen(false)
+                if (onOpenSettings) {
+                  onOpenSettings()
+                }
+              }}
+              className="cursor-pointer py-2.5"
+            >
+              <Settings className="mr-3 h-4 w-4" />
+              <span>Preferences</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setIsOpen(false)
+                toast.info('Notification settings coming soon')
+              }}
+              className="cursor-pointer py-2.5"
+            >
+              <Bell className="mr-3 h-4 w-4" />
+              <span>Notifications</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={handleAccountSettings}
-            className="cursor-pointer py-2.5"
+            onClick={handleSignOut}
+            className="cursor-pointer text-destructive focus:text-destructive py-2.5"
           >
-            <UserCircle className="mr-3 h-4 w-4" />
-            <span>Account Settings</span>
+            <LogOut className="mr-3 h-4 w-4" />
+            <span>Sign Out</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              setIsOpen(false)
-              if (onOpenSettings) {
-                onOpenSettings()
-              }
-            }}
-            className="cursor-pointer py-2.5"
-          >
-            <Settings className="mr-3 h-4 w-4" />
-            <span>Preferences</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              setIsOpen(false)
-              toast.info('Notification settings coming soon')
-            }}
-            className="cursor-pointer py-2.5"
-          >
-            <Bell className="mr-3 h-4 w-4" />
-            <span>Notifications</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="cursor-pointer text-destructive focus:text-destructive py-2.5"
-        >
-          <LogOut className="mr-3 h-4 w-4" />
-          <span>Sign Out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
