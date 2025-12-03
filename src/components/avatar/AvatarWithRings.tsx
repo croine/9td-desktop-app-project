@@ -71,6 +71,10 @@ export function AvatarWithRings({
     lg: { avatar: 'h-12 w-12', container: 80, text: 'text-base' }
   }
 
+  // Validate and sanitize size prop
+  const validSize = (size === 'sm' || size === 'md' || size === 'lg') ? size : 'md'
+  const sizeConfig = sizeMap[validSize]
+
   const shapeClasses = {
     circle: 'rounded-full',
     square: 'rounded-none',
@@ -80,7 +84,7 @@ export function AvatarWithRings({
   const dailyProgress = stats ? Math.min((stats.tasksCompletedToday / stats.dailyGoal) * 100, 100) : 0
   const weeklyProgress = stats ? Math.min((stats.tasksCompletedThisWeek / stats.weeklyGoal) * 100, 100) : 0
 
-  const containerSize = sizeMap[size].container
+  const containerSize = sizeConfig.container
 
   return (
     <div 
@@ -97,7 +101,7 @@ export function AvatarWithRings({
             weeklyGoal={stats.weeklyGoal}
             tasksCompletedToday={stats.tasksCompletedToday}
             tasksCompletedThisWeek={stats.tasksCompletedThisWeek}
-            size={size}
+            size={validSize}
             showTooltip={true}
           />
         </div>
@@ -108,18 +112,18 @@ export function AvatarWithRings({
         <div className="relative">
           {/* Frame */}
           {showFrame && activeFrame && (
-            <AvatarFrame frameType={activeFrame.frameType} size={size} />
+            <AvatarFrame frameType={activeFrame.frameType} size={validSize} />
           )}
 
           {/* Avatar with Border Ring */}
           <Avatar
-            className={`${sizeMap[size].avatar} ${shapeClasses[avatarShape]} relative z-10`}
+            className={`${sizeConfig.avatar} ${shapeClasses[avatarShape]} relative z-10`}
             style={{
               boxShadow: `0 0 0 2px hsl(var(--background)), 0 0 0 4px ${avatarBorderColor}`
             }}
           >
             {avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
-            <AvatarFallback className={`bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold ${sizeMap[size].text}`}>
+            <AvatarFallback className={`bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-semibold ${sizeConfig.text}`}>
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -128,7 +132,7 @@ export function AvatarWithRings({
           {showAchievements && achievements.length > 0 && (
             <AchievementBadges
               achievements={achievements}
-              size={size === 'sm' ? 'sm' : 'md'}
+              size={validSize === 'sm' ? 'sm' : 'md'}
               maxDisplay={3}
               position="top-right"
             />
@@ -139,7 +143,7 @@ export function AvatarWithRings({
             <StatusIndicator
               status={status.status}
               customMessage={status.customMessage}
-              size={size === 'sm' ? 'sm' : 'md'}
+              size={validSize === 'sm' ? 'sm' : 'md'}
               position="bottom-right"
               showTooltip={true}
             />
