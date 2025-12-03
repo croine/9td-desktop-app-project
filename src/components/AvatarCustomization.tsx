@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { AvatarWithRings } from '@/components/avatar/AvatarWithRings'
+import { StatusPicker } from '@/components/avatar/StatusPicker'
 import { useSession } from '@/lib/auth-client'
 
 interface AvatarPreset {
@@ -167,6 +168,8 @@ export function AvatarCustomization() {
   const [effects, setEffects] = useState<AdvancedEffects>(DEFAULT_EFFECTS)
   const [history, setHistory] = useState<AdvancedEffects[]>([DEFAULT_EFFECTS])
   const [historyIndex, setHistoryIndex] = useState(0)
+  const [achievements, setAchievements] = useState<any[]>([])
+  const [status, setStatus] = useState<{ status: 'active' | 'away' | 'busy' | 'offline', customMessage?: string } | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -363,6 +366,32 @@ export function AvatarCustomization() {
     }
   }
 
+  const handleStatusChange = async (newStatus: 'active' | 'away' | 'busy' | 'offline', message?: string) => {
+    const token = localStorage.getItem("bearer_token")
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user-status', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          customMessage: message || null
+        })
+      })
+
+      if (response.ok) {
+        setStatus({ status: newStatus, customMessage: message || null })
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      toast.error('Failed to update status')
+    }
+  }
+
   const getTierBadge = (tier: string) => {
     switch (tier) {
       case 'free':
@@ -478,6 +507,8 @@ export function AvatarCustomization() {
                   initials={initials}
                   userName={userName}
                   stats={stats || undefined}
+                  achievements={achievements}
+                  status={status || undefined}
                   activeFrame={frames.find(f => f.isActive) || undefined}
                   avatarShape={preferences.avatarShape}
                   avatarColorScheme={preferences.avatarColorScheme}
@@ -485,10 +516,20 @@ export function AvatarCustomization() {
                   size="lg"
                   showRings={false}
                   showAchievements={false}
-                  showStatus={false}
+                  showStatus={true}
                   showFrame={false}
                 />
               </div>
+            </div>
+
+            {/* Status Control - NEW */}
+            <div className="space-y-1.5 pt-2 border-t border-border/50">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Avatar Status</Label>
+              <StatusPicker
+                currentStatus={status?.status || 'active'}
+                customMessage={status?.customMessage}
+                onStatusChange={handleStatusChange}
+              />
             </div>
 
             {/* Quick Presets */}

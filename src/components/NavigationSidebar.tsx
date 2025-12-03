@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { AvatarWithRings } from '@/components/avatar/AvatarWithRings'
+import { StatusPicker } from '@/components/avatar/StatusPicker'
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -209,6 +210,32 @@ export function NavigationSidebar({
     }
   }
 
+  const handleStatusChange = async (newStatus: 'active' | 'away' | 'busy' | 'offline', message?: string) => {
+    const token = localStorage.getItem("bearer_token")
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user-status', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          customMessage: message || null
+        })
+      })
+
+      if (response.ok) {
+        setStatus({ status: newStatus, customMessage: message || null })
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      toast.error('Failed to update status')
+    }
+  }
+
   // ==========================================
   // EXPANDED NAVIGATION TABS WITH NEW FEATURES
   // ==========================================
@@ -327,7 +354,7 @@ export function NavigationSidebar({
     <div className="flex flex-col h-full border-r bg-sidebar/50 backdrop-blur-sm">
       <ScrollArea className="flex-1 py-4">
         <div className="space-y-4 px-3">
-          {/* User Section with Advanced Avatar */}
+          {/* User Section with Advanced Avatar & Status */}
           <div className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20">
             {sessionPending ? (
               <div className="flex items-center justify-center py-2">
@@ -350,7 +377,7 @@ export function NavigationSidebar({
                     size="sm"
                     showRings={false}
                     showAchievements={false}
-                    showStatus={false}
+                    showStatus={true}
                     showFrame={false}
                   />
                   <div className="flex-1 min-w-0">
@@ -362,6 +389,17 @@ export function NavigationSidebar({
                     )}
                   </div>
                 </div>
+                
+                {/* Status Picker */}
+                <div className="pt-1.5 border-t border-border/50">
+                  <StatusPicker
+                    currentStatus={status?.status || 'active'}
+                    customMessage={status?.customMessage}
+                    onStatusChange={handleStatusChange}
+                    compact
+                  />
+                </div>
+                
                 <Button
                   variant="ghost"
                   size="sm"
@@ -478,16 +516,16 @@ export function NavigationSidebar({
           >
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-foreground">
-                💡 Advanced Avatar Features
+                💡 Advanced Status System
               </p>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Check out your new avatar features:
+                New status features:
               </p>
               <ul className="text-[9px] text-muted-foreground space-y-0.5 pl-2">
-                <li>• 🎯 Productivity Rings</li>
-                <li>• 🏆 Achievement Badges</li>
-                <li>• 🟢 Status Indicators</li>
-                <li>• 🖼️ Avatar Frames</li>
+                <li>• 🟢 Quick Status Changes</li>
+                <li>• 💬 Custom Messages</li>
+                <li>• ⏰ Auto-Away Detection</li>
+                <li>• 📋 Status Presets</li>
               </ul>
             </div>
           </motion.div>
@@ -497,8 +535,8 @@ export function NavigationSidebar({
       {/* Footer */}
       <div className="p-3 border-t bg-muted/30">
         <div className="text-xs text-muted-foreground text-center space-y-0.5">
-          <p className="font-semibold text-[10px]">9TD v7.0 Ultimate</p>
-          <p className="text-[9px]">With Advanced Avatars</p>
+          <p className="font-semibold text-[10px]">9TD v8.0 Ultimate</p>
+          <p className="text-[9px]">With Advanced Status</p>
         </div>
       </div>
     </div>

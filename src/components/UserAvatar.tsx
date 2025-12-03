@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AvatarWithRings } from '@/components/avatar/AvatarWithRings'
+import { StatusPicker } from '@/components/avatar/StatusPicker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -243,6 +244,33 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     }
   }
 
+  const handleStatusChange = async (newStatus: 'active' | 'away' | 'busy' | 'offline', message?: string) => {
+    const token = localStorage.getItem("bearer_token")
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user-status', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          customMessage: message || null
+        })
+      })
+
+      if (response.ok) {
+        setStatus({ status: newStatus, customMessage: message || null })
+        toast.success('Status updated')
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      toast.error('Failed to update status')
+    }
+  }
+
   const handleSignOut = async () => {
     const { error } = await authClient.signOut()
     if (error?.code) {
@@ -397,7 +425,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
               size="sm"
               showRings={false}
               showAchievements={false}
-              showStatus={false}
+              showStatus={true}
               showFrame={false}
             />
           </Button>
@@ -425,7 +453,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
                     size="md"
                     showRings={false}
                     showAchievements={false}
-                    showStatus={false}
+                    showStatus={true}
                     showFrame={false}
                   />
                 </div>
@@ -486,6 +514,15 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Status Picker - NEW */}
+              <div className="pt-2 border-t border-border/50">
+                <StatusPicker
+                  currentStatus={status?.status || 'active'}
+                  customMessage={status?.customMessage}
+                  onStatusChange={handleStatusChange}
+                />
               </div>
 
               {/* Privacy Settings Toggle */}
