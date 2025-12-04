@@ -38,20 +38,21 @@ import { toast } from 'sonner'
 // ========================================================================
 
 export type SidebarView = 
-  | 'dashboard' 
-  | 'your-tasks' 
-  | 'activity-logs'
-  | 'owner-panel'
-  | 'settings'
-  | 'message-system'
+  | 'dashboard'
+  | 'your-tasks'
   | 'calendar'
   | 'kanban'
   | 'gantt'
-  | 'analytics'
+  | 'dependencies'
   | 'pomodoro'
   | 'time-blocking'
+  | 'analytics'
   | 'gamification'
   | 'avatar-customization'
+  | 'activity-logs'
+  | 'owner-panel'
+  | 'message-system'
+  | 'settings'
 
 interface NavigationSidebarProps {
   currentView: SidebarView
@@ -274,6 +275,13 @@ export function NavigationSidebar({
       label: 'Gantt Chart', 
       icon: GanttChartSquare,
       description: 'Timeline and dependency visualization',
+      requiresAuth: true
+    },
+    { 
+      id: 'dependencies' as const, 
+      label: 'Dependencies', 
+      icon: TagIcon,
+      description: 'Manage task dependencies and relationships',
       requiresAuth: true
     },
     { 

@@ -74,6 +74,7 @@ import { FeatureGate } from '@/components/FeatureGate'
 import { PlanUsageIndicator } from '@/components/PlanUsageIndicator'
 import { GamificationDashboard } from '@/components/GamificationDashboard'
 import { AvatarCustomization } from '@/components/AvatarCustomization'
+import { TaskDependencyGraph } from '@/components/TaskDependencyGraph'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -1060,6 +1061,28 @@ export default function Home() {
                           onTaskClick={handleEditTask}
                         />
                       </FeatureGate>
+                    )
+                  )}
+
+                  {currentView === 'dependencies' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Task Dependencies" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">📊 Task Dependencies</h1>
+                          <p className="text-muted-foreground">
+                            Visualize task relationships, identify critical paths, and detect circular dependencies
+                          </p>
+                        </div>
+                        <TaskDependencyGraph
+                          tasks={sortedTasks}
+                          tags={tags}
+                          categories={categories}
+                          selectedTaskId={editingTask?.id}
+                          onTaskClick={handleEditTask}
+                        />
+                      </div>
                     )
                   )}
 
