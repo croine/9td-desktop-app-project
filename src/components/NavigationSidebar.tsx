@@ -45,6 +45,7 @@ export type SidebarView =
   | 'gantt'
   | 'dependencies'
   | 'daily-planning'
+  | 'focus-mode'
   | 'pomodoro'
   | 'time-blocking'
   | 'analytics'
@@ -290,6 +291,13 @@ export function NavigationSidebar({
       label: 'Daily Planning', 
       icon: Clock,
       description: 'Plan your day with task prioritization',
+      requiresAuth: true
+    },
+    { 
+      id: 'focus-mode' as const, 
+      label: 'Focus Mode', 
+      icon: Clock,
+      description: 'Deep work environment with distractions disabled',
       requiresAuth: true
     },
     { 

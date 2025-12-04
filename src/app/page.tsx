@@ -76,6 +76,7 @@ import { GamificationDashboard } from '@/components/GamificationDashboard'
 import { AvatarCustomization } from '@/components/AvatarCustomization'
 import { TaskDependencyGraph } from '@/components/TaskDependencyGraph'
 import { DailyPlanningRitual } from '@/components/DailyPlanningRitual'
+import { EnhancedFocusMode } from '@/components/EnhancedFocusMode'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -1124,6 +1125,89 @@ export default function Home() {
                             toast.success('Reflection saved! 📝')
                           }}
                         />
+                      </div>
+                    )
+                  )}
+
+                  {currentView === 'focus-mode' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Focus Mode" />
+                    ) : focusTask ? (
+                      <EnhancedFocusMode
+                        task={focusTask}
+                        onExit={() => {
+                          setFocusTask(null)
+                          setCurrentView('your-tasks')
+                        }}
+                        onTaskUpdate={(updates) => {
+                          updateTask(focusTask.id, updates)
+                          setFocusTask({ ...focusTask, ...updates })
+                          refreshData()
+                        }}
+                      />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">🎯 Focus Mode</h1>
+                          <p className="text-muted-foreground">
+                            Select a task to enter distraction-free deep work mode with timer and ambient sounds
+                          </p>
+                        </div>
+                        <Card className="glass-card p-8">
+                          <div className="space-y-6">
+                            <div className="text-center space-y-4">
+                              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                <Lock className="h-10 w-10 text-primary" />
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="font-display text-xl font-semibold">
+                                  No Task Selected
+                                </h3>
+                                <p className="text-muted-foreground">
+                                  Choose a task below to enter focus mode
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <h4 className="font-semibold">Available Tasks:</h4>
+                              {sortedTasks.filter(t => t.status !== 'completed').slice(0, 10).map(task => (
+                                <Button
+                                  key={task.id}
+                                  variant="outline"
+                                  className="w-full justify-between h-auto py-4"
+                                  onClick={() => {
+                                    setFocusTask(task)
+                                  }}
+                                >
+                                  <div className="text-left">
+                                    <div className="font-semibold">{task.title}</div>
+                                    {task.description && (
+                                      <div className="text-sm text-muted-foreground truncate">
+                                        {task.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      task.priority === 'urgent' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
+                                      task.priority === 'high' ? 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300' :
+                                      task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300' :
+                                      'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                    }`}>
+                                      {task.priority}
+                                    </span>
+                                  </div>
+                                </Button>
+                              ))}
+                              {sortedTasks.filter(t => t.status !== 'completed').length === 0 && (
+                                <p className="text-center text-muted-foreground py-8">
+                                  No active tasks available. Create a task to get started!
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
                       </div>
                     )
                   )}
