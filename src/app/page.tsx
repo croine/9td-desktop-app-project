@@ -75,6 +75,7 @@ import { PlanUsageIndicator } from '@/components/PlanUsageIndicator'
 import { GamificationDashboard } from '@/components/GamificationDashboard'
 import { AvatarCustomization } from '@/components/AvatarCustomization'
 import { TaskDependencyGraph } from '@/components/TaskDependencyGraph'
+import { DailyPlanningRitual } from '@/components/DailyPlanningRitual'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -1081,6 +1082,47 @@ export default function Home() {
                           categories={categories}
                           selectedTaskId={editingTask?.id}
                           onTaskClick={handleEditTask}
+                        />
+                      </div>
+                    )
+                  )}
+
+                  {currentView === 'daily-planning' && (
+                    !session?.user ? (
+                      <ProtectedViewPlaceholder viewName="Daily Planning" />
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <h1 className="font-display text-3xl font-bold mb-2">☀️ Daily Planning</h1>
+                          <p className="text-muted-foreground">
+                            Start your day with purpose: morning planning, evening reflection, and weekly goals
+                          </p>
+                        </div>
+                        <DailyPlanningRitual
+                          tasks={sortedTasks}
+                          onTaskSelect={(taskIds) => {
+                            // Mark selected tasks as today's priorities
+                            taskIds.forEach(id => {
+                              const task = tasks.find(t => t.id === id)
+                              if (task) {
+                                updateTask(id, { 
+                                  tags: [...(task.tags || []), 'today-priority']
+                                })
+                              }
+                            })
+                            refreshData()
+                            toast.success('Daily priorities set! 🎯')
+                          }}
+                          onReflectionSave={(reflection) => {
+                            // Save reflection to localStorage
+                            const reflections = JSON.parse(localStorage.getItem('daily-reflections') || '[]')
+                            reflections.push({
+                              date: new Date().toISOString(),
+                              text: reflection
+                            })
+                            localStorage.setItem('daily-reflections', JSON.stringify(reflections))
+                            toast.success('Reflection saved! 📝')
+                          }}
                         />
                       </div>
                     )

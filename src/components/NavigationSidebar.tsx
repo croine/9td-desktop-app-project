@@ -44,6 +44,7 @@ export type SidebarView =
   | 'kanban'
   | 'gantt'
   | 'dependencies'
+  | 'daily-planning'
   | 'pomodoro'
   | 'time-blocking'
   | 'analytics'
@@ -282,6 +283,13 @@ export function NavigationSidebar({
       label: 'Dependencies', 
       icon: TagIcon,
       description: 'Manage task dependencies and relationships',
+      requiresAuth: true
+    },
+    { 
+      id: 'daily-planning' as const, 
+      label: 'Daily Planning', 
+      icon: Clock,
+      description: 'Plan your day with task prioritization',
       requiresAuth: true
     },
     { 
