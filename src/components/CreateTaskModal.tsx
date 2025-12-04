@@ -10,12 +10,14 @@ import {
   Attachment,
   TaskTemplate,
   Reminder,
+  ActivityLog,
 } from "@/types/task";
 import { TaskDependencies } from "@/components/TaskDependencies";
 import { SubtaskManager } from "@/components/SubtaskManager";
 import { TaskCommentsTimeline } from "@/components/TaskCommentsTimeline";
 import { FileAttachmentManager } from "@/components/FileAttachmentManager";
 import { TimeEstimateInput } from "@/components/TimeEstimateInput";
+import { TaskHistory } from "@/components/TaskHistory";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +85,7 @@ import {
   Command,
   Keyboard,
   CheckCircle,
+  History,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { Switch } from "@/components/ui/switch";
@@ -126,6 +129,7 @@ interface CreateTaskModalProps {
   categories: Category[];
   allTasks?: Task[];
   templates?: TaskTemplate[];
+  logs?: ActivityLog[];
 }
 
 const priorityConfig = {
@@ -184,6 +188,7 @@ export function CreateTaskModal({
   categories,
   allTasks = [],
   templates = [],
+  logs = [],
 }: CreateTaskModalProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [autoCalculateProgress, setAutoCalculateProgress] = useState(true);
@@ -962,6 +967,36 @@ export function CreateTaskModal({
                     mode={editTask ? 'edit' : 'create'}
                   />
                 </div>
+
+                {/* Task History - Only show when editing */}
+                {editTask && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('history')}
+                      className="flex items-center gap-2 w-full group"
+                    >
+                      {expandedSections.has('history') ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      )}
+                      <Label className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                        <History className="h-4 w-4" />
+                        Task History & Audit Trail
+                      </Label>
+                      <Badge variant="outline" className="ml-auto text-[10px]">
+                        {logs.filter(log => log.taskId === editTask.id).length} changes
+                      </Badge>
+                    </button>
+                    
+                    {expandedSections.has('history') && (
+                      <div className="mt-3">
+                        <TaskHistory task={editTask} logs={logs} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </form>
             </div>
 

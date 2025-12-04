@@ -1382,6 +1382,7 @@ export default function Home() {
         categories={categories}
         allTasks={tasks}
         templates={templates}
+        logs={logs}
       />
 
       <KeyboardShortcutsModal
