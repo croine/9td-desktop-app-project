@@ -157,77 +157,6 @@ export function TaskList({
     localStorage.setItem(STORAGE_KEYS.PINNED_TASKS, JSON.stringify(Array.from(pinnedTaskIds)))
   }, [pinnedTaskIds])
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Skip if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
-
-      const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
-      
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault()
-          setFocusedIndex(prev => Math.min(prev + 1, visibleTasks.length - 1))
-          break
-        case 'ArrowUp':
-          e.preventDefault()
-          setFocusedIndex(prev => Math.max(prev - 1, 0))
-          break
-        case 'Enter':
-          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
-            onEdit(visibleTasks[focusedIndex])
-          }
-          break
-        case ' ':
-          e.preventDefault()
-          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
-            handleToggleTask(visibleTasks[focusedIndex].id)
-          }
-          break
-        case 'Delete':
-          if (selectedTasks.size > 0) {
-            handleBulkAction('delete')
-          }
-          break
-        case 'a':
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault()
-            handleSelectAll()
-          }
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [focusedIndex, selectedTasks, pinnedTasks, unpinnedTasks])
-
-  // Scroll focused task into view
-  useEffect(() => {
-    const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
-    if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
-      const taskId = visibleTasks[focusedIndex].id
-      const element = taskRefs.current.get(taskId)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      }
-    }
-  }, [focusedIndex])
-
-  // Pin/Unpin task
-  const togglePinTask = (taskId: string) => {
-    const newPinned = new Set(pinnedTaskIds)
-    if (newPinned.has(taskId)) {
-      newPinned.delete(taskId)
-    } else {
-      newPinned.add(taskId)
-    }
-    setPinnedTaskIds(newPinned)
-  }
-
   // Calculate statistics
   const stats = {
     total: tasks.length,
@@ -291,6 +220,77 @@ export function TaskList({
   // Separate pinned and unpinned tasks
   const pinnedTasks = sortTasks(filteredTasks.filter(task => pinnedTaskIds.has(task.id)))
   const unpinnedTasks = sortTasks(filteredTasks.filter(task => !pinnedTaskIds.has(task.id)))
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setFocusedIndex(prev => Math.min(prev + 1, visibleTasks.length - 1))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setFocusedIndex(prev => Math.max(prev - 1, 0))
+          break
+        case 'Enter':
+          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+            onEdit(visibleTasks[focusedIndex])
+          }
+          break
+        case ' ':
+          e.preventDefault()
+          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+            handleToggleTask(visibleTasks[focusedIndex].id)
+          }
+          break
+        case 'Delete':
+          if (selectedTasks.size > 0) {
+            handleBulkAction('delete')
+          }
+          break
+        case 'a':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            handleSelectAll()
+          }
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [focusedIndex, selectedTasks, pinnedTasks, unpinnedTasks, onEdit])
+
+  // Scroll focused task into view
+  useEffect(() => {
+    const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
+    if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+      const taskId = visibleTasks[focusedIndex].id
+      const element = taskRefs.current.get(taskId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [focusedIndex, pinnedTasks, unpinnedTasks])
+
+  // Pin/Unpin task
+  const togglePinTask = (taskId: string) => {
+    const newPinned = new Set(pinnedTaskIds)
+    if (newPinned.has(taskId)) {
+      newPinned.delete(taskId)
+    } else {
+      newPinned.add(taskId)
+    }
+    setPinnedTaskIds(newPinned)
+  }
 
   // Group tasks
   const groupTasks = (tasksToGroup: Task[]) => {
