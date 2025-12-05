@@ -28,6 +28,76 @@ export const saveTasks = (tasks: Task[]) => {
   autoBackup();
 };
 
+// NEW: Clone task with all metadata
+export const cloneTask = (taskId: string): Task | null => {
+  const tasks = getTasks();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return null;
+
+  const clonedTask: Task = {
+    ...task,
+    id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    title: `${task.title} (Copy)`,
+    status: 'todo',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    completedAt: undefined,
+    // Clone subtasks with new IDs
+    subtasks: task.subtasks?.map(st => ({
+      ...st,
+      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    })),
+    // Clone time tracking but reset times
+    timeTracking: task.timeTracking ? {
+      ...task.timeTracking,
+      totalTime: 0,
+      entries: [],
+      pomodoroSessions: [],
+    } : undefined,
+    // Clone attachments (keep references)
+    attachments: task.attachments ? [...task.attachments] : undefined,
+    // Clone dependencies
+    dependencies: task.dependencies ? [...task.dependencies] : undefined,
+    // Clone custom fields
+    customFields: task.customFields ? { ...task.customFields } : undefined,
+    // Clone tags and categories
+    tags: task.tags ? [...task.tags] : undefined,
+    categories: task.categories ? [...task.categories] : undefined,
+    // Reset recurring settings
+    recurring: task.recurring ? {
+      ...task.recurring,
+      parentTaskId: undefined,
+      nextOccurrence: undefined,
+      lastGenerated: undefined,
+    } : undefined,
+  };
+
+  addTask(clonedTask);
+
+  addLog({
+    id: `log_${Date.now()}`,
+    taskId: clonedTask.id,
+    action: 'created',
+    description: `Task "${clonedTask.title}" was cloned from "${task.title}"`,
+    timestamp: new Date().toISOString(),
+    tags: clonedTask.tags || [],
+  });
+
+  return clonedTask;
+};
+
+// NEW: Bulk clone tasks
+export const bulkCloneTasks = (taskIds: string[]): Task[] => {
+  const clonedTasks: Task[] = [];
+  taskIds.forEach(id => {
+    const cloned = cloneTask(id);
+    if (cloned) clonedTasks.push(cloned);
+  });
+  return clonedTasks;
+};
+
 export function addTask(task: Task): void {
   // Auto-assign to active workspace if not set
   if (!task.workspaceId) {

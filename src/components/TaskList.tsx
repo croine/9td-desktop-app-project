@@ -3,7 +3,7 @@
 import { Task, Tag, Category } from '@/types/task'
 import { TaskCard } from './TaskCard'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { Badge } from './ui/badge'
@@ -25,7 +25,11 @@ import {
   Pin,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Copy,
+  Printer,
+  Tags,
+  Folder
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -56,6 +60,11 @@ interface TaskListProps {
   onBulkArchive?: (taskIds: string[]) => void
   onBulkDelete?: (taskIds: string[]) => void
   onBulkStatusChange?: (taskIds: string[], status: Task['status']) => void
+  onClone?: (taskId: string) => void
+  onBulkClone?: (taskIds: string[]) => void
+  onBulkAddTags?: (taskIds: string[], tagIds: string[]) => void
+  onBulkAddCategories?: (taskIds: string[], categoryIds: string[]) => void
+  onPrint?: () => void
 }
 
 // Local storage keys
@@ -78,7 +87,12 @@ export function TaskList({
   emptyMessage = "No tasks found",
   onBulkArchive,
   onBulkDelete,
-  onBulkStatusChange
+  onBulkStatusChange,
+  onClone,
+  onBulkClone,
+  onBulkAddTags,
+  onBulkAddCategories,
+  onPrint
 }: TaskListProps) {
   // Load preferences from localStorage
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -119,6 +133,8 @@ export function TaskList({
   
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
   const [quickFilter, setQuickFilter] = useState<string | null>(null)
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1)
+  const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   // Save preferences to localStorage
   useEffect(() => {
@@ -140,6 +156,66 @@ export function TaskList({
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PINNED_TASKS, JSON.stringify(Array.from(pinnedTaskIds)))
   }, [pinnedTaskIds])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
+      
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setFocusedIndex(prev => Math.min(prev + 1, visibleTasks.length - 1))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setFocusedIndex(prev => Math.max(prev - 1, 0))
+          break
+        case 'Enter':
+          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+            onEdit(visibleTasks[focusedIndex])
+          }
+          break
+        case ' ':
+          e.preventDefault()
+          if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+            handleToggleTask(visibleTasks[focusedIndex].id)
+          }
+          break
+        case 'Delete':
+          if (selectedTasks.size > 0) {
+            handleBulkAction('delete')
+          }
+          break
+        case 'a':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            handleSelectAll()
+          }
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [focusedIndex, selectedTasks, pinnedTasks, unpinnedTasks])
+
+  // Scroll focused task into view
+  useEffect(() => {
+    const visibleTasks = [...pinnedTasks, ...unpinnedTasks]
+    if (focusedIndex >= 0 && visibleTasks[focusedIndex]) {
+      const taskId = visibleTasks[focusedIndex].id
+      const element = taskRefs.current.get(taskId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [focusedIndex])
 
   // Pin/Unpin task
   const togglePinTask = (taskId: string) => {
@@ -298,7 +374,8 @@ export function TaskList({
     setSelectedTasks(newSelected)
   }
 
-  const handleBulkAction = (action: 'archive' | 'delete' | 'complete' | 'todo' | 'in-progress') => {
+  // Enhanced bulk action handlers
+  const handleBulkAction = (action: 'archive' | 'delete' | 'complete' | 'todo' | 'in-progress' | 'clone' | 'add-tags' | 'add-categories') => {
     const taskIds = Array.from(selectedTasks)
     
     switch (action) {
@@ -316,6 +393,9 @@ export function TaskList({
         break
       case 'in-progress':
         onBulkStatusChange?.(taskIds, 'in-progress')
+        break
+      case 'clone':
+        onBulkClone?.(taskIds)
         break
     }
     
@@ -361,51 +441,64 @@ export function TaskList({
       
       <div className={getGridClass()}>
         <AnimatePresence mode="popLayout">
-          {groupTasks.map(task => (
-            <motion.div
-              key={task.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative"
-            >
-              {/* Selection Checkbox */}
-              <div className="absolute top-2 left-2 z-10">
-                <Checkbox
-                  checked={selectedTasks.has(task.id)}
-                  onCheckedChange={() => handleToggleTask(task.id)}
-                  className="bg-background/80 backdrop-blur-sm"
+          {groupTasks.map((task, index) => {
+            const globalIndex = isPinned ? index : pinnedTasks.length + index
+            const isFocused = globalIndex === focusedIndex
+            
+            return (
+              <motion.div
+                key={task.id}
+                ref={(el) => {
+                  if (el) taskRefs.current.set(task.id, el)
+                }}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={cn(
+                  "relative",
+                  isFocused && "ring-2 ring-primary ring-offset-2 rounded-lg"
+                )}
+              >
+                {/* Selection Checkbox */}
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={selectedTasks.has(task.id)}
+                    onCheckedChange={() => handleToggleTask(task.id)}
+                    className="bg-background/80 backdrop-blur-sm"
+                  />
+                </div>
+                
+                {/* Pin Button */}
+                <div className="absolute top-2 right-2 z-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background",
+                      pinnedTaskIds.has(task.id) && "text-primary"
+                    )}
+                    onClick={() => togglePinTask(task.id)}
+                  >
+                    <Pin className={cn("h-4 w-4", pinnedTaskIds.has(task.id) && "fill-current")} />
+                  </Button>
+                </div>
+                
+                <TaskCard
+                  task={task}
+                  tags={tags}
+                  categories={categories}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onStatusChange={onStatusChange}
+                  onArchive={onArchive}
+                  onClone={onClone}
+                  compact={viewMode === 'compact'}
+                  allTasks={tasks}
                 />
-              </div>
-              
-              {/* Pin Button */}
-              <div className="absolute top-2 right-2 z-10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "h-7 w-7 bg-background/80 backdrop-blur-sm hover:bg-background",
-                    pinnedTaskIds.has(task.id) && "text-primary"
-                  )}
-                  onClick={() => togglePinTask(task.id)}
-                >
-                  <Pin className={cn("h-4 w-4", pinnedTaskIds.has(task.id) && "fill-current")} />
-                </Button>
-              </div>
-              
-              <TaskCard
-                task={task}
-                tags={tags}
-                categories={categories}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onStatusChange={onStatusChange}
-                onArchive={onArchive}
-                compact={viewMode === 'compact'}
-              />
-            </motion.div>
-          ))}
+              </motion.div>
+            )
+          })}
         </AnimatePresence>
       </div>
     </div>
@@ -518,8 +611,20 @@ export function TaskList({
           </Button>
         </div>
 
-        {/* View Controls */}
+        {/* View Controls with Print Button */}
         <div className="flex gap-2">
+          {onPrint && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrint}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+          )}
+          
           {/* Sort By */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -606,10 +711,10 @@ export function TaskList({
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
+      {/* Enhanced Bulk Actions Bar */}
       {selectedTasks.size > 0 && (
         <Card className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium">
                 {selectedTasks.size} task{selectedTasks.size > 1 ? 's' : ''} selected
@@ -622,7 +727,7 @@ export function TaskList({
                 Clear Selection
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -641,6 +746,17 @@ export function TaskList({
                 <TrendingUp className="h-4 w-4" />
                 In Progress
               </Button>
+              {onBulkClone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkAction('clone')}
+                  className="gap-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  Clone
+                </Button>
+              )}
               {onBulkArchive && (
                 <Button
                   variant="outline"
@@ -664,6 +780,22 @@ export function TaskList({
                 </Button>
               )}
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Keyboard Navigation Hint */}
+      {tasks.length > 0 && (
+        <Card className="p-3 bg-muted/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <kbd className="px-2 py-1 bg-background rounded border">↑↓</kbd>
+            <span>Navigate</span>
+            <kbd className="px-2 py-1 bg-background rounded border">Space</kbd>
+            <span>Select</span>
+            <kbd className="px-2 py-1 bg-background rounded border">Enter</kbd>
+            <span>Open</span>
+            <kbd className="px-2 py-1 bg-background rounded border">Ctrl+A</kbd>
+            <span>Select All</span>
           </div>
         </Card>
       )}

@@ -82,6 +82,8 @@ import {
   getWorkspaces, 
   setActiveWorkspaceId 
 } from '@/lib/workspaceStorage'
+import { PrintView } from '@/components/PrintView'
+import { cloneTask, bulkCloneTasks } from '@/lib/storage'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -714,6 +716,38 @@ export default function Home() {
     refreshData()
   }
 
+  const handleCloneTask = (taskId: string) => {
+    if (!session?.user) {
+      showToast.error('Please sign in to clone tasks')
+      return
+    }
+    
+    const clonedTask = cloneTask(taskId)
+    if (clonedTask) {
+      showToast.success('Task Cloned', `"${clonedTask.title}" has been created`)
+      refreshData()
+    } else {
+      showToast.error('Failed to clone task')
+    }
+  }
+
+  const handleBulkClone = (taskIds: string[]) => {
+    const clonedTasks = bulkCloneTasks(taskIds)
+    showToast.success('Tasks Cloned', `${clonedTasks.length} task${clonedTasks.length > 1 ? 's' : ''} cloned successfully`)
+    refreshData()
+  }
+
+  const handlePrintView = () => {
+    setShowPrintView(true)
+    // Trigger print after a short delay to ensure rendering
+    setTimeout(() => {
+      window.print()
+      setShowPrintView(false)
+    }, 500)
+  }
+
+  const [showPrintView, setShowPrintView] = useState(false)
+
   // Protected View Component
   const ProtectedViewPlaceholder = ({ viewName }: { viewName: string }) => (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -1013,6 +1047,9 @@ export default function Home() {
                           onBulkArchive={handleBulkArchive}
                           onBulkDelete={handleBulkDelete}
                           onBulkStatusChange={handleBulkStatusChange}
+                          onClone={handleCloneTask}
+                          onBulkClone={handleBulkClone}
+                          onPrint={handlePrintView}
                           emptyMessage={
                             filters.query || filters.priority || filters.status || 
                             filters.tags.length > 0 || filters.categories.length > 0
@@ -1545,6 +1582,23 @@ export default function Home() {
         open={shortcutsModalOpen}
         onOpenChange={setShortcutsModalOpen}
       />
+
+      {/* Print View Component */}
+      {showPrintView && (
+        <PrintView
+          tasks={sortedTasks}
+          tags={tags}
+          categories={categories}
+          title="9TD Task List"
+          showFilters={true}
+          filters={{
+            status: filters.status,
+            priority: filters.priority,
+            tags: filters.tags,
+            categories: filters.categories,
+          }}
+        />
+      )}
     </div>
   )
 }

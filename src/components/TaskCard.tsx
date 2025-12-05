@@ -18,7 +18,8 @@ import {
   LockKeyhole,
   UnlockKeyhole,
   GitBranch,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ interface TaskCardProps {
   onDelete: (taskId: string) => void
   onStatusChange: (taskId: string, status: Task['status']) => void
   onArchive?: (taskId: string) => void
+  onClone?: (taskId: string) => void
   compact?: boolean
   allTasks?: Task[]
 }
@@ -57,7 +59,7 @@ const statusColors = {
   'cancelled': 'bg-red-500/10 text-red-600 border-red-500/20',
 }
 
-export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusChange, onArchive, compact = false, allTasks = [] }: TaskCardProps) {
+export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusChange, onArchive, onClone, compact = false, allTasks = [] }: TaskCardProps) {
   const taskTags = tags.filter(tag => (task.tags || []).includes(tag.id))
   const taskCategories = categories.filter(cat => (task.categories || []).includes(cat.id))
   
@@ -174,6 +176,13 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Task
                 </DropdownMenuItem>
+                {onClone && (
+                  <DropdownMenuItem onClick={() => onClone(task.id)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Clone Task
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => onStatusChange(task.id, 'in-progress')}
                   disabled={task.status === 'in-progress'}
@@ -273,6 +282,13 @@ export function TaskCard({ task, tags, categories, onEdit, onDelete, onStatusCha
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Task
                 </DropdownMenuItem>
+                {onClone && (
+                  <DropdownMenuItem onClick={() => onClone(task.id)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Clone Task
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => onStatusChange(task.id, 'in-progress')}
                   disabled={task.status === 'in-progress'}
