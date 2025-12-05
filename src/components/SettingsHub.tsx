@@ -53,8 +53,27 @@ import {
   Plug,
   Code,
   Workflow,
+  Palette,
+  FolderOpen,
+  Type
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
+import { WorkspaceManager } from '@/components/WorkspaceManager'
+import { CustomFieldsManager } from '@/components/CustomFieldsManager'
+import { 
+  getWorkspaces, 
+  getActiveWorkspaceId, 
+  setActiveWorkspaceId,
+  addWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+  getAllWorkspaceStats,
+  getCustomFields,
+  addCustomField,
+  updateCustomField,
+  deleteCustomField
+} from '@/lib/workspaceStorage'
 
 interface SettingsHubProps {
   settings: AppSettings
@@ -91,6 +110,20 @@ interface SettingsHubProps {
   onSaveTask: (task: Task) => void
   initialTab?: string
 }
+
+const TABS = [
+  { id: 'general', label: 'General', icon: Settings },
+  { id: 'workspaces', label: 'Workspaces', icon: FolderOpen },
+  { id: 'custom-fields', label: 'Custom Fields', icon: Type },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'defaults', label: 'Defaults', icon: CheckSquare },
+  { id: 'datetime', label: 'Date & Time', icon: CalendarClock },
+  { id: 'privacy', label: 'Privacy', icon: Shield },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
+  { id: 'advanced', label: 'Advanced', icon: Code },
+  { id: 'archive', label: 'Archive', icon: ArchiveIcon },
+] as const
 
 export function SettingsHub({
   settings,
@@ -150,12 +183,23 @@ export function SettingsHub({
   const [activeCategory, setActiveCategory] = useState(tabToCategory[initialTab] || 'settings')
   const [activeSubTab, setActiveSubTab] = useState(initialTab)
 
+  const [workspaces, setWorkspaces] = useState(getWorkspaces())
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState(getActiveWorkspaceId())
+  const [workspaceStats, setWorkspaceStats] = useState(getAllWorkspaceStats(tasks))
+  const [customFields, setCustomFields] = useState(getCustomFields())
+
   useEffect(() => {
     if (initialTab) {
       setActiveSubTab(initialTab)
       setActiveCategory(tabToCategory[initialTab] || 'settings')
     }
   }, [initialTab])
+
+  useEffect(() => {
+    setWorkspaces(getWorkspaces())
+    setWorkspaceStats(getAllWorkspaceStats(tasks))
+    setCustomFields(getCustomFields())
+  }, [tasks])
 
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category)
@@ -180,6 +224,46 @@ export function SettingsHub({
         setActiveSubTab('archive')
         break
     }
+  }
+
+  const handleWorkspaceSelect = (workspaceId: string) => {
+    setActiveWorkspaceId(workspaceId)
+    setCurrentWorkspaceId(workspaceId)
+    onRefresh()
+    toast.success('Workspace switched')
+  }
+
+  const handleWorkspaceCreate = (workspace: any) => {
+    const newWorkspace = addWorkspace(workspace)
+    setWorkspaces(getWorkspaces())
+    toast.success(`Workspace "${newWorkspace.name}" created`)
+  }
+
+  const handleWorkspaceUpdate = (workspaceId: string, updates: any) => {
+    updateWorkspace(workspaceId, updates)
+    setWorkspaces(getWorkspaces())
+  }
+
+  const handleWorkspaceDelete = (workspaceId: string) => {
+    deleteWorkspace(workspaceId)
+    setWorkspaces(getWorkspaces())
+    onRefresh()
+  }
+
+  const handleCustomFieldCreate = (field: any) => {
+    const newField = addCustomField(field)
+    setCustomFields(getCustomFields())
+    toast.success(`Custom field "${newField.name}" created`)
+  }
+
+  const handleCustomFieldUpdate = (fieldId: string, updates: any) => {
+    updateCustomField(fieldId, updates)
+    setCustomFields(getCustomFields())
+  }
+
+  const handleCustomFieldDelete = (fieldId: string) => {
+    deleteCustomField(fieldId)
+    setCustomFields(getCustomFields())
   }
 
   return (

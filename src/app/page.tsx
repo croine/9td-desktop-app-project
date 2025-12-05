@@ -77,6 +77,11 @@ import { AvatarCustomization } from '@/components/AvatarCustomization'
 import { TaskDependencyGraph } from '@/components/TaskDependencyGraph'
 import { DailyPlanningRitual } from '@/components/DailyPlanningRitual'
 import { EnhancedFocusMode } from '@/components/EnhancedFocusMode'
+import { 
+  getActiveWorkspaceId, 
+  getWorkspaces, 
+  setActiveWorkspaceId 
+} from '@/lib/workspaceStorage'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -738,7 +743,21 @@ export default function Home() {
     </div>
   )
 
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null)
+  const [workspaces, setWorkspaces] = useState(getWorkspaces())
+
+  useEffect(() => {
+    const activeId = getActiveWorkspaceId()
+    setCurrentWorkspaceId(activeId)
+    setWorkspaces(getWorkspaces())
+  }, [])
+
   const filteredTasks = tasks.filter(task => {
+    // Filter by workspace
+    if (currentWorkspaceId && task.workspaceId !== currentWorkspaceId) {
+      return false
+    }
+
     if (filters.query) {
       const query = filters.query.toLowerCase()
       if (
@@ -817,6 +836,9 @@ export default function Home() {
     }
   })
 
+  // Get current workspace info for display
+  const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId)
+
   // Show loading screen while checking session - this uses the enhanced loading.tsx
   if (sessionPending) {
     return null // Next.js will show loading.tsx automatically
@@ -888,6 +910,14 @@ export default function Home() {
               {settings.showLogo && <Logo />}
               <DashboardTitle settings={settings} />
               <AnimatedTitle />
+              
+              {/* Workspace Selector */}
+              {session?.user && currentWorkspace && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                  <span className="text-xl">{currentWorkspace.icon || '📁'}</span>
+                  <span className="text-sm font-semibold">{currentWorkspace.name}</span>
+                </div>
+              )}
             </div>
             
             {/* Search Bar and Actions */}

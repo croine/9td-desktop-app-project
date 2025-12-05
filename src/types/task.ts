@@ -175,49 +175,27 @@ export interface Category {
 }
 
 export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: TaskPriority;
-  status: TaskStatus;
-  tags: string[]; // tag IDs
-  categories: string[]; // category IDs
-  assignees: string[];
-  dueDate?: string;
-  subtasks?: Subtask[];
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  archived?: boolean;
-  archivedAt?: string;
-  
-  // New fields for advanced features
-  progress?: number; // Manual progress percentage (0-100)
-  timeTracking?: TimeTracking;
-  recurring?: RecurringTask;
-  dependencies?: TaskDependency[];
-  attachments?: Attachment[];
-  comments?: Comment[];
-  reminders?: Reminder[];
-  links?: string[]; // External links/references
-  notes?: string; // Additional notes
-  
-  // Eisenhower Matrix
-  importance?: 'important' | 'not-important'; // for Eisenhower Matrix
-  urgency?: 'urgent' | 'not-urgent'; // for Eisenhower Matrix
-  
-  // Template & Inbox
-  isTemplate?: boolean;
-  templateId?: string;
-  isInInbox?: boolean; // Quick capture inbox
-  processedFromInbox?: boolean;
-  
-  // Smart suggestions
-  suggestions?: SmartSuggestion[];
-  
-  // Focus mode
-  isFocused?: boolean;
-  focusStartTime?: string;
+  id: string
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  status: 'todo' | 'in-progress' | 'completed' | 'on-hold'
+  tags: string[]
+  categories: string[]
+  createdAt: string
+  updatedAt: string
+  dueDate?: string
+  assignees?: string[]
+  subtasks?: SubTask[]
+  attachments?: Attachment[]
+  estimatedTime?: number
+  actualTime?: number
+  timeTracking?: TimeTrackingSession[]
+  dependencies?: string[]
+  blockedBy?: string[]
+  recurrence?: RecurrencePattern
+  workspaceId?: string // NEW: Workspace association
+  customFields?: CustomFieldValue[] // NEW: Custom field values
 }
 
 export interface ActivityLog {
@@ -323,3 +301,5 @@ export interface InboxItem {
   createdAt: string;
   processed: boolean;
 }
+
+import { CustomFieldValue } from './workspace'

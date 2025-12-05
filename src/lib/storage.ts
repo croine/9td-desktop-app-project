@@ -1,5 +1,6 @@
 import { Task, Tag, Category, ActivityLog, AppSettings, AnimationSettings, TaskTemplate, InboxItem, ExportData, ChangeDetail } from '@/types/task';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { getActiveWorkspaceId } from './workspaceStorage';
 
 const STORAGE_KEYS = {
   TASKS: 'ntd_tasks',
@@ -27,10 +28,16 @@ export const saveTasks = (tasks: Task[]) => {
   autoBackup();
 };
 
-export const addTask = (task: Task) => {
-  const tasks = getTasks();
-  tasks.push(task);
-  saveTasks(tasks);
+export function addTask(task: Task): void {
+  // Auto-assign to active workspace if not set
+  if (!task.workspaceId) {
+    task.workspaceId = getActiveWorkspaceId() || 'default'
+  }
+  
+  const tasks = getTasks()
+  tasks.push(task)
+  localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks))
+  
   addLog({
     id: `log_${Date.now()}`,
     taskId: task.id,
@@ -39,15 +46,16 @@ export const addTask = (task: Task) => {
     timestamp: new Date().toISOString(),
     tags: task.tags || [],
   });
-};
+}
 
-export const updateTask = (taskId: string, updates: Partial<Task>) => {
-  const tasks = getTasks();
-  const index = tasks.findIndex(t => t.id === taskId);
+export function updateTask(taskId: string, updates: Partial<Task>): void {
+  const tasks = getTasks()
+  const index = tasks.findIndex(t => t.id === taskId)
+  
   if (index !== -1) {
-    const oldTask = tasks[index];
-    tasks[index] = { ...tasks[index], ...updates, updatedAt: new Date().toISOString() };
-    saveTasks(tasks);
+    const oldTask = tasks[index]
+    tasks[index] = { ...oldTask, ...updates, updatedAt: new Date().toISOString() }
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks))
     
     // Track detailed changes
     const changes: ChangeDetail[] = [];
@@ -108,7 +116,7 @@ export const updateTask = (taskId: string, updates: Partial<Task>) => {
       changes: changes.length > 0 ? changes : undefined,
     });
   }
-};
+}
 
 export const deleteTask = (taskId: string) => {
   const tasks = getTasks();
@@ -171,6 +179,13 @@ export const getArchivedTasks = (): Task[] => {
 export const getActiveTasks = (): Task[] => {
   return getTasks().filter(t => !t.archived);
 };
+
+// Get tasks for active workspace only
+export function getActiveWorkspaceTasks(): Task[] {
+  const allTasks = getTasks()
+  const activeWorkspaceId = getActiveWorkspaceId()
+  return allTasks.filter(task => task.workspaceId === activeWorkspaceId)
+}
 
 // Tags
 export const getTags = (): Tag[] => {
