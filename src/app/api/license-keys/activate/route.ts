@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { licenseKeys, user, account } from '@/db/schema';
+import { licenseKeys, user, account, verification } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
+import { Resend } from 'resend';
+import { render } from '@react-email/render';
+import { VerificationEmail } from '@/components/emails/VerificationEmail';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
@@ -175,7 +180,7 @@ export async function POST(request: NextRequest) {
     // Generate unique user ID
     const userId = 'user_' + randomBytes(16).toString('hex');
 
-    // Create user account with optional username
+    // Create user account with emailVerified: false to trigger verification flow
     const newUsers = await db
       .insert(user)
       .values({
@@ -183,7 +188,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: normalizedEmail,
         username: username && username.trim() !== '' ? username.trim().toLowerCase() : null,
-        emailVerified: true,
+        emailVerified: false, // Changed from true to false
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -215,6 +220,49 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
+    // Generate verification token
+    const verificationToken = randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+
+    // Create verification record
+    await db
+      .insert(verification)
+      .values({
+        id: 'verification_' + randomBytes(16).toString('hex'),
+        identifier: normalizedEmail,
+        value: verificationToken,
+        expiresAt: expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+    // Send verification email
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
+      
+      const emailHtml = render(
+        VerificationEmail({
+          name: name.trim(),
+          verificationUrl,
+        })
+      );
+
+      await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+        to: normalizedEmail,
+        subject: '🎯 Verify your 9TD account',
+        html: emailHtml,
+        replyTo: process.env.RESEND_REPLY_TO,
+      });
+
+      console.log(`✅ Verification email sent to ${normalizedEmail}`);
+    } catch (emailError) {
+      console.error('❌ Failed to send verification email:', emailError);
+      // Continue with registration even if email fails
+    }
+
     // Update license key
     const updatedLicenseKeys = await db
       .update(licenseKeys)
@@ -240,13 +288,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        requiresVerification: true, // Added flag
         user: {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
           username: newUser.username,
         },
-        message: 'Account activated successfully',
+        message: 'Account created successfully. Please check your email to verify your account.',
       },
       { status: 201 }
     );

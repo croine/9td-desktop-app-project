@@ -167,13 +167,25 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success('Account created successfully!', {
-        description: 'Redirecting to login...'
-      })
-      
-      setTimeout(() => {
-        router.push('/login?registered=true')
-      }, 1200)
+      // Check if email verification is required
+      if (data.requiresVerification) {
+        toast.success('Account created successfully!', {
+          description: 'Please check your email to verify your account'
+        })
+        
+        setTimeout(() => {
+          router.push('/verify-email-pending')
+        }, 1200)
+      } else {
+        // Legacy flow for backwards compatibility
+        toast.success('Account created successfully!', {
+          description: 'Redirecting to login...'
+        })
+        
+        setTimeout(() => {
+          router.push('/login?registered=true')
+        }, 1200)
+      }
     } catch (error) {
       console.error('Account activation error:', error)
       toast.error('Failed to create account')
