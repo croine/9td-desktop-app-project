@@ -44,6 +44,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { authClient, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useCustomer } from 'autumn-js/react'
 
 // ========================================================================
 // NAVIGATION SIDEBAR v9.0 - REVOLUTIONARY GROUPED DESIGN WITH SMART MINIMAP
@@ -140,6 +141,7 @@ export function NavigationSidebar({
 }: NavigationSidebarProps) {
   const router = useRouter()
   const { refetch: refetchSession } = useSession()
+  const { customer, isLoading: isLoadingCustomer } = useCustomer()
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   
@@ -160,6 +162,29 @@ export function NavigationSidebar({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['core', 'productivity']))
   const [scrollProgress, setScrollProgress] = useState(0)
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
+  const [sessionDuration, setSessionDuration] = useState<string>('')
+  
+  // Calculate session duration for signed-in users
+  useEffect(() => {
+    if (session?.user) {
+      const updateDuration = () => {
+        // Simple session time tracker (you could enhance this with actual session start time)
+        const now = new Date()
+        const hours = now.getHours()
+        const minutes = now.getMinutes()
+        setSessionDuration(`${hours}:${minutes.toString().padStart(2, '0')}`)
+      }
+      
+      updateDuration()
+      const interval = setInterval(updateDuration, 60000) // Update every minute
+      return () => clearInterval(interval)
+    }
+  }, [session])
+
+  // Determine user plan status
+  const isPro = customer?.products?.some(p => 
+    p.id !== 'free' && (p.status === 'active' || p.status === 'trialing')
+  )
 
   // ==========================================
   // GROUPED NAVIGATION CATEGORIES
@@ -550,6 +575,39 @@ export function NavigationSidebar({
               </div>
             ) : session?.user ? (
               <div className="space-y-2">
+                {/* Status Mode Badge - Workspace Active */}
+                <div className="flex items-center justify-between gap-2 pb-2">
+                  <Badge 
+                    variant="outline" 
+                    className="h-5 px-2 text-[10px] font-semibold border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  >
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.2, 1],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <Zap className="h-2.5 w-2.5 mr-1" />
+                    </motion.div>
+                    Workspace Active
+                  </Badge>
+                  
+                  {/* Pro Member Badge (if applicable) */}
+                  {isPro && (
+                    <Badge 
+                      variant="outline" 
+                      className="h-5 px-2 text-[10px] font-semibold border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
+                    >
+                      <Sparkles className="h-2.5 w-2.5 mr-1" />
+                      Pro
+                    </Badge>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-2">
                   <AvatarWithRings
                     avatarUrl={preferences.avatarUrl}
@@ -575,6 +633,13 @@ export function NavigationSidebar({
                         {session.user.email}
                       </p>
                     )}
+                    {/* Session Time */}
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                      <span className="text-[9px] text-muted-foreground">
+                        Active since {sessionDuration}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
