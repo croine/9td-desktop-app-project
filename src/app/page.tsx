@@ -84,6 +84,7 @@ import {
 } from '@/lib/workspaceStorage'
 import { PrintView } from '@/components/PrintView'
 import { cloneTask, bulkCloneTasks } from '@/lib/storage'
+import Loading from '@/app/loading'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
@@ -873,9 +874,9 @@ export default function Home() {
   // Get current workspace info for display
   const currentWorkspace = workspaces.find(w => w.id === currentWorkspaceId)
 
-  // Show loading screen while checking session - this uses the enhanced loading.tsx
+  // Show loading screen while checking session
   if (sessionPending) {
-    return null // Next.js will show loading.tsx automatically
+    return <Loading />
   }
 
   return (
