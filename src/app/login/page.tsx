@@ -1,640 +1,468 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { authClient, useSession } from '@/lib/auth-client'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Logo } from '@/components/Logo'
 import { toast } from 'sonner'
-import { Loader2, ArrowRight, Key, Shield, Mail, User, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Activity, Globe, Wifi, Server, Database, Cpu } from 'lucide-react'
+import { 
+  Mail, Lock, Key, Eye, EyeOff, ArrowRight, 
+  Shield, Sparkles, CheckCircle2, AlertCircle,
+  User, Loader2
+} from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
 type SignInMethod = 'email' | 'username'
 
-// Real-time security metrics component
-const SecurityMetrics = () => {
-  const [metrics, setMetrics] = useState({
-    activeUsers: 0,
-    securityLevel: 0,
-    serverStatus: 'online',
-    responseTime: 0
-  })
-
-  useEffect(() => {
-    // Fetch real metrics on mount
-    const fetchMetrics = async () => {
-      try {
-        const start = Date.now()
-        const response = await fetch('/api/user/profile')
-        const responseTime = Date.now() - start
-        
-        setMetrics({
-          activeUsers: Math.floor(Math.random() * 50) + 100, // Real active session count could be fetched from DB
-          securityLevel: 99,
-          serverStatus: response.ok ? 'online' : 'degraded',
-          responseTime
-        })
-      } catch {
-        setMetrics(prev => ({ ...prev, serverStatus: 'degraded' }))
-      }
-    }
-
-    fetchMetrics()
-    const interval = setInterval(fetchMetrics, 30000) // Update every 30s
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground font-medium flex items-center gap-2">
-          <Activity className="h-3 w-3" />
-          System Status
-        </span>
-        <motion.span 
-          className="flex items-center gap-1 text-green-500 font-semibold"
-          animate={{ opacity: [1, 0.6, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="h-1.5 w-1.5 bg-green-500 rounded-full" />
-          {metrics.serverStatus.toUpperCase()}
-        </motion.span>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-2">
-        <div className="glass-card p-3 rounded-lg border border-primary/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Globe className="h-3 w-3 text-primary" />
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Active Users</span>
-          </div>
-          <div className="text-lg font-bold font-display text-primary">{metrics.activeUsers}</div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg border border-green-500/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="h-3 w-3 text-green-500" />
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Security</span>
-          </div>
-          <div className="text-lg font-bold font-display text-green-500">{metrics.securityLevel}%</div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg border border-blue-500/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Cpu className="h-3 w-3 text-blue-500" />
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Response</span>
-          </div>
-          <div className="text-lg font-bold font-display text-blue-500">{metrics.responseTime}ms</div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg border border-purple-500/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Database className="h-3 w-3 text-purple-500" />
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Encryption</span>
-          </div>
-          <div className="text-lg font-bold font-display text-purple-500">AES-256</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Neural network background animation
-const NeuralBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-    
-    const nodes: { x: number; y: number; vx: number; vy: number }[] = []
-    const nodeCount = 50
-    
-    for (let i = 0; i < nodeCount; i++) {
-      nodes.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5
-      })
-    }
-    
-    const animate = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
-      // Update and draw nodes
-      nodes.forEach((node, i) => {
-        node.x += node.vx
-        node.y += node.vy
-        
-        if (node.x < 0 || node.x > canvas.width) node.vx *= -1
-        if (node.y < 0 || node.y > canvas.height) node.vy *= -1
-        
-        // Draw node
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, 2, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)'
-        ctx.fill()
-        
-        // Draw connections
-        nodes.slice(i + 1).forEach(otherNode => {
-          const dx = otherNode.x - node.x
-          const dy = otherNode.y - node.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-          
-          if (distance < 150) {
-            ctx.beginPath()
-            ctx.moveTo(node.x, node.y)
-            ctx.lineTo(otherNode.x, otherNode.y)
-            ctx.strokeStyle = `rgba(59, 130, 246, ${0.2 * (1 - distance / 150)})`
-            ctx.lineWidth = 1
-            ctx.stroke()
-          }
-        })
-      })
-      
-      requestAnimationFrame(animate)
-    }
-    
-    animate()
-  }, [])
-  
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 opacity-20 dark:opacity-30"
-      style={{ filter: 'blur(1px)' }}
-    />
-  )
-}
-
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const { data: session, isPending: sessionPending, refetch } = useSession()
-  const [isLoading, setIsLoading] = useState(false)
   const [signInMethod, setSignInMethod] = useState<SignInMethod>('email')
+  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [licenseKey, setLicenseKey] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [validationState, setValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle')
-  const [formData, setFormData] = useState({
-    email: '',
-    username: '',
-    password: '',
-    licenseKey: '',
-    rememberMe: false
-  })
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Validation states
+  const [emailValid, setEmailValid] = useState<boolean | null>(null)
+  const [usernameValid, setUsernameValid] = useState<boolean | null>(null)
+  const [passwordValid, setPasswordValid] = useState<boolean | null>(null)
+  const [licenseKeyValid, setLicenseKeyValid] = useState<boolean | null>(null)
 
+  // Validate email format
   useEffect(() => {
-    if (searchParams.get('registered') === 'true') {
-      toast.success('🎉 Account created successfully!', {
-        description: 'Welcome to 9TD! Sign in to get started'
-      })
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    if (!sessionPending && session?.user) {
-      router.push('/')
-    }
-  }, [session, sessionPending, router])
-
-  // Real-time validation for email/username
-  useEffect(() => {
-    const value = signInMethod === 'email' ? formData.email : formData.username
-    if (!value) {
-      setValidationState('idle')
+    if (!email) {
+      setEmailValid(null)
       return
     }
-    
-    setValidationState('validating')
-    
-    const timer = setTimeout(() => {
-      if (signInMethod === 'email') {
-        const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-        setValidationState(isValid ? 'valid' : 'invalid')
-      } else {
-        const isValid = /^[a-zA-Z0-9_-]{3,20}$/.test(value)
-        setValidationState(isValid ? 'valid' : 'invalid')
-      }
-    }, 500)
-    
-    return () => clearTimeout(timer)
-  }, [formData.email, formData.username, signInMethod])
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    setEmailValid(emailRegex.test(email))
+  }, [email])
 
-  const handleCredentialSignIn = async (e: React.FormEvent) => {
+  // Validate username format
+  useEffect(() => {
+    if (!username) {
+      setUsernameValid(null)
+      return
+    }
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/
+    setUsernameValid(usernameRegex.test(username))
+  }, [username])
+
+  // Validate password
+  useEffect(() => {
+    if (!password) {
+      setPasswordValid(null)
+      return
+    }
+    setPasswordValid(password.length >= 6)
+  }, [password])
+
+  // Validate license key
+  useEffect(() => {
+    if (!licenseKey) {
+      setLicenseKeyValid(null)
+      return
+    }
+    // Remove dashes and check length
+    const cleanKey = licenseKey.replace(/-/g, '')
+    setLicenseKeyValid(cleanKey.length === 16)
+  }, [licenseKey])
+
+  // Auto-format license key
+  const handleLicenseKeyChange = (value: string) => {
+    // Remove all non-alphanumeric characters
+    const cleaned = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+    
+    // Add dashes every 4 characters
+    let formatted = ''
+    for (let i = 0; i < cleaned.length && i < 16; i++) {
+      if (i > 0 && i % 4 === 0) {
+        formatted += '-'
+      }
+      formatted += cleaned[i]
+    }
+    
+    setLicenseKey(formatted)
+  }
+
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validate license key format (XXXX-XXXX-XXXX-XXXX)
-    const licenseKeyPattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-    if (!licenseKeyPattern.test(formData.licenseKey.toUpperCase())) {
-      toast.error('Invalid license key format', {
-        description: 'License key must be in format: XXXX-XXXX-XXXX-XXXX'
-      })
+    // Validate all fields
+    if (signInMethod === 'email' && !emailValid) {
+      toast.error('Please enter a valid email address')
       return
     }
     
+    if (signInMethod === 'username' && !usernameValid) {
+      toast.error('Please enter a valid username')
+      return
+    }
+    
+    if (!passwordValid) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    
+    if (!licenseKeyValid) {
+      toast.error('Please enter a valid 16-character license key')
+      return
+    }
+
     setIsLoading(true)
 
     try {
+      const cleanLicenseKey = licenseKey.replace(/-/g, '')
+      
       const response = await fetch('/api/auth/signin-multi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          signInMethod === 'email'
-            ? { 
-                method: 'email', 
-                email: formData.email, 
-                password: formData.password,
-                licenseKey: formData.licenseKey.toUpperCase().trim()
-              }
-            : { 
-                method: 'username', 
-                username: formData.username, 
-                password: formData.password,
-                licenseKey: formData.licenseKey.toUpperCase().trim()
-              }
-        )
+        body: JSON.stringify({
+          method: signInMethod,
+          email: signInMethod === 'email' ? email : undefined,
+          username: signInMethod === 'username' ? username : undefined,
+          password,
+          license_key: cleanLicenseKey,
+          rememberMe
+        })
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        toast.error('Authentication failed', {
-          description: data.error || 'Invalid credentials or license key'
-        })
+        toast.error(data.error || 'Sign in failed')
         setIsLoading(false)
         return
       }
 
-      localStorage.setItem('bearer_token', data.session.token)
-      toast.success('🔐 Three-factor authentication successful!')
-      await refetch()
-      router.push('/')
+      if (data.session?.token) {
+        localStorage.setItem('bearer_token', data.session.token)
+      }
+
+      toast.success('Welcome back! 🎉')
+      
+      setTimeout(() => {
+        router.push('/')
+        router.refresh()
+      }, 500)
     } catch (error) {
-      toast.error('An error occurred. Please try again.')
+      console.error('Sign in error:', error)
+      toast.error('An error occurred during sign in')
       setIsLoading(false)
     }
   }
 
-  if (sessionPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground font-medium">Initializing secure session...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (session?.user) {
-    return null
+  const getFieldIcon = (isValid: boolean | null) => {
+    if (isValid === null) return null
+    if (isValid) return <CheckCircle2 className="h-4 w-4 text-green-500" />
+    return <AlertCircle className="h-4 w-4 text-red-500" />
   }
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden bg-background">
-      {/* Neural Network Background */}
-      <NeuralBackground />
-      
-      {/* Left Panel - Security Dashboard */}
-      <div className="hidden lg:flex lg:w-2/5 relative z-10 p-12 flex-col justify-between border-r border-border/50">
-        <div className="space-y-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="flex items-center gap-3 mb-8">
-              <Logo />
-              <div>
-                <h1 className="text-2xl font-bold font-display">9TD Security</h1>
-                <p className="text-sm text-muted-foreground">Three-Factor Authentication</p>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <SecurityMetrics />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="space-y-4"
-          >
-            <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Authentication Factors
-            </h3>
-            
-            {[
-              { icon: Mail, text: 'Email or Username Verification', color: 'text-blue-500' },
-              { icon: Lock, text: 'Password Authentication', color: 'text-green-500' },
-              { icon: Key, text: 'License Key Validation', color: 'text-purple-500' }
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.5 + i * 0.1 }}
-                className="flex items-center gap-3 glass-card p-3 rounded-lg border border-border/30"
-              >
-                <feature.icon className={`h-4 w-4 ${feature.color}`} />
-                <span className="text-sm font-medium text-foreground/80">{feature.text}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="glass-card p-4 rounded-lg border border-primary/20 bg-primary/5"
-          >
-            <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-xs">
-                <p className="font-semibold text-foreground mb-1">Enhanced Security</p>
-                <p className="text-muted-foreground">
-                  All three factors are required to verify your identity and protect your account
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Floating Orbs */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1.0 }}
-          className="text-xs text-muted-foreground"
-        >
-          <p>© 2024 9TD. All rights reserved.</p>
-          <p className="mt-1">Protected by three-factor authentication</p>
-        </motion.div>
+          className="absolute top-20 left-20 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl"
+          animate={{
+            x: [0, 30, 0],
+            y: [0, 50, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div
+          className="absolute bottom-20 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl"
+          animate={{
+            x: [0, -40, 0],
+            y: [0, -30, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 w-64 h-64 bg-blue-300/10 rounded-full blur-2xl"
+          animate={{
+            x: [-32, 32, -32],
+            y: [-32, 32, -32],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        />
       </div>
 
-      {/* Right Panel - Authentication Form */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-12 relative z-10">
+      {/* Main Content */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <Card className="glass-card border-2 shadow-2xl p-8">
-            {/* Logo for mobile */}
-            <div className="lg:hidden flex justify-center mb-6">
-              <Logo />
-            </div>
+          {/* Logo & Title */}
+          <motion.div 
+            className="text-center mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <motion.div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 shadow-lg"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Shield className="h-8 w-8 text-white" />
+            </motion.div>
+            <h1 className="font-display text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-muted-foreground">
+              Sign in to access your 9TD dashboard
+            </p>
+          </motion.div>
 
-            {/* Title */}
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-bold font-display mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                Secure Sign In
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Three-factor authentication required
-              </p>
-            </div>
-
-            {/* Method Selector Pills - Only Email and Username */}
-            <div className="flex gap-2 mb-8 p-1.5 bg-muted/30 rounded-xl border border-border/50">
-              {[
-                { id: 'email' as SignInMethod, icon: Mail, label: 'Email' },
-                { id: 'username' as SignInMethod, icon: User, label: 'Username' }
-              ].map((method) => (
-                <Button
-                  key={method.id}
+          {/* Main Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <Card className="glass-card p-8 shadow-2xl border-2 border-blue-100 dark:border-blue-900/50">
+              {/* Method Selector */}
+              <div className="flex gap-2 mb-6 p-1 bg-muted/50 rounded-lg">
+                <button
                   type="button"
-                  variant={signInMethod === method.id ? 'default' : 'ghost'}
-                  size="sm"
-                  className={`flex-1 gap-2 transition-all duration-300 ${
-                    signInMethod === method.id 
-                      ? 'shadow-lg scale-105' 
-                      : 'hover:scale-105'
+                  onClick={() => setSignInMethod('email')}
+                  className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                    signInMethod === 'email'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-105'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-muted'
                   }`}
-                  onClick={() => setSignInMethod(method.id)}
                 >
-                  <method.icon className="h-3.5 w-3.5" />
-                  {method.label}
-                </Button>
-              ))}
-            </div>
+                  <Mail className="h-4 w-4" />
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSignInMethod('username')}
+                  className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
+                    signInMethod === 'username'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-105'
+                      : 'text-foreground/70 hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <User className="h-4 w-4" />
+                  Username
+                </button>
+              </div>
 
-            <AnimatePresence mode="wait">
-              <motion.form
-                key={signInMethod}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                onSubmit={handleCredentialSignIn}
-                className="space-y-6"
-              >
-                {/* Step 1: Email or Username */}
-                <div className="space-y-2">
-                  <Label htmlFor={signInMethod} className="text-sm font-semibold flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
-                    {signInMethod === 'email' ? (
-                      <><Mail className="h-4 w-4 text-primary" /> Email Address</>
-                    ) : (
-                      <><User className="h-4 w-4 text-primary" /> Username</>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id={signInMethod}
-                      type={signInMethod === 'email' ? 'email' : 'text'}
-                      placeholder={signInMethod === 'email' ? 'you@example.com' : 'your_username'}
-                      value={signInMethod === 'email' ? formData.email : formData.username}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        [signInMethod]: e.target.value 
-                      })}
-                      className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
-                      required
-                      disabled={isLoading}
-                      autoFocus
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {validationState === 'validating' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
-                      {validationState === 'valid' && (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      )}
-                      {validationState === 'invalid' && (
-                        <AlertCircle className="h-4 w-4 text-red-500" />
-                      )}
+              <form onSubmit={handleSignIn} className="space-y-5">
+                {/* Email or Username Field */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={signInMethod}
+                    initial={{ opacity: 0, x: signInMethod === 'email' ? -20 : 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: signInMethod === 'email' ? 20 : -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Label className="text-sm font-semibold flex items-center gap-2 mb-2">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                        1
+                      </span>
+                      {signInMethod === 'email' ? 'Email Address' : 'Username'}
+                    </Label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        {signInMethod === 'email' ? <Mail className="h-5 w-5" /> : <User className="h-5 w-5" />}
+                      </div>
+                      <Input
+                        type={signInMethod === 'email' ? 'email' : 'text'}
+                        placeholder={signInMethod === 'email' ? 'you@example.com' : 'your_username'}
+                        value={signInMethod === 'email' ? email : username}
+                        onChange={(e) => signInMethod === 'email' ? setEmail(e.target.value) : setUsername(e.target.value)}
+                        className="pl-11 pr-10 h-12 border-2 focus:border-blue-500 transition-all duration-300"
+                        required
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {signInMethod === 'email' ? getFieldIcon(emailValid) : getFieldIcon(usernameValid)}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </AnimatePresence>
 
-                {/* Step 2: Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-semibold flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
-                    <Lock className="h-4 w-4 text-primary" />
+                {/* Password Field */}
+                <div>
+                  <Label className="text-sm font-semibold flex items-center gap-2 mb-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                      2
+                    </span>
                     Password
                   </Label>
                   <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Lock className="h-5 w-5" />
+                    </div>
                     <Input
-                      id="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
-                      required
-                      disabled={isLoading}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-11 pr-10 h-12 border-2 focus:border-blue-500 transition-all duration-300"
                       autoComplete="off"
+                      required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Step 3: License Key */}
-                <div className="space-y-2">
-                  <Label htmlFor="licenseKey" className="text-sm font-semibold flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
-                    <Key className="h-4 w-4 text-primary" />
+                {/* License Key Field */}
+                <div>
+                  <Label className="text-sm font-semibold flex items-center gap-2 mb-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                      3
+                    </span>
                     License Key
                   </Label>
-                  <Input
-                    id="licenseKey"
-                    type="text"
-                    placeholder="XXXX-XXXX-XXXX-XXXX"
-                    value={formData.licenseKey}
-                    onChange={(e) => {
-                      let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '')
-                      
-                      // Auto-format with dashes
-                      if (value.length > 4 && value[4] !== '-') {
-                        value = value.slice(0, 4) + '-' + value.slice(4)
-                      }
-                      if (value.length > 9 && value[9] !== '-') {
-                        value = value.slice(0, 9) + '-' + value.slice(9)
-                      }
-                      if (value.length > 14 && value[14] !== '-') {
-                        value = value.slice(0, 14) + '-' + value.slice(14)
-                      }
-                      
-                      // Limit to 19 characters (16 chars + 3 dashes)
-                      value = value.slice(0, 19)
-                      
-                      setFormData({ ...formData, licenseKey: value })
-                    }}
-                    className="h-12 font-mono text-center text-lg tracking-wider border-2 focus:border-primary/50 transition-all uppercase"
-                    maxLength={19}
-                    required
-                    disabled={isLoading}
-                  />
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Key className="h-3 w-3" />
-                    Enter the 16-character license key from your registration email
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Key className="h-5 w-5" />
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
+                      value={licenseKey}
+                      onChange={(e) => handleLicenseKeyChange(e.target.value)}
+                      className="pl-11 pr-10 h-12 border-2 focus:border-blue-500 transition-all duration-300 font-mono tracking-wider"
+                      required
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {getFieldIcon(licenseKeyValid)}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Enter the 16-character key sent to your email
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                {/* Remember Me */}
+                <div className="flex items-center gap-2">
                   <Checkbox
                     id="remember"
-                    checked={formData.rememberMe}
-                    onCheckedChange={(checked) => 
-                      setFormData({ ...formData, rememberMe: checked as boolean })
-                    }
-                    disabled={isLoading}
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                   />
                   <Label htmlFor="remember" className="text-sm font-medium cursor-pointer">
-                    Keep me signed in for 30 days
+                    Remember me for 30 days
                   </Label>
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading || validationState === 'invalid'}
-                  className="w-full h-12 text-base font-semibold gap-2"
+                {/* Submit Button */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Authenticating...
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="h-5 w-5" />
-                      Sign In with 3-Factor Auth
-                      <ArrowRight className="h-5 w-5" />
-                    </>
-                  )}
-                </Button>
-              </motion.form>
-            </AnimatePresence>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg shadow-blue-500/50 hover:shadow-xl hover:shadow-blue-500/60 transition-all duration-300"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Signing In...
+                      </>
+                    ) : (
+                      <>
+                        Sign In Securely
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
 
-            {/* Security Notice */}
-            <div className="mt-6 glass-card p-4 rounded-lg border border-primary/10 bg-primary/5">
-              <div className="flex items-start gap-3">
-                <Shield className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <div className="text-xs">
-                  <p className="font-semibold text-foreground mb-1">Enhanced Security Active</p>
-                  <p className="text-muted-foreground">
-                    All three authentication factors are required to access your account
-                  </p>
+                {/* Security Badge */}
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
+                  <Shield className="h-4 w-4 text-green-500" />
+                  <span>Three-factor authentication enabled</span>
                 </div>
-              </div>
-            </div>
+              </form>
+            </Card>
+          </motion.div>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border/50"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground font-medium">
-                  New to 9TD?
-                </span>
-              </div>
-            </div>
+          {/* Register Link */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="text-center mt-6"
+          >
+            <Card className="glass-card p-4 border border-blue-100 dark:border-blue-900/50">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <Link 
+                  href="/register" 
+                  className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-1 group"
+                >
+                  Create one now
+                  <Sparkles className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                </Link>
+              </p>
+            </Card>
+          </motion.div>
 
-            {/* Register Button */}
-            <Link href="/register" className="block">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-12 gap-2 font-semibold border-2 hover:border-primary hover:bg-primary/5 transition-all"
+          {/* Features Footer */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-8 grid grid-cols-3 gap-4 text-center"
+          >
+            {[
+              { icon: Shield, label: 'Secure' },
+              { icon: Sparkles, label: 'Advanced' },
+              { icon: CheckCircle2, label: 'Verified' }
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 + index * 0.1, duration: 0.3 }}
+                className="flex flex-col items-center gap-1"
               >
-                <Key className="h-5 w-5" />
-                Create Account with License Key
-              </Button>
-            </Link>
-          </Card>
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <feature.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">{feature.label}</span>
+              </motion.div>
+            ))}
+          </motion.div>
         </motion.div>
       </div>
     </div>
