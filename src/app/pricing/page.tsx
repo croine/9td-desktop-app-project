@@ -9,7 +9,7 @@ import { PlanUsageIndicator } from "@/components/PlanUsageIndicator"
 import { LicenseKeyPurchase } from "@/components/LicenseKeyPurchase"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Check, Zap, Crown, Users, Star, Sparkles, Lock, TrendingUp, Shield, Rocket, Target, Brain, Palette, FileDown, Puzzle, Workflow, Mail, HardDrive, ListChecks, Filter, Flag, BarChart3, Bell, Database, KeyRound, CreditCard, CheckCircle2, XCircle } from "lucide-react"
+import { ArrowLeft, Check, Zap, Crown, Users, Star, Sparkles, Lock, TrendingUp, Shield, Rocket, Target, Brain, Palette, FileDown, Puzzle, Workflow, Mail, HardDrive, ListChecks, Filter, Flag, BarChart3, Bell, Database, KeyRound, CreditCard, CheckCircle2, XCircle, ArrowRight, Info } from "lucide-react"
 import { PageContainer } from "@/components/LoadingStates"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
@@ -226,25 +226,21 @@ export default function PricingPage() {
   const { data: session, isPending } = useSession()
   const { customer, isLoading } = useCustomer()
   
-  // Get tab from URL or default to subscription
   const urlTab = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(urlTab === 'license' ? 'license' : 'subscription')
   
   const currentPlan = customer?.products?.at(-1)
   const planName = currentPlan?.name || "Free"
 
-  // Handle success/cancel states from URL
   useEffect(() => {
     const success = searchParams.get('success')
     const canceled = searchParams.get('canceled')
-    const sessionId = searchParams.get('session_id')
 
     if (success === 'true') {
       toast.success('Payment successful! Check your email for your license key.', {
         duration: 5000,
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />
       })
-      // Clean up URL parameters
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('success')
       newUrl.searchParams.delete('session_id')
@@ -256,14 +252,12 @@ export default function PricingPage() {
         duration: 5000,
         icon: <XCircle className="h-5 w-5 text-red-500" />
       })
-      // Clean up URL parameters
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('canceled')
       window.history.replaceState({}, '', newUrl.toString())
     }
   }, [searchParams])
 
-  // Update tab when URL changes
   useEffect(() => {
     if (urlTab === 'license') {
       setActiveTab('license')
@@ -272,394 +266,341 @@ export default function PricingPage() {
 
   return (
     <PageContainer>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        {/* Animated Background Elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse-smooth" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse-smooth" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse-smooth" style={{ animationDelay: '2s' }} />
-        </div>
-
-        <div className="relative">
-          {/* Header */}
-          <div className="container mx-auto px-4 pt-8 pb-4">
+      <div className="min-h-screen bg-background">
+        {/* Navigation */}
+        <div className="border-b border-border/50">
+          <div className="container mx-auto px-4 py-4">
             <Button
               variant="ghost"
               onClick={() => router.back()}
-              className="gap-2 mb-6 hover:gap-3 transition-all"
+              className="gap-2 hover:bg-accent"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
+              Back to Dashboard
             </Button>
           </div>
+        </div>
 
-          {/* Hero Section */}
-          <div className="container mx-auto px-4 py-16 text-center">
-            <div className="max-w-4xl mx-auto space-y-8">
-              {/* Animated Badge */}
-              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 border border-primary/30 backdrop-blur-sm">
-                <div className="relative">
-                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                  <div className="absolute inset-0 blur-md bg-primary/50 animate-pulse" />
-                </div>
-                <span className="text-sm font-semibold bg-gradient-to-r from-primary via-purple-500 to-blue-500 bg-clip-text text-transparent">
-                  Premium Plans Now Available
-                </span>
+        {/* Hero Section - Clean & Focused */}
+        <div className="container mx-auto px-4 py-20">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            {session?.user && !isLoading && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+                <div className={`w-2 h-2 rounded-full ${
+                  planName === "Free" ? "bg-slate-500" :
+                  planName === "Pro" ? "bg-primary" :
+                  "bg-amber-500"
+                }`} />
+                <span className="text-sm text-muted-foreground">Currently on</span>
+                <span className="text-sm font-semibold text-foreground">{planName}</span>
               </div>
-              
-              {/* Main Heading with Gradient */}
-              <h1 className="font-display text-6xl md:text-7xl lg:text-8xl font-bold leading-tight">
-                <span className="bg-gradient-to-r from-foreground via-primary to-purple-500 bg-clip-text text-transparent animate-gradient">
-                  Supercharge Your
-                </span>
-                <br />
-                <span className="bg-gradient-to-r from-purple-500 via-blue-500 to-primary bg-clip-text text-transparent animate-gradient" style={{ animationDelay: '0.5s' }}>
-                  Productivity
-                </span>
-              </h1>
-              
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Unlock powerful features and take your task management to the next level. 
-                From AI-powered assistance to team collaboration, we've got you covered.
-              </p>
+            )}
+            
+            <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight">
+              Simple, Transparent Pricing
+            </h1>
+            
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Choose the plan that fits your workflow. Upgrade, downgrade, or cancel anytime.
+            </p>
+          </div>
+        </div>
 
-              {/* Current Plan Badge */}
-              {session?.user && !isLoading && (
-                <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-muted to-muted/50 backdrop-blur-sm border border-border/50 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      planName === "Free" ? "bg-slate-500" :
-                      planName === "Pro" ? "bg-gradient-to-r from-purple-500 to-fuchsia-500" :
-                      "bg-gradient-to-r from-amber-400 to-yellow-500"
-                    } animate-pulse`} />
-                    <span className="text-sm text-muted-foreground">Current plan:</span>
+        {/* Pricing Tabs */}
+        <div className="container mx-auto px-4 pb-16">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex justify-center mb-12">
+              <TabsList className="inline-flex h-11 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+                <TabsTrigger 
+                  value="subscription" 
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Subscription
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="license" 
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  One-Time License
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="subscription" className="space-y-16 mt-0">
+              {/* Pricing Table */}
+              <PricingTable productDetails={productDetails} />
+
+              {/* Current Usage - Only show for logged in users */}
+              {session?.user && (
+                <div className="max-w-3xl mx-auto">
+                  <div className="mb-8">
+                    <h2 className="font-display text-2xl font-semibold mb-2">Your Usage</h2>
+                    <p className="text-muted-foreground">
+                      Track your feature usage across the current billing period
+                    </p>
                   </div>
-                  <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                    {planName !== "Free" && (
-                      <Crown className="h-4 w-4 text-yellow-500 animate-float" />
-                    )}
-                    {planName}
-                  </span>
+                  <PlanUsageIndicator />
                 </div>
               )}
 
-              {/* Social Proof */}
-              <div className="flex items-center justify-center gap-6 pt-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">10K+</div>
-                  <div className="text-sm text-muted-foreground">Active Users</div>
-                </div>
-                <div className="w-px h-12 bg-border" />
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">50K+</div>
-                  <div className="text-sm text-muted-foreground">Tasks Completed</div>
-                </div>
-                <div className="w-px h-12 bg-border" />
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-foreground">4.9★</div>
-                  <div className="text-sm text-muted-foreground">User Rating</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs for Subscription vs License Key */}
-          <div className="container mx-auto px-4 py-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12 h-12 glass-card">
-                <TabsTrigger value="subscription" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground h-10 text-base gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Subscription Plans
-                </TabsTrigger>
-                <TabsTrigger value="license" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground h-10 text-base gap-2">
-                  <KeyRound className="h-4 w-4" />
-                  License Key
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="subscription" className="space-y-16">
-                {/* Pricing Table */}
-                <div>
-                  <PricingTable productDetails={productDetails} />
-                </div>
-
-                {/* Current Usage Section */}
-                {session?.user && (
-                  <div className="max-w-3xl mx-auto">
-                    <div className="text-center mb-8">
-                      <h2 className="font-display text-3xl font-bold mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Your Current Usage
-                      </h2>
-                      <p className="text-muted-foreground">
-                        Track your feature usage and plan limits
-                      </p>
-                    </div>
-                    <PlanUsageIndicator />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="license" className="space-y-16">
-                {/* License Key Purchase */}
-                <div className="py-8">
-                  <LicenseKeyPurchase />
-                </div>
-
-                {/* License Key Benefits */}
-                <div className="max-w-4xl mx-auto">
-                  <div className="text-center mb-12">
-                    <h2 className="font-display text-3xl font-bold mb-3">
-                      Why Choose a License Key?
-                    </h2>
-                    <p className="text-muted-foreground text-lg">
-                      Perfect for users who prefer one-time purchases over subscriptions
-                    </p>
-                  </div>
-
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="glass-card p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                        <Zap className="h-6 w-6 text-green-500" />
-                      </div>
-                      <h3 className="font-semibold mb-2">Instant Access</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Receive your license key immediately via email and activate within minutes
-                      </p>
-                    </div>
-
-                    <div className="glass-card p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center mx-auto mb-4">
-                        <Shield className="h-6 w-6 text-blue-500" />
-                      </div>
-                      <h3 className="font-semibold mb-2">Secure & Simple</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Unique cryptographically generated keys with email verification
-                      </p>
-                    </div>
-
-                    <div className="glass-card p-6 text-center">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-4">
-                        <Mail className="h-6 w-6 text-purple-500" />
-                      </div>
-                      <h3 className="font-semibold mb-2">Easy Activation</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Step-by-step instructions sent directly to your inbox
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Feature Showcase Grid */}
-          <div className="container mx-auto px-4 py-20">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-16">
-                <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Everything You Need
-                </h2>
-                <p className="text-xl text-muted-foreground">
-                  Powerful features to transform how you work
-                </p>
-              </div>
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* AI Assistant */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Brain className="h-6 w-6 text-purple-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">AI Assistant</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Get intelligent task suggestions and smart scheduling powered by AI
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-purple-500/10 text-purple-500 text-xs rounded-full inline-block">
-                    Pro Feature
-                  </div>
-                </div>
-
-                {/* Advanced Views */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Sparkles className="h-6 w-6 text-blue-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">Advanced Views</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Kanban boards, Gantt charts, time blocking, and more visualization options
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-blue-500/10 text-blue-500 text-xs rounded-full inline-block">
-                    Pro Feature
-                  </div>
-                </div>
-
-                {/* Team Collaboration */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Users className="h-6 w-6 text-amber-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">Team Messaging</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Real-time collaboration and communication with your team
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-amber-500/10 text-amber-500 text-xs rounded-full inline-block">
-                    Team Feature
-                  </div>
-                </div>
-
-                {/* Automation */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Workflow className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">Automation Rules</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Create custom workflows to automate repetitive tasks
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-green-500/10 text-green-500 text-xs rounded-full inline-block">
-                    Pro Feature
-                  </div>
-                </div>
-
-                {/* Analytics */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <BarChart3 className="h-6 w-6 text-pink-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">Advanced Analytics</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Detailed insights into productivity and time tracking
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-pink-500/10 text-pink-500 text-xs rounded-full inline-block">
-                    Pro Feature
-                  </div>
-                </div>
-
-                {/* API Access */}
-                <div className="glass-card p-6 hover:shadow-xl transition-all duration-300 group">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Puzzle className="h-6 w-6 text-orange-500" />
-                  </div>
-                  <h3 className="font-display text-lg font-semibold mb-2">API & Integrations</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Connect with your favorite tools and build custom integrations
-                  </p>
-                  <div className="mt-4 px-2 py-1 bg-orange-500/10 text-orange-500 text-xs rounded-full inline-block">
-                    Team Feature
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="container mx-auto px-4 py-20">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-16">
-                <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Frequently Asked Questions
-                </h2>
-                <p className="text-xl text-muted-foreground">
-                  Everything you need to know about our plans
-                </p>
-              </div>
-              
-              <div className="grid gap-6">
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">Can I change plans anytime?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, 
-                    and we'll prorate any charges. No questions asked, no hidden fees.
-                  </p>
-                </div>
-                
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">What happens when I reach my task limit?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    When you reach your monthly task limit, you'll be prompted to upgrade. Your existing tasks 
-                    remain accessible, but you won't be able to create new ones until the next billing cycle 
-                    or until you upgrade to a higher plan.
-                  </p>
-                </div>
-                
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">Is there a free trial for paid plans?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    The Free plan is always available with no time limit. You can start there and upgrade 
-                    when you're ready to unlock more features. This allows you to fully explore the platform 
-                    before committing to a paid plan.
-                  </p>
-                </div>
-                
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">How secure is my data?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    All your data is encrypted in transit and at rest using industry-standard encryption. 
-                    We use best-in-class security practices and never share your data with third parties. 
-                    Team plans include automatic daily backups for extra peace of mind.
-                  </p>
-                </div>
-
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">What payment methods do you accept?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    We accept all major credit cards (Visa, Mastercard, American Express) through Stripe, 
-                    our secure payment processor. All transactions are encrypted and PCI-compliant.
-                  </p>
-                </div>
-
-                <div className="glass-card p-8 hover:shadow-xl transition-all duration-300">
-                  <h3 className="font-display text-lg font-semibold mb-3">Can I cancel my subscription?</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Yes, you can cancel your subscription at any time through the billing portal. You'll 
-                    continue to have access to premium features until the end of your billing period. 
-                    Your data is never deleted, so you can always reactivate later.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="container mx-auto px-4 py-20">
-            <div className="max-w-4xl mx-auto">
-              <div className="glass-card p-12 text-center relative overflow-hidden">
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-purple-500/10 to-blue-500/10 blur-3xl" />
-                
-                <div className="relative">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-500 mb-6">
-                    <Rocket className="h-8 w-8 text-white" />
-                  </div>
-                  
-                  <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-                    Ready to Get Started?
+              {/* Feature Comparison */}
+              <div className="max-w-6xl mx-auto">
+                <div className="mb-12">
+                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
+                    What's included in each plan
                   </h2>
-                  <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-                    Join thousands of users who have transformed their productivity with our platform. 
-                    Start free and upgrade anytime.
+                  <p className="text-center text-muted-foreground">
+                    All plans include our core features. Upgrade for advanced capabilities.
                   </p>
-                  
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button 
-                      size="lg" 
-                      className="gap-2 text-lg px-8"
-                      onClick={() => router.push(session?.user ? "/" : "/register")}
-                    >
-                      {session?.user ? "Go to Dashboard" : "Get Started Free"}
-                      <ArrowLeft className="h-5 w-5 rotate-180" />
-                    </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      className="gap-2 text-lg px-8"
-                      onClick={() => router.push("/")}
-                    >
-                      View Features
-                    </Button>
-                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Pro Features */}
+                  <Card className="p-6 border-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Zap className="h-4 w-4 text-primary" />
+                      </div>
+                      <h3 className="font-semibold">Pro Features</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>1,000 tasks per month</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>Advanced views (Kanban, Gantt, Timeline)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>AI-powered suggestions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>Time tracking & analytics</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>Custom automation rules</span>
+                      </li>
+                    </ul>
+                  </Card>
+
+                  {/* Team Features */}
+                  <Card className="p-6 border-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                      </div>
+                      <h3 className="font-semibold">Team Features</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <span>Unlimited tasks</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <span>Team messaging & collaboration</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <span>Advanced permissions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <span>Team analytics dashboard</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <span>API access & integrations</span>
+                      </li>
+                    </ul>
+                  </Card>
+
+                  {/* Enterprise */}
+                  <Card className="p-6 border-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                        <Shield className="h-4 w-4 text-purple-600 dark:text-purple-500" />
+                      </div>
+                      <h3 className="font-semibold">Enterprise Add-ons</h3>
+                    </div>
+                    <ul className="space-y-3 text-sm">
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
+                        <span>SSO & SAML authentication</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
+                        <span>Custom data retention</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
+                        <span>Dedicated account manager</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
+                        <span>SLA guarantees</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
+                        <span>Custom integrations</span>
+                      </li>
+                    </ul>
+                  </Card>
                 </div>
               </div>
+
+              {/* FAQ */}
+              <div className="max-w-3xl mx-auto">
+                <div className="mb-12">
+                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
+                    Frequently Asked Questions
+                  </h2>
+                  <p className="text-center text-muted-foreground">
+                    Common questions about our pricing and plans
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <details className="group border border-border rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">Can I switch plans anytime?</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
+                      Yes, you can upgrade or downgrade at any time. When you upgrade, you'll be charged the prorated difference. When you downgrade, you'll receive credit toward your next billing cycle.
+                    </div>
+                  </details>
+
+                  <details className="group border border-border rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">What happens if I exceed my task limit?</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
+                      You'll receive a notification when you're approaching your limit. If you reach it, you can either upgrade to a higher plan or wait until the next billing cycle. Your existing tasks remain accessible.
+                    </div>
+                  </details>
+
+                  <details className="group border border-border rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">Do you offer refunds?</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
+                      We offer a 14-day money-back guarantee on all plans. If you're not satisfied, contact our support team for a full refund.
+                    </div>
+                  </details>
+
+                  <details className="group border border-border rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">Is my data secure?</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
+                      Yes. All data is encrypted in transit and at rest. We use industry-standard security practices and never share your data with third parties.
+                    </div>
+                  </details>
+
+                  <details className="group border border-border rounded-lg overflow-hidden">
+                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
+                      <span className="font-medium">What payment methods do you accept?</span>
+                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                    </summary>
+                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
+                      We accept all major credit cards through Stripe, our secure payment processor. All transactions are PCI-compliant.
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="license" className="space-y-16 mt-0">
+              {/* License Key Purchase */}
+              <LicenseKeyPurchase />
+
+              {/* License Benefits */}
+              <div className="max-w-4xl mx-auto">
+                <div className="mb-12">
+                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
+                    One-Time Purchase Benefits
+                  </h2>
+                  <p className="text-center text-muted-foreground">
+                    Prefer to own your software? Purchase a perpetual license.
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  <Card className="p-6 text-center">
+                    <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Zap className="h-6 w-6 text-green-600 dark:text-green-500" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Instant Delivery</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive your license key via email immediately after purchase
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 text-center">
+                    <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Shield className="h-6 w-6 text-blue-600 dark:text-blue-500" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Secure Activation</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Cryptographically secure keys with email verification
+                    </p>
+                  </Card>
+
+                  <Card className="p-6 text-center">
+                    <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
+                      <Mail className="h-6 w-6 text-purple-600 dark:text-purple-500" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Easy Setup</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Step-by-step activation instructions included
+                    </p>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* CTA Section */}
+        <div className="border-t border-border/50 bg-muted/30">
+          <div className="container mx-auto px-4 py-16">
+            <div className="max-w-3xl mx-auto text-center space-y-6">
+              <h2 className="font-display text-3xl font-semibold">
+                Ready to get started?
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Join thousands of professionals who trust 9TD for their task management.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+                <Button 
+                  size="lg" 
+                  onClick={() => router.push(session?.user ? "/" : "/register")}
+                  className="gap-2"
+                >
+                  {session?.user ? "Go to Dashboard" : "Start Free Trial"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => router.push("/")}
+                >
+                  Learn More
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                No credit card required • Cancel anytime • 14-day money-back guarantee
+              </p>
             </div>
           </div>
         </div>
