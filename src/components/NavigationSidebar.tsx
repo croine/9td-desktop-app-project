@@ -864,25 +864,6 @@ export function NavigationSidebar({
                 <Fingerprint className="h-3 w-3 text-primary" />
                 Get License Key
               </Button>
-
-              <div className="flex gap-2 pt-2 border-t border-border/50">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 h-6 px-2"
-                  onClick={() => router.push('/login')}
-                >
-                  <Chrome className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1 h-6 px-2"
-                  onClick={() => router.push('/login')}
-                >
-                  <Github className="h-3 w-3" />
-                </Button>
-              </div>
             </div>
           )}
         </div>
