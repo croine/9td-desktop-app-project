@@ -195,8 +195,11 @@ export default function LoginPage() {
       return
     }
     
-    const cleanLicenseKey = licenseKey.replace(/-/g, '').trim()
-    if (!cleanLicenseKey || cleanLicenseKey.length !== 16) {
+    // Keep dashes in license key for database matching
+    const cleanLicenseKey = licenseKey.trim()
+    // Verify format: should be XXXX-XXXX-XXXX-XXXX (19 chars with dashes) or XXXXXXXXXXXXXXXX (16 chars without)
+    const keyWithoutDashes = cleanLicenseKey.replace(/-/g, '')
+    if (!keyWithoutDashes || keyWithoutDashes.length !== 16) {
       toast.error('Please enter a valid 16-character license key')
       return
     }
@@ -215,7 +218,7 @@ export default function LoginPage() {
             : { username: identifier }
           ),
           password,
-          licenseKey: cleanLicenseKey,
+          licenseKey: cleanLicenseKey, // Send WITH dashes as stored in database
         })
       })
 
