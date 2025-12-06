@@ -93,7 +93,7 @@ export const GuestTrialBanner = ({ className, compact = false }: GuestTrialBanne
 
   return (
     <Card className={cn(
-      "glass-card p-3 max-w-2xl",
+      "glass-card p-3 max-w-2xl mx-auto",
       isUrgent && "border-destructive/50 bg-destructive/5",
       isWarning && !isUrgent && "border-yellow-500/50 bg-yellow-500/5",
       className
