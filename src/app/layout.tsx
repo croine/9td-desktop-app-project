@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import CustomAutumnProvider from "@/lib/autumn-provider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,11 +25,20 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={inter.className}>
-        <CustomAutumnProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </CustomAutumnProvider>
+        <ErrorBoundary
+          onError={(error, errorInfo) => {
+            // Log errors to console in development
+            console.error('🚨 Application Error:', error, errorInfo)
+            // You can add external error logging service here
+            // Example: Sentry.captureException(error)
+          }}
+        >
+          <CustomAutumnProvider>
+            <ThemeProvider>
+              {children}
+            </ThemeProvider>
+          </CustomAutumnProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

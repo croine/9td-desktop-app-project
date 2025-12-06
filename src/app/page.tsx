@@ -56,7 +56,7 @@ import { Logo } from '@/components/Logo'
 import { DashboardTitle } from '@/components/DashboardTitle'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import { Button } from '@/components/ui/button'
-import { Plus, Menu, X, MessageSquare, Lock } from 'lucide-react'
+import { Plus, Menu, X, MessageSquare, Lock, LogIn, UserPlus, KeyRound } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { showToast, keyboardShortcutToast } from '@/lib/toast-utils'
@@ -85,9 +85,10 @@ import {
 import { PrintView } from '@/components/PrintView'
 import { cloneTask, bulkCloneTasks } from '@/lib/storage'
 import Loading from '@/app/loading'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 // ========================================================================
-// VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION
+// VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION + ERROR HANDLING
 // ========================================================================
 const APP_VERSION = "v8.0-COMPLETE-" + Date.now()
 const FORCE_RELOAD_KEY = "9td-v8.0-complete"
@@ -187,7 +188,6 @@ export default function Home() {
     }
   }, [tasks, session, settings.notificationTimings])
 
-  // Keyboard shortcuts
   const viewMap: { [key: string]: SidebarView } = {
     '1': 'dashboard',
     '2': 'your-tasks',
@@ -880,718 +880,756 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" key={APP_VERSION}>
-      <Toaster position="top-right" />
-      
-      {/* Desktop Sidebar - 10 TABS */}
-      <div className="w-64 shrink-0 hidden md:block">
-        <div className="glass-sidebar h-full">
-          <NavigationSidebar
-            currentView={currentView}
-            onViewChange={handleViewChange}
-            taskCount={tasks.length}
-            inboxCount={inboxItems.length}
-            session={session}
-            sessionPending={sessionPending}
-          />
-        </div>
-      </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {mobileMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-      <div className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${
-        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="glass-sidebar h-full">
-          <div className="flex items-center justify-between p-4 border-b border-border/50">
-            <span className="font-display text-lg font-semibold">Menu</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+    <ErrorBoundary>
+      <div className="flex h-screen overflow-hidden" key={APP_VERSION}>
+        <Toaster position="top-right" />
+        
+        {/* Desktop Sidebar - 10 TABS */}
+        <div className="w-64 shrink-0 hidden md:block">
+          <div className="glass-sidebar h-full">
+            <NavigationSidebar
+              currentView={currentView}
+              onViewChange={handleViewChange}
+              taskCount={tasks.length}
+              inboxCount={inboxItems.length}
+              session={session}
+              sessionPending={sessionPending}
+            />
           </div>
-          <NavigationSidebar
-            currentView={currentView}
-            onViewChange={handleViewChange}
-            taskCount={tasks.length}
-            inboxCount={inboxItems.length}
-            session={session}
-            sessionPending={sessionPending}
-          />
         </div>
-      </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="glass-header px-4 md:px-8 py-4 md:py-6 shrink-0">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Mobile Sidebar Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+        <div className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="glass-sidebar h-full">
+            <div className="flex items-center justify-between p-4 border-b border-border/50">
+              <span className="font-display text-lg font-semibold">Menu</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden h-9 w-9"
-                onClick={() => setMobileMenuOpen(true)}
+                onClick={() => setMobileMenuOpen(false)}
+                className="h-8 w-8"
               >
-                <Menu className="h-5 w-5" />
+                <X className="h-5 w-5" />
               </Button>
-              {settings.showLogo && <Logo />}
-              <DashboardTitle settings={settings} />
-              <AnimatedTitle />
             </div>
-            
-            {/* Search Bar and Actions */}
-            <div className="flex items-center gap-4 flex-shrink-0">
-              {/* Search Bar */}
-              <div className="hidden md:block">
-                <div className="w-full max-w-sm">
-                  <AdvancedSearchBar
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    tags={tags}
-                    categories={categories}
-                  />
-                </div>
+            <NavigationSidebar
+              currentView={currentView}
+              onViewChange={handleViewChange}
+              taskCount={tasks.length}
+              inboxCount={inboxItems.length}
+              session={session}
+              sessionPending={sessionPending}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <header className="glass-header px-4 md:px-8 py-4 md:py-6 shrink-0">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden h-9 w-9"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                {settings.showLogo && <Logo />}
+                <DashboardTitle settings={settings} />
+                <AnimatedTitle />
               </div>
               
-              <div className="flex items-center gap-2">
-                <NotificationCenter tasks={tasks} onTaskClick={handleEditTaskById} />
-                <UserAvatar 
-                  session={session} 
-                  onOpenSettings={() => {
-                    setSettingsInitialTab('general')
-                    setCurrentView('settings')
-                  }}
-                  onOpenAccountSettings={handleOpenAccountSettings}
-                />
-                <QuickLinksDropdown onOpenSettings={handleOpenQuickLinksSettings} />
-                <ThemeToggle />
+              {/* Search Bar and Actions */}
+              <div className="flex items-center gap-4 flex-shrink-0">
+                {/* Search Bar */}
+                <div className="hidden md:block">
+                  <div className="w-full max-w-sm">
+                    <AdvancedSearchBar
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      tags={tags}
+                      categories={categories}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {/* Quick Access Buttons - Show when NOT logged in */}
+                  {!session?.user && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/login')}
+                        className="gap-2 text-sm"
+                      >
+                        <LogIn className="h-4 w-4" />
+                        <span className="hidden sm:inline">Sign In</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/register')}
+                        className="gap-2 text-sm"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Register</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/pricing')}
+                        className="gap-2 text-sm"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                        <span className="hidden sm:inline">Get License</span>
+                      </Button>
+                    </>
+                  )}
+                  
+                  {/* Logged in user actions */}
+                  {session?.user && (
+                    <>
+                      <NotificationCenter tasks={tasks} onTaskClick={handleEditTaskById} />
+                      <UserAvatar 
+                        session={session} 
+                        onOpenSettings={() => {
+                          setSettingsInitialTab('general')
+                          setCurrentView('settings')
+                        }}
+                        onOpenAccountSettings={handleOpenAccountSettings}
+                      />
+                      <QuickLinksDropdown onOpenSettings={handleOpenQuickLinksSettings} />
+                    </>
+                  )}
+                  
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main className="flex-1 overflow-y-auto">
-          {/* Payment Warning */}
-          {session?.user && (
-            <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
-              <PaymentWarning />
-            </div>
-          )}
+          <main className="flex-1 overflow-y-auto">
+            {/* Payment Warning */}
+            {session?.user && (
+              <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
+                <PaymentWarning />
+              </div>
+            )}
 
-          <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
-            <AnimatePresence mode="wait">
-              {isLoadingView ? (
-                <ViewTransitionLoader key="loader" />
-              ) : (
-                <PageContainer key={currentView}>
-                  {currentView === 'dashboard' && (
-                    <div className="mt-0">
-                      <Dashboard 
-                        tasks={sortedTasks} 
-                        tags={tags} 
-                        categories={categories}
-                        settings={settings}
-                        onCreateTask={handleCreateTaskClick}
-                        onViewTasks={handleViewTasksClick}
-                      />
-                    </div>
-                  )}
-
-                  {currentView === 'your-tasks' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Your Tasks" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Manage and organize all your tasks
-                            </p>
-                          </div>
-                          <Button
-                            className="gap-2"
-                            onClick={() => {
-                              setEditingTask(null)
-                              setCreateModalOpen(true)
-                            }}
-                          >
-                            <Plus className="h-5 w-5" />
-                            Create Task
-                          </Button>
-                        </div>
-
-                        <TaskList
-                          tasks={sortedTasks}
-                          tags={tags}
-                          categories={categories}
-                          onEdit={handleEditTask}
-                          onDelete={handleDeleteTask}
-                          onStatusChange={handleStatusChange}
-                          onArchive={handleArchiveTask}
-                          onBulkArchive={handleBulkArchive}
-                          onBulkDelete={handleBulkDelete}
-                          onBulkStatusChange={handleBulkStatusChange}
-                          onClone={handleCloneTask}
-                          onBulkClone={handleBulkClone}
-                          onPrint={handlePrintView}
-                          emptyMessage={
-                            filters.query || filters.priority || filters.status || 
-                            filters.tags.length > 0 || filters.categories.length > 0
-                              ? "No tasks match your filters"
-                              : "No tasks yet"
-                          }
-                        />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'calendar' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Calendar View" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
-                          <p className="text-foreground/70 font-medium">
-                            View and manage tasks in calendar format
-                          </p>
-                        </div>
-                        <CalendarView
-                          tasks={sortedTasks}
-                          tags={tags}
-                          categories={categories}
-                          onTaskClick={handleEditTask}
-                          onDateClick={(date) => {
-                            setEditingTask(null)
-                            setCreateModalOpen(true)
-                          }}
-                          onTaskReschedule={handleTaskReschedule}
-                        />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'kanban' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Kanban Board" />
-                    ) : (
-                      <FeatureGate 
-                        featureId="advanced_views"
-                        upgradeMessage="Upgrade to Pro to access Kanban board and advanced task views"
-                      >
-                        <div className="space-y-6">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Visualize and manage tasks with drag-and-drop
-                            </p>
-                          </div>
-                          <KanbanBoard
-                            tasks={sortedTasks}
-                            tags={tags}
+            <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
+              <ErrorBoundary>
+                <AnimatePresence mode="wait">
+                  {isLoadingView ? (
+                    <ViewTransitionLoader key="loader" />
+                  ) : (
+                    <PageContainer key={currentView}>
+                      {currentView === 'dashboard' && (
+                        <div className="mt-0">
+                          <Dashboard 
+                            tasks={sortedTasks} 
+                            tags={tags} 
                             categories={categories}
-                            onEdit={handleEditTask}
-                            onDelete={handleDeleteTask}
-                            onStatusChange={handleStatusChange}
+                            settings={settings}
+                            onCreateTask={handleCreateTaskClick}
+                            onViewTasks={handleViewTasksClick}
                           />
                         </div>
-                      </FeatureGate>
-                    )
-                  )}
+                      )}
 
-                  {currentView === 'gantt' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Gantt View" />
-                    ) : (
-                      <FeatureGate 
-                        featureId="advanced_views"
-                        upgradeMessage="Upgrade to Pro to access Gantt charts and project timeline views"
-                      >
-                        <GanttView
-                          tasks={sortedTasks}
-                          tags={tags}
-                          categories={categories}
-                          onTaskClick={handleEditTask}
-                        />
-                      </FeatureGate>
-                    )
-                  )}
-
-                  {currentView === 'dependencies' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Task Dependencies" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">📊 Task Dependencies</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Visualize task relationships, identify critical paths, and detect circular dependencies
-                          </p>
-                        </div>
-                        <TaskDependencyGraph
-                          tasks={sortedTasks}
-                          tags={tags}
-                          categories={categories}
-                          selectedTaskId={editingTask?.id}
-                          onTaskClick={handleEditTask}
-                        />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'daily-planning' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Daily Planning" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">☀️ Daily Planning</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Start your day with purpose: morning planning, evening reflection, and weekly goals
-                          </p>
-                        </div>
-                        <DailyPlanningRitual
-                          tasks={sortedTasks}
-                          onTaskSelect={(taskIds) => {
-                            // Mark selected tasks as today's priorities
-                            taskIds.forEach(id => {
-                              const task = tasks.find(t => t.id === id)
-                              if (task) {
-                                updateTask(id, { 
-                                  tags: [...(task.tags || []), 'today-priority']
-                                })
-                              }
-                            })
-                            refreshData()
-                            toast.success('Daily priorities set! 🎯')
-                          }}
-                          onReflectionSave={(reflection) => {
-                            // Save reflection to localStorage
-                            const reflections = JSON.parse(localStorage.getItem('daily-reflections') || '[]')
-                            reflections.push({
-                              date: new Date().toISOString(),
-                              text: reflection
-                            })
-                            localStorage.setItem('daily-reflections', JSON.stringify(reflections))
-                            toast.success('Reflection saved! 📝')
-                          }}
-                        />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'focus-mode' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Focus Mode" />
-                    ) : focusTask ? (
-                      <EnhancedFocusMode
-                        task={focusTask}
-                        onExit={() => {
-                          setFocusTask(null)
-                          setCurrentView('your-tasks')
-                        }}
-                        onTaskUpdate={(updates) => {
-                          updateTask(focusTask.id, updates)
-                          setFocusTask({ ...focusTask, ...updates })
-                          refreshData()
-                        }}
-                      />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">🎯 Focus Mode</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Select a task to enter distraction-free deep work mode with timer and ambient sounds
-                          </p>
-                        </div>
-                        <Card className="glass-card p-8">
+                      {currentView === 'your-tasks' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Your Tasks" />
+                        ) : (
                           <div className="space-y-6">
-                            <div className="text-center space-y-4">
-                              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                                <Lock className="h-10 w-10 text-primary" />
-                              </div>
-                              <div className="space-y-2">
-                                <h3 className="font-display text-xl font-semibold">
-                                  No Task Selected
-                                </h3>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
                                 <p className="text-foreground/70 font-medium">
-                                  Choose a task below to enter focus mode
+                                  Manage and organize all your tasks
                                 </p>
                               </div>
+                              <Button
+                                className="gap-2"
+                                onClick={() => {
+                                  setEditingTask(null)
+                                  setCreateModalOpen(true)
+                                }}
+                              >
+                                <Plus className="h-5 w-5" />
+                                Create Task
+                              </Button>
                             </div>
 
-                            <div className="space-y-3">
-                              <h4 className="font-semibold">Available Tasks:</h4>
-                              {sortedTasks.filter(t => t.status !== 'completed').slice(0, 10).map(task => (
-                                <Button
-                                  key={task.id}
-                                  variant="outline"
-                                  className="w-full justify-between h-auto py-4"
-                                  onClick={() => {
-                                    setFocusTask(task)
-                                  }}
-                                >
-                                  <div className="text-left">
-                                    <div className="font-semibold">{task.title}</div>
-                                    {task.description && (
-                                      <div className="text-sm text-muted-foreground truncate">
-                                        {task.description}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`text-xs px-2 py-1 rounded ${
-                                      task.priority === 'urgent' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
-                                      task.priority === 'high' ? 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300' :
-                                      task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300' :
-                                      'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                                    }`}>
-                                      {task.priority}
-                                    </span>
-                                  </div>
-                                </Button>
-                              ))}
-                              {sortedTasks.filter(t => t.status !== 'completed').length === 0 && (
-                                <p className="text-center text-foreground/70 font-medium py-8">
-                                  No active tasks available. Create a task to get started!
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </Card>
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'pomodoro' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
-                    ) : (
-                      <FeatureGate 
-                        featureId="pomodoro"
-                        upgradeMessage="Upgrade to Pro to access Pomodoro timer with task integration"
-                      >
-                        <div className="space-y-6">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Focus with structured work/break intervals and track time against tasks
-                            </p>
-                          </div>
-                          <div className="max-w-3xl mx-auto">
-                            <PomodoroTaskIntegration
+                            <TaskList
                               tasks={sortedTasks}
-                              onTaskUpdate={(taskId, updates) => {
-                                updateTask(taskId, updates)
-                                refreshData()
-                              }}
-                              workDuration={settings.pomodoroWorkDuration || 25}
-                              breakDuration={settings.pomodoroBreakDuration || 5}
-                              longBreakDuration={settings.pomodoroLongBreakDuration || 15}
-                              sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
+                              tags={tags}
+                              categories={categories}
+                              onEdit={handleEditTask}
+                              onDelete={handleDeleteTask}
+                              onStatusChange={handleStatusChange}
+                              onArchive={handleArchiveTask}
+                              onBulkArchive={handleBulkArchive}
+                              onBulkDelete={handleBulkDelete}
+                              onBulkStatusChange={handleBulkStatusChange}
+                              onClone={handleCloneTask}
+                              onBulkClone={handleBulkClone}
+                              onPrint={handlePrintView}
+                              emptyMessage={
+                                filters.query || filters.priority || filters.status || 
+                                filters.tags.length > 0 || filters.categories.length > 0
+                                  ? "No tasks match your filters"
+                                  : "No tasks yet"
+                              }
                             />
                           </div>
-                        </div>
-                      </FeatureGate>
-                    )
-                  )}
+                        )
+                      )}
 
-                  {currentView === 'time-blocking' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Time Blocking" />
-                    ) : (
-                      <FeatureGate 
-                        featureId="advanced_views"
-                        upgradeMessage="Upgrade to Pro to access Time Blocking calendar"
-                      >
-                        <div className="space-y-6">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Schedule and organize your tasks throughout the week
-                            </p>
+                      {currentView === 'calendar' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Calendar View" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
+                              <p className="text-foreground/70 font-medium">
+                                View and manage tasks in calendar format
+                              </p>
+                            </div>
+                            <CalendarView
+                              tasks={sortedTasks}
+                              tags={tags}
+                              categories={categories}
+                              onTaskClick={handleEditTask}
+                              onDateClick={(date) => {
+                                setEditingTask(null)
+                                setCreateModalOpen(true)
+                              }}
+                              onTaskReschedule={handleTaskReschedule}
+                            />
                           </div>
-                          <TimeBlockingCalendar
-                            tasks={sortedTasks}
-                            onTaskClick={handleEditTask}
-                            onBlockCreate={(block) => {
-                              toast.success('Time block created')
-                            }}
-                          />
-                        </div>
-                      </FeatureGate>
-                    )
-                  )}
+                        )
+                      )}
 
-                  {currentView === 'analytics' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Analytics" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Comprehensive analytics including time tracking and productivity insights
-                            </p>
-                          </div>
-                          
-                          {/* Export Buttons with Feature Gate */}
-                          <FeatureGate
-                            featureId="advanced_export"
-                            upgradeMessage="Upgrade to Pro to export your data to JSON, CSV, and PDF formats"
-                            fallback={
-                              <div className="flex gap-2">
-                                <Button variant="outline" disabled className="gap-2">
-                                  <Lock className="h-4 w-4" />
-                                  Export JSON
-                                </Button>
-                                <Button variant="outline" disabled className="gap-2">
-                                  <Lock className="h-4 w-4" />
-                                  Export CSV
-                                </Button>
-                              </div>
-                            }
+                      {currentView === 'kanban' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Kanban Board" />
+                        ) : (
+                          <FeatureGate 
+                            featureId="advanced_views"
+                            upgradeMessage="Upgrade to Pro to access Kanban board and advanced task views"
                           >
-                            <div className="flex gap-2">
-                              <Button variant="outline" onClick={handleExportJSON} className="gap-2">
-                                Export JSON
-                              </Button>
-                              <Button variant="outline" onClick={handleExportCSV} className="gap-2">
-                                Export CSV
-                              </Button>
+                            <div className="space-y-6">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
+                                <p className="text-foreground/70 font-medium">
+                                  Visualize and manage tasks with drag-and-drop
+                                </p>
+                              </div>
+                              <KanbanBoard
+                                tasks={sortedTasks}
+                                tags={tags}
+                                categories={categories}
+                                onEdit={handleEditTask}
+                                onDelete={handleDeleteTask}
+                                onStatusChange={handleStatusChange}
+                              />
                             </div>
                           </FeatureGate>
-                        </div>
-                        
-                        {/* Time Analytics Section - Requires Pro */}
-                        <FeatureGate 
-                          featureId="advanced_analytics"
-                          upgradeMessage="Upgrade to Pro to access detailed time tracking and productivity insights"
-                        >
-                          <div>
-                            <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
-                            <TimeAnalytics tasks={tasks} />
-                          </div>
-                        </FeatureGate>
+                        )
+                      )}
 
-                        {/* General Analytics - Available to all */}
-                        <div>
-                          <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
-                          <Analytics
-                            tasks={tasks}
+                      {currentView === 'gantt' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Gantt View" />
+                        ) : (
+                          <FeatureGate 
+                            featureId="advanced_views"
+                            upgradeMessage="Upgrade to Pro to access Gantt charts and project timeline views"
+                          >
+                            <GanttView
+                              tasks={sortedTasks}
+                              tags={tags}
+                              categories={categories}
+                              onTaskClick={handleEditTask}
+                            />
+                          </FeatureGate>
+                        )
+                      )}
+
+                      {currentView === 'dependencies' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Task Dependencies" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">📊 Task Dependencies</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Visualize task relationships, identify critical paths, and detect circular dependencies
+                              </p>
+                            </div>
+                            <TaskDependencyGraph
+                              tasks={sortedTasks}
+                              tags={tags}
+                              categories={categories}
+                              selectedTaskId={editingTask?.id}
+                              onTaskClick={handleEditTask}
+                            />
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'daily-planning' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Daily Planning" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">☀️ Daily Planning</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Start your day with purpose: morning planning, evening reflection, and weekly goals
+                              </p>
+                            </div>
+                            <DailyPlanningRitual
+                              tasks={sortedTasks}
+                              onTaskSelect={(taskIds) => {
+                                taskIds.forEach(id => {
+                                  const task = tasks.find(t => t.id === id)
+                                  if (task) {
+                                    updateTask(id, { 
+                                      tags: [...(task.tags || []), 'today-priority']
+                                    })
+                                  }
+                                })
+                                refreshData()
+                                toast.success('Daily priorities set! 🎯')
+                              }}
+                              onReflectionSave={(reflection) => {
+                                const reflections = JSON.parse(localStorage.getItem('daily-reflections') || '[]')
+                                reflections.push({
+                                  date: new Date().toISOString(),
+                                  text: reflection
+                                })
+                                localStorage.setItem('daily-reflections', JSON.stringify(reflections))
+                                toast.success('Reflection saved! 📝')
+                              }}
+                            />
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'focus-mode' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Focus Mode" />
+                        ) : focusTask ? (
+                          <EnhancedFocusMode
+                            task={focusTask}
+                            onExit={() => {
+                              setFocusTask(null)
+                              setCurrentView('your-tasks')
+                            }}
+                            onTaskUpdate={(updates) => {
+                              updateTask(focusTask.id, updates)
+                              setFocusTask({ ...focusTask, ...updates })
+                              refreshData()
+                            }}
+                          />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">🎯 Focus Mode</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Select a task to enter distraction-free deep work mode with timer and ambient sounds
+                              </p>
+                            </div>
+                            <Card className="glass-card p-8">
+                              <div className="space-y-6">
+                                <div className="text-center space-y-4">
+                                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                                    <Lock className="h-10 w-10 text-primary" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <h3 className="font-display text-xl font-semibold">
+                                      No Task Selected
+                                    </h3>
+                                    <p className="text-foreground/70 font-medium">
+                                      Choose a task below to enter focus mode
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                  <h4 className="font-semibold">Available Tasks:</h4>
+                                  {sortedTasks.filter(t => t.status !== 'completed').slice(0, 10).map(task => (
+                                    <Button
+                                      key={task.id}
+                                      variant="outline"
+                                      className="w-full justify-between h-auto py-4"
+                                      onClick={() => {
+                                        setFocusTask(task)
+                                      }}
+                                    >
+                                      <div className="text-left">
+                                        <div className="font-semibold">{task.title}</div>
+                                        {task.description && (
+                                          <div className="text-sm text-muted-foreground truncate">
+                                            {task.description}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className={`text-xs px-2 py-1 rounded ${
+                                          task.priority === 'urgent' ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300' :
+                                          task.priority === 'high' ? 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300' :
+                                          task.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300' :
+                                          'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                                        }`}>
+                                          {task.priority}
+                                        </span>
+                                      </div>
+                                    </Button>
+                                  ))}
+                                  {sortedTasks.filter(t => t.status !== 'completed').length === 0 && (
+                                    <p className="text-center text-foreground/70 font-medium py-8">
+                                      No active tasks available. Create a task to get started!
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'pomodoro' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Pomodoro Timer" />
+                        ) : (
+                          <FeatureGate 
+                            featureId="pomodoro"
+                            upgradeMessage="Upgrade to Pro to access Pomodoro timer with task integration"
+                          >
+                            <div className="space-y-6">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
+                                <p className="text-foreground/70 font-medium">
+                                  Focus with structured work/break intervals and track time against tasks
+                                </p>
+                              </div>
+                              <div className="max-w-3xl mx-auto">
+                                <PomodoroTaskIntegration
+                                  tasks={sortedTasks}
+                                  onTaskUpdate={(taskId, updates) => {
+                                    updateTask(taskId, updates)
+                                    refreshData()
+                                  }}
+                                  workDuration={settings.pomodoroWorkDuration || 25}
+                                  breakDuration={settings.pomodoroBreakDuration || 5}
+                                  longBreakDuration={settings.pomodoroLongBreakDuration || 15}
+                                  sessionsUntilLongBreak={settings.pomodoroSessionsUntilLongBreak || 4}
+                                />
+                              </div>
+                            </div>
+                          </FeatureGate>
+                        )
+                      )}
+
+                      {currentView === 'time-blocking' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Time Blocking" />
+                        ) : (
+                          <FeatureGate 
+                            featureId="advanced_views"
+                            upgradeMessage="Upgrade to Pro to access Time Blocking calendar"
+                          >
+                            <div className="space-y-6">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
+                                <p className="text-foreground/70 font-medium">
+                                  Schedule and organize your tasks throughout the week
+                                </p>
+                              </div>
+                              <TimeBlockingCalendar
+                                tasks={sortedTasks}
+                                onTaskClick={handleEditTask}
+                                onBlockCreate={(block) => {
+                                  toast.success('Time block created')
+                                }}
+                              />
+                            </div>
+                          </FeatureGate>
+                        )
+                      )}
+
+                      {currentView === 'analytics' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Analytics" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
+                                <p className="text-foreground/70 font-medium">
+                                  Comprehensive analytics including time tracking and productivity insights
+                                </p>
+                              </div>
+                              
+                              <FeatureGate
+                                featureId="advanced_export"
+                                upgradeMessage="Upgrade to Pro to export your data to JSON, CSV, and PDF formats"
+                                fallback={
+                                  <div className="flex gap-2">
+                                    <Button variant="outline" disabled className="gap-2">
+                                      <Lock className="h-4 w-4" />
+                                      Export JSON
+                                    </Button>
+                                    <Button variant="outline" disabled className="gap-2">
+                                      <Lock className="h-4 w-4" />
+                                      Export CSV
+                                    </Button>
+                                  </div>
+                                }
+                              >
+                                <div className="flex gap-2">
+                                  <Button variant="outline" onClick={handleExportJSON} className="gap-2">
+                                    Export JSON
+                                  </Button>
+                                  <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+                                    Export CSV
+                                  </Button>
+                                </div>
+                              </FeatureGate>
+                            </div>
+                            
+                            <FeatureGate 
+                              featureId="advanced_analytics"
+                              upgradeMessage="Upgrade to Pro to access detailed time tracking and productivity insights"
+                            >
+                              <div>
+                                <h2 className="font-display text-xl font-semibold mb-4">Time Management Analytics</h2>
+                                <TimeAnalytics tasks={tasks} />
+                              </div>
+                            </FeatureGate>
+
+                            <div>
+                              <h2 className="font-display text-xl font-semibold mb-4">Task Analytics</h2>
+                              <Analytics
+                                tasks={tasks}
+                                tags={tags}
+                                categories={categories}
+                                onExport={handleExportJSON}
+                              />
+                            </div>
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'gamification' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Achievements & Gamification" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">🏆 Achievements & Progress</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Track your productivity journey with XP, levels, streaks, and achievement badges
+                              </p>
+                            </div>
+                            <GamificationDashboard onFeatureGateRedirect={() => router.push('/pricing')} />
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'avatar-customization' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Avatar Studio" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">🎨 Avatar Studio</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Personalize your profile with custom avatars, frames, and visual effects
+                              </p>
+                            </div>
+                            <AvatarCustomization />
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'activity-logs' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Activity Logs" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Track all changes and updates to your tasks
+                              </p>
+                            </div>
+                            <Card className="glass-card p-6">
+                              <ActivityLogComponent 
+                                logs={logs} 
+                                tags={tags}
+                                onRefresh={refreshData}
+                                onTaskClick={handleEditTask}
+                              />
+                            </Card>
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'owner-panel' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Owner Panel" />
+                        ) : (
+                          <div className="space-y-6">
+                            <div>
+                              <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
+                              <p className="text-foreground/70 font-medium">
+                                Manage tags, categories, and organize your workspace
+                              </p>
+                            </div>
+                            <Card className="glass-card p-6">
+                              <OwnerPanel
+                                tags={tags}
+                                categories={categories}
+                                tasks={tasks}
+                                onAddTag={handleAddTag}
+                                onUpdateTag={handleUpdateTag}
+                                onDeleteTag={handleDeleteTag}
+                                onAddCategory={handleAddCategory}
+                                onUpdateCategory={handleUpdateCategory}
+                                onDeleteCategory={handleDeleteCategory}
+                              />
+                            </Card>
+                          </div>
+                        )
+                      )}
+
+                      {currentView === 'message-system' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Message System" />
+                        ) : (
+                          <FeatureGate 
+                            featureId="message_system"
+                            upgradeMessage="Upgrade to Team plan to access team messaging and collaboration features"
+                          >
+                            <div className="space-y-6">
+                              <div>
+                                <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
+                                <p className="text-foreground/70 font-medium">
+                                  Team communication and collaboration hub
+                                </p>
+                              </div>
+                              <MessageSystem />
+                            </div>
+                          </FeatureGate>
+                        )
+                      )}
+
+                      {currentView === 'settings' && (
+                        !session?.user ? (
+                          <ProtectedViewPlaceholder viewName="Settings" />
+                        ) : (
+                          <SettingsHub
+                            settings={settings}
+                            onSettingsChange={handleSettingsChange}
+                            onExportJSON={handleExportJSON}
+                            onExportCSV={handleExportCSV}
+                            onImport={handleImport}
+                            stats={{
+                              totalTasks: tasks.length,
+                              totalTags: tags.length,
+                              totalCategories: categories.length,
+                              totalTemplates: templates.length
+                            }}
                             tags={tags}
                             categories={categories}
-                            onExport={handleExportJSON}
-                          />
-                        </div>
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'gamification' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Achievements & Gamification" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">🏆 Achievements & Progress</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Track your productivity journey with XP, levels, streaks, and achievement badges
-                          </p>
-                        </div>
-                        <GamificationDashboard onFeatureGateRedirect={() => router.push('/pricing')} />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'avatar-customization' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Avatar Studio" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">🎨 Avatar Studio</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Personalize your profile with custom avatars, frames, and visual effects
-                          </p>
-                        </div>
-                        <AvatarCustomization />
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'activity-logs' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Activity Logs" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Track all changes and updates to your tasks
-                          </p>
-                        </div>
-                        <Card className="glass-card p-6">
-                          <ActivityLogComponent 
-                            logs={logs} 
-                            tags={tags}
-                            onRefresh={refreshData}
+                            templates={templates}
+                            onAddTemplate={handleAddTemplate}
+                            onUpdateTemplate={handleUpdateTemplate}
+                            onDeleteTemplate={handleDeleteTemplate}
+                            onCreateFromTemplate={handleCreateFromTemplate}
+                            onTaskRestore={handleUnarchiveTask}
+                            onTaskDelete={handleDeleteTask}
+                            onTaskArchive={handleArchiveTask}
+                            tasks={tasks}
                             onTaskClick={handleEditTask}
+                            onTaskEdit={handleEditTask}
+                            onTaskStatusChange={handleStatusChange}
+                            onTaskUpdate={(taskId, updates) => {
+                              updateTask(taskId, updates)
+                              refreshData()
+                              if (focusTask?.id === taskId) {
+                                setFocusTask({ ...focusTask, ...updates })
+                              }
+                            }}
+                            onCreateTask={handleCreateTaskClick}
+                            onRefresh={refreshData}
+                            focusTask={focusTask}
+                            onExitFocus={handleExitFocus}
+                            onSelectFocusTask={handleSelectFocusTask}
+                            onSaveTask={handleSaveTask}
+                            initialTab={settingsInitialTab}
                           />
-                        </Card>
-                      </div>
-                    )
+                        )
+                      )}
+                    </PageContainer>
                   )}
+                </AnimatePresence>
+              </ErrorBoundary>
+            </div>
+          </main>
+        </div>
 
-                  {currentView === 'owner-panel' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Owner Panel" />
-                    ) : (
-                      <div className="space-y-6">
-                        <div>
-                          <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
-                          <p className="text-foreground/70 font-medium">
-                            Manage tags, categories, and organize your workspace
-                          </p>
-                        </div>
-                        <Card className="glass-card p-6">
-                          <OwnerPanel
-                            tags={tags}
-                            categories={categories}
-                            tasks={tasks}
-                            onAddTag={handleAddTag}
-                            onUpdateTag={handleUpdateTag}
-                            onDeleteTag={handleDeleteTag}
-                            onAddCategory={handleAddCategory}
-                            onUpdateCategory={handleUpdateCategory}
-                            onDeleteCategory={handleDeleteCategory}
-                          />
-                        </Card>
-                      </div>
-                    )
-                  )}
-
-                  {currentView === 'message-system' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Message System" />
-                    ) : (
-                      <FeatureGate 
-                        featureId="message_system"
-                        upgradeMessage="Upgrade to Team plan to access team messaging and collaboration features"
-                      >
-                        <div className="space-y-6">
-                          <div>
-                            <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
-                            <p className="text-foreground/70 font-medium">
-                              Team communication and collaboration hub
-                            </p>
-                          </div>
-                          <MessageSystem />
-                        </div>
-                      </FeatureGate>
-                    )
-                  )}
-
-                  {currentView === 'settings' && (
-                    !session?.user ? (
-                      <ProtectedViewPlaceholder viewName="Settings" />
-                    ) : (
-                      <SettingsHub
-                        settings={settings}
-                        onSettingsChange={handleSettingsChange}
-                        onExportJSON={handleExportJSON}
-                        onExportCSV={handleExportCSV}
-                        onImport={handleImport}
-                        stats={{
-                          totalTasks: tasks.length,
-                          totalTags: tags.length,
-                          totalCategories: categories.length,
-                          totalTemplates: templates.length
-                        }}
-                        tags={tags}
-                        categories={categories}
-                        templates={templates}
-                        onAddTemplate={handleAddTemplate}
-                        onUpdateTemplate={handleUpdateTemplate}
-                        onDeleteTemplate={handleDeleteTemplate}
-                        onCreateFromTemplate={handleCreateFromTemplate}
-                        onTaskRestore={handleUnarchiveTask}
-                        onTaskDelete={handleDeleteTask}
-                        onTaskArchive={handleArchiveTask}
-                        tasks={tasks}
-                        onTaskClick={handleEditTask}
-                        onTaskEdit={handleEditTask}
-                        onTaskStatusChange={handleStatusChange}
-                        onTaskUpdate={(taskId, updates) => {
-                          updateTask(taskId, updates)
-                          refreshData()
-                          if (focusTask?.id === taskId) {
-                            setFocusTask({ ...focusTask, ...updates })
-                          }
-                        }}
-                        onCreateTask={handleCreateTaskClick}
-                        onRefresh={refreshData}
-                        focusTask={focusTask}
-                        onExitFocus={handleExitFocus}
-                        onSelectFocusTask={handleSelectFocusTask}
-                        onSaveTask={handleSaveTask}
-                        initialTab={settingsInitialTab}
-                      />
-                    )
-                  )}
-                </PageContainer>
-              )}
-            </AnimatePresence>
-          </div>
-        </main>
-      </div>
-
-      <CreateTaskModal
-        open={createModalOpen}
-        onOpenChange={(open) => {
-          setCreateModalOpen(open)
-          if (!open) setEditingTask(null)
-        }}
-        onSave={handleSaveTask}
-        editTask={editingTask}
-        tags={tags}
-        categories={categories}
-        allTasks={tasks}
-        templates={templates}
-        logs={logs}
-      />
-
-      <KeyboardShortcutsModal
-        open={shortcutsModalOpen}
-        onOpenChange={setShortcutsModalOpen}
-      />
-
-      {/* Print View Component */}
-      {showPrintView && (
-        <PrintView
-          tasks={sortedTasks}
+        <CreateTaskModal
+          open={createModalOpen}
+          onOpenChange={(open) => {
+            setCreateModalOpen(open)
+            if (!open) setEditingTask(null)
+          }}
+          onSave={handleSaveTask}
+          editTask={editingTask}
           tags={tags}
           categories={categories}
-          title="9TD Task List"
-          showFilters={true}
-          filters={{
-            status: filters.status,
-            priority: filters.priority,
-            tags: filters.tags,
-            categories: filters.categories,
-          }}
+          allTasks={tasks}
+          templates={templates}
+          logs={logs}
         />
-      )}
-    </div>
+
+        <KeyboardShortcutsModal
+          open={shortcutsModalOpen}
+          onOpenChange={setShortcutsModalOpen}
+        />
+
+        {/* Print View Component */}
+        {showPrintView && (
+          <PrintView
+            tasks={sortedTasks}
+            tags={tags}
+            categories={categories}
+            title="9TD Task List"
+            showFilters={true}
+            filters={{
+              status: filters.status,
+              priority: filters.priority,
+              tags: filters.tags,
+              categories: filters.categories,
+            }}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
   )
 }
