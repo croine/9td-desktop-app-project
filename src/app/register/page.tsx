@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Logo } from '@/components/Logo'
 import { LicenseKeyInput } from '@/components/LicenseKeyInput'
 import { toast } from 'sonner'
-import { Loader2, Shield, ArrowRight, Mail, CheckCircle2, Key, Sparkles } from 'lucide-react'
+import { Loader2, Shield, ArrowRight, Mail, CheckCircle2, Key, Sparkles, User, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -25,9 +25,12 @@ export default function RegisterPage() {
   const [licenseKey, setLicenseKey] = useState('')
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     password: '',
     confirmPassword: ''
   })
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
+  const [checkingUsername, setCheckingUsername] = useState(false)
 
   // Redirect if already logged in
   useEffect(() => {
@@ -35,6 +38,41 @@ export default function RegisterPage() {
       router.push('/')
     }
   }, [session, sessionPending, router])
+
+  // Check username availability with debounce
+  useEffect(() => {
+    const checkUsername = async () => {
+      if (formData.username.length < 3) {
+        setUsernameAvailable(null)
+        return
+      }
+
+      setCheckingUsername(true)
+      try {
+        const response = await fetch('/api/user/check-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: formData.username })
+        })
+
+        const data = await response.json()
+        
+        if (response.ok) {
+          setUsernameAvailable(data.available)
+        } else {
+          setUsernameAvailable(null)
+        }
+      } catch (error) {
+        console.error('Username check error:', error)
+        setUsernameAvailable(null)
+      } finally {
+        setCheckingUsername(false)
+      }
+    }
+
+    const timeoutId = setTimeout(checkUsername, 500)
+    return () => clearTimeout(timeoutId)
+  }, [formData.username])
 
   // Step 1: Request license key
   const handleRequestLicenseKey = async (e: React.FormEvent) => {
@@ -122,6 +160,13 @@ export default function RegisterPage() {
       return
     }
 
+    // Validate username if provided
+    if (formData.username && !usernameAvailable) {
+      toast.error('Please choose an available username or leave it empty')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/license-keys/activate', {
         method: 'POST',
@@ -130,6 +175,7 @@ export default function RegisterPage() {
           key: licenseKey,
           email: email.trim(),
           name: formData.name.trim(),
+          username: formData.username.trim() || undefined,
           password: formData.password
         })
       })
@@ -456,6 +502,44 @@ export default function RegisterPage() {
                   </div>
                   
                   <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="username">Username (Optional)</Label>
+                      {checkingUsername && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Checking...
+                        </span>
+                      )}
+                      {!checkingUsername && usernameAvailable === true && formData.username.length >= 3 && (
+                        <span className="text-xs text-green-500 flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Available
+                        </span>
+                      )}
+                      {!checkingUsername && usernameAvailable === false && (
+                        <span className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Taken
+                        </span>
+                      )}
+                    </div>
+                    <Input
+                      id="username"
+                      type="text"
+                      placeholder="john_doe"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      disabled={isLoading}
+                      autoComplete="off"
+                      className="h-11"
+                    />
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-primary" />
+                      Create a unique username for quick sign-in (3-20 characters)
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
                       id="password"
@@ -494,7 +578,7 @@ export default function RegisterPage() {
                   <Button
                     type="submit"
                     className="w-full h-11 gap-2 font-semibold"
-                    disabled={isLoading}
+                    disabled={isLoading || (formData.username && !usernameAvailable)}
                   >
                     {isLoading ? (
                       <>

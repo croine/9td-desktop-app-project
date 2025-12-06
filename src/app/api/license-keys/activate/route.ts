@@ -7,7 +7,7 @@ import { randomBytes } from 'crypto';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { key, email, name, password } = body;
+    const { key, email, name, username, password } = body;
 
     // Validate all required fields are present
     if (!key) {
@@ -74,6 +74,35 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email format', code: 'INVALID_EMAIL_FORMAT' },
         { status: 400 }
       );
+    }
+
+    // Validate username format if provided
+    if (username && username.trim() !== '') {
+      const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+      if (!usernameRegex.test(username.trim())) {
+        return NextResponse.json(
+          { 
+            error: 'Invalid username format. Username must be 3-20 characters and contain only letters, numbers, underscores, and hyphens',
+            code: 'INVALID_USERNAME_FORMAT' 
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check if username already exists
+      const normalizedUsername = username.trim().toLowerCase();
+      const existingUsername = await db
+        .select()
+        .from(user)
+        .where(eq(user.username, normalizedUsername))
+        .limit(1);
+
+      if (existingUsername.length > 0) {
+        return NextResponse.json(
+          { error: 'Username already taken', code: 'USERNAME_TAKEN' },
+          { status: 409 }
+        );
+      }
     }
 
     // Normalize email to lowercase
@@ -146,13 +175,14 @@ export async function POST(request: NextRequest) {
     // Generate unique user ID
     const userId = 'user_' + randomBytes(16).toString('hex');
 
-    // Create user account
+    // Create user account with optional username
     const newUsers = await db
       .insert(user)
       .values({
         id: userId,
         name: name.trim(),
         email: normalizedEmail,
+        username: username && username.trim() !== '' ? username.trim().toLowerCase() : null,
         emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -214,6 +244,7 @@ export async function POST(request: NextRequest) {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
+          username: newUser.username,
         },
         message: 'Account activated successfully',
       },
