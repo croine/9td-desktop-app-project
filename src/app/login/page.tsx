@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
@@ -45,10 +45,6 @@ export default function LoginPage() {
   // Current authentication step (1, 2, 3)
   const [currentStep, setCurrentStep] = useState(1)
 
-  // Holographic grid canvas
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [particles, setParticles] = useState<Array<{ x: number; y: number; vx: number; vy: number }>>([])
-
   // Password strength calculator
   const calculatePasswordStrength = (password: string) => {
     if (!password) {
@@ -92,100 +88,6 @@ export default function LoginPage() {
       setCapsLockOn(false)
     }
   }
-
-  // Initialize holographic grid background
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-
-    // Create grid particles
-    const newParticles = []
-    for (let i = 0; i < 80; i++) {
-      newParticles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-      })
-    }
-    setParticles(newParticles)
-
-    let animationId: number
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      // Draw grid lines
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)'
-      ctx.lineWidth = 1
-      for (let i = 0; i < canvas.width; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(i, 0)
-        ctx.lineTo(i, canvas.height)
-        ctx.stroke()
-      }
-      for (let i = 0; i < canvas.height; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(0, i)
-        ctx.lineTo(canvas.width, i)
-        ctx.stroke()
-      }
-
-      // Update and draw particles
-      newParticles.forEach((particle, i) => {
-        particle.x += particle.vx
-        particle.y += particle.vy
-
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1
-
-        // Draw particle
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.4)'
-        ctx.beginPath()
-        ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2)
-        ctx.fill()
-
-        // Draw connections
-        newParticles.forEach((otherParticle, j) => {
-          if (i !== j) {
-            const dx = particle.x - otherParticle.x
-            const dy = particle.y - otherParticle.y
-            const distance = Math.sqrt(dx * dx + dy * dy)
-
-            if (distance < 120) {
-              ctx.strokeStyle = `rgba(59, 130, 246, ${0.15 * (1 - distance / 120)})`
-              ctx.lineWidth = 1
-              ctx.beginPath()
-              ctx.moveTo(particle.x, particle.y)
-              ctx.lineTo(otherParticle.x, otherParticle.y)
-              ctx.stroke()
-            }
-          }
-        })
-      })
-
-      animationId = requestAnimationFrame(animate)
-    }
-
-    animate()
-
-    const handleResize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      cancelAnimationFrame(animationId)
-    }
-  }, [])
 
   // Update current step based on field focus
   useEffect(() => {
@@ -374,8 +276,6 @@ export default function LoginPage() {
             : 'bg-muted text-muted-foreground'
         }`}
         whileHover={{ scale: 1.05 }}
-        animate={isActive ? { scale: [1, 1.03, 1] } : {}}
-        transition={{ duration: 2, repeat: isActive ? Infinity : 0 }}
       >
         {isComplete ? (
           <motion.div
@@ -388,13 +288,6 @@ export default function LoginPage() {
         ) : (
           step
         )}
-        {isActive && (
-          <motion.div
-            className="absolute inset-0 rounded-full border border-primary"
-            animate={{ scale: [1, 1.4], opacity: [1, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
-        )}
       </motion.div>
       <span className={`text-[10px] font-medium transition-colors ${isActive || isComplete ? 'text-foreground' : 'text-muted-foreground'}`}>
         {label}
@@ -403,22 +296,16 @@ export default function LoginPage() {
   )
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-background">
-      {/* Holographic grid background */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full opacity-40"
-      />
-
-      {/* Radial gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent" />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-primary/[0.02] to-background">
+      {/* Simple animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 animate-pulse-smooth" />
 
       {/* Main content container */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6">
         <div className="grid md:grid-cols-2 gap-6 items-center">
-          {/* Left side - Branding and features */}
+          {/* Left side - Branding and features (hidden on mobile) */}
           <motion.div
-            className="space-y-6"
+            className="hidden md:block space-y-6"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
