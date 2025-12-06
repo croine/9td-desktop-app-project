@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card } from '@/components/ui/card'
 import { Logo } from '@/components/Logo'
-import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight, AlertTriangle, Clipboard, ClipboardCheck } from 'lucide-react'
+import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight, AlertTriangle, Clipboard, ClipboardCheck, Home, UserPlus, LogIn, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
@@ -224,71 +224,58 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await authClient.signIn.email({
-        email: authMethod === 'email' ? email : username,
-        password,
-        rememberMe,
-        callbackURL: '/'
-      })
-
-      if (error?.code) {
-        // Enhanced error messages based on error type
-        if (error.code === 'USER_NOT_FOUND') {
-          toast.error(
-            authMethod === 'email' 
-              ? 'Email not found. Did you mean to register?' 
-              : 'Username not found. Did you mean to register?',
-            {
-              action: {
-                label: 'Register',
-                onClick: () => router.push('/register')
-              }
-            }
-          )
-        } else if (error.code === 'INVALID_PASSWORD') {
-          toast.error('Incorrect password. Please try again or reset your password.')
-        } else {
-          toast.error('Invalid credentials. Please check your details and try again.')
-        }
-        setIsLoading(false)
-        return
-      }
-
-      const licenseResponse = await fetch('/api/auth/signin-multi', {
+      // Call custom signin-multi endpoint directly
+      const response = await fetch('/api/auth/signin-multi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method: authMethod,
-          identifier: authMethod === 'email' ? email : username,
+          ...(authMethod === 'email' 
+            ? { email: email }
+            : { username: username }
+          ),
           password,
           licenseKey: licenseKey.replace(/-/g, ''),
-          rememberMe
         })
       })
 
-      const licenseData = await licenseResponse.json()
+      const data = await response.json()
 
-      if (!licenseResponse.ok) {
-        // Enhanced license key error messages
-        if (licenseData.error?.includes('expired')) {
+      if (!response.ok) {
+        // Enhanced error messages
+        if (data.code === 'INVALID_CREDENTIALS') {
+          toast.error('Invalid email, password, or license key. Please check your credentials and try again.')
+        } else if (data.code === 'EXPIRED_LICENSE_KEY') {
           toast.error('License key has expired. Please renew your license.', {
             action: {
               label: 'Renew',
               onClick: () => router.push('/pricing')
             }
           })
-        } else if (licenseData.error?.includes('Invalid')) {
-          toast.error('Invalid license key. Please check your key and try again.')
+        } else if (data.code === 'INVALID_LICENSE_KEY') {
+          toast.error('License key is not active or invalid.')
+        } else if (data.code === 'MISSING_EMAIL' || data.code === 'MISSING_USERNAME') {
+          toast.error('Please enter your ' + (authMethod === 'email' ? 'email' : 'username'))
+        } else if (data.code === 'MISSING_PASSWORD') {
+          toast.error('Please enter your password')
+        } else if (data.code === 'MISSING_LICENSE_KEY') {
+          toast.error('Please enter your license key')
         } else {
-          toast.error(licenseData.error || 'License verification failed')
+          toast.error(data.error || 'Sign in failed. Please try again.')
         }
         setIsLoading(false)
         return
       }
 
+      // Store session token
+      if (data.session?.token) {
+        localStorage.setItem('bearer_token', data.session.token)
+      }
+
       toast.success('Welcome back! 🎉')
       setTimeout(() => {
         router.push('/')
+        router.refresh()
       }, 500)
     } catch (error) {
       console.error('Sign in error:', error)
@@ -366,8 +353,51 @@ export default function LoginPage() {
       {/* Simple animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 animate-pulse-smooth" />
 
-      {/* Main content container */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6">
+      {/* Smart Navigation Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Logo className="scale-90" />
+              <span className="font-display font-bold text-lg hidden sm:inline">9TD</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/')}
+                className="gap-2 text-sm"
+              >
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">Home</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/register')}
+                className="gap-2 text-sm"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Register</span>
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => router.push('/login')}
+                className="gap-2 text-sm"
+                disabled
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign In</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content container with top padding for fixed nav */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6 mt-16">
         <div className="grid md:grid-cols-2 gap-6 items-center">
           {/* Left side - Branding and features (hidden on mobile) */}
           <motion.div
@@ -419,6 +449,28 @@ export default function LoginPage() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+
+            {/* Quick Links */}
+            <div className="glass-card p-4 rounded-xl border border-primary/10">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Quick Access
+              </h3>
+              <div className="space-y-2">
+                <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                  <Home className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Go to Dashboard</span>
+                </Link>
+                <Link href="/register" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                  <UserPlus className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Create New Account</span>
+                </Link>
+                <Link href="/pricing" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                  <KeyRound className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                  <span>Purchase License Key</span>
+                </Link>
+              </div>
             </div>
           </motion.div>
 
@@ -764,14 +816,14 @@ export default function LoginPage() {
                 </motion.div>
               </form>
 
-              {/* Footer */}
+              {/* Footer - Enhanced with navigation */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.3 }}
-                className="mt-5 pt-4 border-t border-border/50 text-center"
+                className="mt-5 pt-4 border-t border-border/50 space-y-3"
               >
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground text-center">
                   New to 9TD?{' '}
                   <button
                     onClick={() => router.push('/register')}
@@ -780,6 +832,28 @@ export default function LoginPage() {
                     Create an account
                   </button>
                 </p>
+                
+                {/* Mobile Quick Links */}
+                <div className="md:hidden flex flex-wrap justify-center gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/')}
+                    className="gap-1.5 text-xs h-8"
+                  >
+                    <Home className="h-3 w-3" />
+                    Home
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/pricing')}
+                    className="gap-1.5 text-xs h-8"
+                  >
+                    <KeyRound className="h-3 w-3" />
+                    Get License
+                  </Button>
+                </div>
               </motion.div>
             </Card>
           </motion.div>
