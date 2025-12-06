@@ -56,7 +56,7 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success('License key generated!', {
+      toast.success('🔑 License key generated!', {
         description: 'Check your email for the activation code'
       })
       
@@ -87,6 +87,9 @@ export default function RegisterPage() {
 
       if (data.valid) {
         setLicenseKey(key)
+        toast.success('✅ License key verified!', {
+          description: 'Proceeding to account creation...'
+        })
         // Auto-advance to profile completion after successful verification
         setTimeout(() => {
           setCurrentStep('complete-profile')
@@ -170,8 +173,8 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success('License key resent!', {
-        description: 'Check your email for the activation code'
+      toast.success('📧 License key resent!', {
+        description: 'Check your email for the new activation code'
       })
     } catch (error) {
       console.error('Resend error:', error)
@@ -208,11 +211,11 @@ export default function RegisterPage() {
             key={i}
             className="absolute w-2 h-2 bg-primary/20 rounded-full"
             initial={{ 
-              x: Math.random() * window.innerWidth, 
-              y: Math.random() * window.innerHeight 
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000), 
+              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000)
             }}
             animate={{ 
-              y: [null, Math.random() * window.innerHeight],
+              y: [null, Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000)],
               opacity: [0, 1, 0]
             }}
             transition={{ 
@@ -224,38 +227,50 @@ export default function RegisterPage() {
         ))}
       </div>
       
-      <div className="w-full max-w-md relative z-10">
-        <Card className="glass-card border shadow-xl">
-          <CardHeader className="space-y-3 pb-6">
+      <div className="w-full max-w-2xl relative z-10">
+        <Card className="glass-card border-2 shadow-xl">
+          <CardHeader className="space-y-4 pb-6">
             <div className="flex justify-center">
               <Logo />
             </div>
             
-            {/* Step indicator */}
-            <div className="flex items-center justify-center gap-2 pt-2">
+            {/* Enhanced Step indicator */}
+            <div className="flex items-center justify-center gap-3 pt-2">
               {['email', 'license-key', 'complete-profile'].map((step, index) => (
                 <div key={step} className="flex items-center">
                   <motion.div
                     initial={{ scale: 0.8 }}
                     animate={{ 
-                      scale: currentStep === step ? 1.2 : 1,
-                      backgroundColor: currentStep === step ? 'hsl(var(--primary))' : 'hsl(var(--muted))'
+                      scale: currentStep === step ? 1.3 : 1,
                     }}
-                    className={`w-2 h-2 rounded-full ${
-                      currentStep === step ? 'bg-primary' : 'bg-muted'
+                    className={`relative w-3 h-3 rounded-full transition-all duration-300 ${
+                      currentStep === step 
+                        ? 'bg-primary ring-4 ring-primary/30' 
+                        : index < ['email', 'license-key', 'complete-profile'].indexOf(currentStep)
+                        ? 'bg-primary/50'
+                        : 'bg-muted'
                     }`}
-                  />
+                  >
+                    {currentStep === step && (
+                      <motion.div
+                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute inset-0 rounded-full bg-primary"
+                      />
+                    )}
+                  </motion.div>
                   {index < 2 && (
-                    <div className={`w-8 h-0.5 mx-1 ${
-                      ['license-key', 'complete-profile'].includes(currentStep) && index === 0 ? 'bg-primary' : 
-                      currentStep === 'complete-profile' && index === 1 ? 'bg-primary' : 'bg-muted'
+                    <div className={`w-12 h-0.5 mx-2 transition-all duration-300 ${
+                      index < ['email', 'license-key', 'complete-profile'].indexOf(currentStep)
+                        ? 'bg-primary' 
+                        : 'bg-muted'
                     }`} />
                   )}
                 </div>
               ))}
             </div>
             
-            <div className="space-y-1 text-center">
+            <div className="space-y-2 text-center">
               <CardTitle className="text-2xl font-display flex items-center justify-center gap-2">
                 {currentStep === 'email' && (
                   <>
@@ -266,7 +281,7 @@ export default function RegisterPage() {
                 {currentStep === 'license-key' && (
                   <>
                     <Key className="h-5 w-5 text-primary" />
-                    Enter License Key
+                    Verify License Key
                   </>
                 )}
                 {currentStep === 'complete-profile' && (
@@ -276,10 +291,10 @@ export default function RegisterPage() {
                   </>
                 )}
               </CardTitle>
-              <CardDescription>
-                {currentStep === 'email' && 'Enter your email to receive a license key'}
+              <CardDescription className="text-sm">
+                {currentStep === 'email' && 'Enter your email to receive a secure license key'}
                 {currentStep === 'license-key' && 'Enter the license key sent to your email'}
-                {currentStep === 'complete-profile' && 'Create your account to get started'}
+                {currentStep === 'complete-profile' && 'Create your account credentials to get started'}
               </CardDescription>
             </div>
           </CardHeader>
@@ -307,17 +322,18 @@ export default function RegisterPage() {
                       disabled={isLoading}
                       autoComplete="email"
                       autoFocus
+                      className="h-11"
                     />
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Shield className="h-3 w-3" />
-                      We'll send a license key to this email
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                      A secure 16-character license key will be sent to this email
                     </p>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-3 pt-2">
                   <Button
                     type="submit"
-                    className="w-full h-10 gap-2"
+                    className="w-full h-11 gap-2 font-semibold"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -327,6 +343,7 @@ export default function RegisterPage() {
                       </>
                     ) : (
                       <>
+                        <Key className="h-4 w-4" />
                         Generate License Key
                         <ArrowRight className="h-4 w-4" />
                       </>
@@ -338,7 +355,7 @@ export default function RegisterPage() {
                       <div className="w-full border-t border-border"></div>
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground">
+                      <span className="bg-card px-2 text-muted-foreground font-medium">
                         Already have an account?
                       </span>
                     </div>
@@ -348,7 +365,7 @@ export default function RegisterPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full h-10"
+                      className="w-full h-11 font-semibold"
                     >
                       Sign In
                     </Button>
@@ -365,7 +382,7 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
               >
-                <CardContent className="space-y-4 py-8">
+                <CardContent className="space-y-6 py-6">
                   <LicenseKeyInput
                     onVerify={handleVerifyLicenseKey}
                     onKeyChange={(key) => setLicenseKey(key)}
@@ -373,28 +390,31 @@ export default function RegisterPage() {
                     autoFocus
                   />
                   
-                  <div className="text-center">
+                  <div className="text-center space-y-2">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={handleResendKey}
                       disabled={isLoading}
-                      className="text-xs"
+                      className="text-xs font-medium"
                     >
-                      Didn't receive the key? Resend
+                      Didn't receive the key? Click to resend
                     </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Check your spam folder if you don't see the email
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-10"
+                    className="w-full h-11 font-semibold"
                     onClick={() => setCurrentStep('email')}
                     disabled={isLoading}
                   >
-                    Back to Email
+                    ← Back to Email
                   </Button>
                 </CardFooter>
               </motion.div>
@@ -413,10 +433,10 @@ export default function RegisterPage() {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="flex items-center justify-center gap-2 text-green-500 bg-green-500/10 rounded-lg p-3 mb-4"
+                    className="flex items-center justify-center gap-2 text-green-500 bg-green-500/10 rounded-lg p-4 mb-4 border border-green-500/30"
                   >
                     <CheckCircle2 className="h-5 w-5" />
-                    <span className="text-sm font-medium">License key verified!</span>
+                    <span className="text-sm font-semibold">License key verified successfully!</span>
                   </motion.div>
                   
                   <div className="space-y-2">
@@ -431,6 +451,7 @@ export default function RegisterPage() {
                       disabled={isLoading}
                       autoComplete="name"
                       autoFocus
+                      className="h-11"
                     />
                   </div>
                   
@@ -446,10 +467,11 @@ export default function RegisterPage() {
                       disabled={isLoading}
                       autoComplete="off"
                       minLength={8}
+                      className="h-11"
                     />
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Shield className="h-3 w-3" />
-                      Must be at least 8 characters
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                      Must be at least 8 characters long
                     </p>
                   </div>
                   
@@ -464,13 +486,14 @@ export default function RegisterPage() {
                       required
                       disabled={isLoading}
                       autoComplete="off"
+                      className="h-11"
                     />
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-3 pt-2">
                   <Button
                     type="submit"
-                    className="w-full h-10 gap-2"
+                    className="w-full h-11 gap-2 font-semibold"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -480,6 +503,7 @@ export default function RegisterPage() {
                       </>
                     ) : (
                       <>
+                        <Sparkles className="h-4 w-4" />
                         Create Account
                         <ArrowRight className="h-4 w-4" />
                       </>

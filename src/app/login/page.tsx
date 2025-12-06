@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Logo } from '@/components/Logo'
 import { toast } from 'sonner'
-import { Loader2, ArrowRight, Key, Sparkles } from 'lucide-react'
+import { Loader2, ArrowRight, Key, Sparkles, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
@@ -28,8 +28,8 @@ export default function LoginPage() {
   // Show success message if redirected from registration
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
-      toast.success('Account created successfully!', {
-        description: 'Please sign in with your credentials'
+      toast.success('🎉 Account created successfully!', {
+        description: 'Welcome to 9TD! Please sign in with your credentials'
       })
     }
   }, [searchParams])
@@ -54,12 +54,16 @@ export default function LoginPage() {
       })
 
       if (error?.code) {
-        toast.error('Invalid email or password. Please make sure you have already registered an account and try again.')
+        toast.error('Authentication failed', {
+          description: 'Invalid email or password. Please check your credentials and try again.'
+        })
         setIsLoading(false)
         return
       }
 
-      toast.success('Welcome back!')
+      toast.success('Welcome back!', {
+        description: 'Redirecting to your dashboard...'
+      })
       router.push('/')
     } catch (error) {
       console.error('Login error:', error)
@@ -117,7 +121,7 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="glass-card border shadow-xl">
+          <Card className="glass-card border-2 shadow-xl">
             <CardHeader className="space-y-3 pb-6">
               <motion.div 
                 className="flex justify-center"
@@ -129,17 +133,17 @@ export default function LoginPage() {
               </motion.div>
               
               <motion.div 
-                className="space-y-1 text-center"
+                className="space-y-2 text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
                 <CardTitle className="text-2xl font-display flex items-center justify-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Welcome Back
+                  <Shield className="h-5 w-5 text-primary" />
+                  Secure Sign In
                 </CardTitle>
-                <CardDescription>
-                  Sign in to your 9TD account
+                <CardDescription className="text-sm">
+                  Access your 9TD task dashboard
                 </CardDescription>
               </motion.div>
             </CardHeader>
@@ -163,6 +167,7 @@ export default function LoginPage() {
                     disabled={isLoading}
                     autoComplete="email"
                     autoFocus
+                    className="h-11"
                   />
                 </motion.div>
                 
@@ -182,6 +187,7 @@ export default function LoginPage() {
                     required
                     disabled={isLoading}
                     autoComplete="off"
+                    className="h-11"
                   />
                 </motion.div>
                 
@@ -203,7 +209,7 @@ export default function LoginPage() {
                     htmlFor="rememberMe"
                     className="text-sm font-normal cursor-pointer"
                   >
-                    Remember me
+                    Remember me for 30 days
                   </Label>
                 </motion.div>
               </CardContent>
@@ -217,7 +223,7 @@ export default function LoginPage() {
                 >
                   <Button
                     type="submit"
-                    className="w-full h-10 gap-2"
+                    className="w-full h-11 gap-2 font-semibold"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -244,8 +250,8 @@ export default function LoginPage() {
                     <div className="w-full border-t border-border"></div>
                   </div>
                   <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-2 text-muted-foreground">
-                      Don't have an account?
+                    <span className="bg-card px-2 text-muted-foreground font-medium">
+                      Need an account?
                     </span>
                   </div>
                 </motion.div>
@@ -260,12 +266,28 @@ export default function LoginPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full h-10 gap-2"
+                      className="w-full h-11 gap-2 font-semibold border-2 hover:border-primary/50"
                     >
                       <Key className="h-4 w-4" />
                       Create Account with License Key
+                      <Sparkles className="h-3 w-3 text-primary" />
                     </Button>
                   </Link>
+                </motion.div>
+
+                {/* Info Banner */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                  className="glass-card border border-primary/20 p-3 rounded-lg"
+                >
+                  <div className="flex items-start gap-2">
+                    <Zap className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">License Key Authentication:</span> Generate a secure license key sent to your email for account activation
+                    </div>
+                  </div>
                 </motion.div>
               </CardFooter>
             </form>

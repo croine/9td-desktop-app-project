@@ -85,7 +85,7 @@ interface ActiveFrame {
 export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: UserAvatarProps) {
   const router = useRouter()
   const { refetch: refetchSession } = useSession()
-  const { customer, isLoading: isLoadingCustomer } = useCustomer()
+  const { customer, isLoading: isLoadingCustomer, refetch: refetchCustomer } = useCustomer()
   
   const [isOpen, setIsOpen] = useState(false)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -292,8 +292,13 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
       toast.error('Failed to sign out')
     } else {
       localStorage.removeItem('bearer_token')
-      toast.success('Signed out successfully')
-      router.push('/')
+      await refetchSession() // Refetch session to update UI
+      await refetchCustomer() // Clear customer data
+      toast.success('You have signed out successfully')
+      // Small delay before redirect to ensure state updates
+      setTimeout(() => {
+        router.push('/')
+      }, 500)
     }
   }
 
