@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { KeyRound, Mail, User, Loader2, CheckCircle2, Copy, CheckCheck, ArrowRight, CreditCard } from 'lucide-react'
+import { KeyRound, Mail, User, Loader2, CheckCircle2, Copy, CheckCheck, ArrowRight, CreditCard, Zap, Shield, Lock, Clock, Infinity, Sparkles, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -92,7 +92,7 @@ export function LicenseKeyPurchase() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto">
       <AnimatePresence mode="wait">
         {!purchasedKey ? (
           <motion.div
@@ -102,131 +102,269 @@ export function LicenseKeyPurchase() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="glass-card p-8 shadow-xl">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-500 mb-4 shadow-lg">
-                  <KeyRound className="h-8 w-8 text-white" />
-                </div>
-                <h2 className="font-display text-3xl font-bold mb-3">
-                  Purchase License Key
-                </h2>
-                <p className="text-muted-foreground text-lg">
-                  Get instant access to all premium features with a one-time license key
-                </p>
-                
-                {/* Price Display */}
-                <div className="mt-6 inline-flex items-baseline gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20">
-                  <span className="text-4xl font-bold">$49</span>
-                  <span className="text-muted-foreground">one-time</span>
-                </div>
+            {/* Hero Section */}
+            <div className="text-center mb-16 space-y-6">
+              <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 backdrop-blur-sm">
+                <Infinity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">LIFETIME ACCESS</span>
+              </div>
+              
+              <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight">
+                <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                  One Payment.
+                </span>
+                <br />
+                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Yours Forever.
+                </span>
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-medium">
+                Skip the subscription. Own your productivity software with a single payment.
+              </p>
+            </div>
+
+            {/* Main License Card */}
+            <div className="grid lg:grid-cols-2 gap-12 items-start">
+              {/* Left: Pricing & Features */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-500 rounded-3xl blur-2xl opacity-60 group-hover:opacity-80 transition-opacity" />
+                <Card className="relative p-10 rounded-3xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-50/90 via-teal-50/90 to-cyan-50/90 dark:from-emerald-950/90 dark:via-teal-950/90 dark:to-cyan-950/90 backdrop-blur-xl overflow-hidden shadow-2xl">
+                  {/* Special Badge */}
+                  <div className="absolute -top-1 -right-1 px-5 py-2 rounded-bl-2xl rounded-tr-3xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    LIMITED OFFER
+                  </div>
+
+                  {/* Decorative pattern */}
+                  <div className="absolute top-0 left-0 w-40 h-40 opacity-10">
+                    <div className="grid grid-cols-5 gap-2 rotate-12">
+                      {Array.from({ length: 25 }).map((_, i) => (
+                        <div key={i} className="w-2 h-2 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500" />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative space-y-8">
+                    {/* Icon & Title */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                          <KeyRound className="h-7 w-7 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-3xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+                            Pro License
+                          </h3>
+                          <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+                            Lifetime access • One-time payment
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="space-y-3">
+                      <div className="flex items-baseline gap-3">
+                        <span className="font-display text-6xl font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
+                          $49
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                            one-time
+                          </span>
+                          <span className="text-sm text-emerald-500 dark:text-emerald-400 line-through">
+                            $149 regular price
+                          </span>
+                        </div>
+                      </div>
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30">
+                        <Star className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                          Save $100 • 67% OFF Launch Discount
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    <div className="space-y-4 pt-6 border-t border-emerald-300 dark:border-emerald-800">
+                      <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                        Everything Included:
+                      </p>
+                      <ul className="space-y-3">
+                        {[
+                          { text: "All Pro features unlocked", icon: <Zap className="h-4 w-4" /> },
+                          { text: "Lifetime updates & support", icon: <Infinity className="h-4 w-4" /> },
+                          { text: "No monthly fees ever", icon: <CheckCircle2 className="h-4 w-4" /> },
+                          { text: "7-day money-back guarantee", icon: <Shield className="h-4 w-4" /> },
+                          { text: "Instant email delivery", icon: <Mail className="h-4 w-4" /> },
+                          { text: "Secure activation system", icon: <Lock className="h-4 w-4" /> },
+                        ].map((feature) => (
+                          <li key={feature.text} className="flex items-start gap-3">
+                            <div className="mt-0.5 shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                              {feature.icon}
+                            </div>
+                            <span className="text-sm text-emerald-900 dark:text-emerald-100 font-medium pt-0.5">
+                              {feature.text}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Trust Badge */}
+                    <div className="bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-2xl p-5 border border-emerald-500/20">
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-6 w-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                            100% Secure Payment
+                          </p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                            All transactions are encrypted with 256-bit SSL and processed securely through Stripe. Your payment information is never stored on our servers.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
 
-              <form onSubmit={handlePurchase} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-semibold">
-                    Full Name
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="John Doe"
-                      className="pl-10 h-12 text-base"
-                      disabled={isLoading}
-                      required
-                    />
+              {/* Right: Purchase Form */}
+              <div className="relative">
+                <Card className="relative p-10 rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xl shadow-xl">
+                  <div className="space-y-8">
+                    <div className="space-y-2">
+                      <h2 className="font-display text-3xl font-bold">
+                        Get Your License
+                      </h2>
+                      <p className="text-muted-foreground font-medium">
+                        Enter your details to proceed to secure checkout
+                      </p>
+                    </div>
+
+                    <form onSubmit={handlePurchase} className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-sm font-semibold flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Full Name
+                        </Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="John Doe"
+                          className="h-12 text-base border-2 focus:border-emerald-500 transition-colors"
+                          disabled={isLoading}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email Address
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          className="h-12 text-base border-2 focus:border-emerald-500 transition-colors"
+                          disabled={isLoading}
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <Clock className="h-3 w-3" />
+                          License key will be sent instantly after payment
+                        </p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 border border-border/50">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                          What Happens Next
+                        </h3>
+                        <ol className="space-y-3">
+                          {[
+                            "Secure payment via Stripe ($49)",
+                            "Instant license key delivery to your email",
+                            "Activate in your account dashboard",
+                            "Enjoy lifetime Pro access!"
+                          ].map((step, i) => (
+                            <li key={i} className="flex items-start gap-3 text-sm">
+                              <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 text-white flex items-center justify-center text-xs font-bold">
+                                {i + 1}
+                              </span>
+                              <span className="text-muted-foreground font-medium pt-0.5">
+                                {step}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        className="w-full h-14 text-base font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white shadow-xl hover:shadow-2xl transition-all"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Opening Checkout...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="h-5 w-5 mr-2" />
+                            Proceed to Secure Checkout
+                            <ArrowRight className="h-5 w-5 ml-2" />
+                          </>
+                        )}
+                      </Button>
+
+                      <div className="flex items-center justify-center gap-6 pt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <span>7-day refund</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <span>Instant delivery</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <span>Secure payment</span>
+                        </div>
+                      </div>
+                    </form>
                   </div>
+                </Card>
+
+                {/* Comparison callout */}
+                <div className="mt-6">
+                  <Card className="p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/50 dark:to-orange-950/50">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
+                        <Star className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100">
+                          Compare: Pro Subscription vs License
+                        </p>
+                        <div className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                          <p>• Pro Monthly: <span className="font-semibold">$12/month = $144/year</span></p>
+                          <p>• Pro Annual: <span className="font-semibold">$115/year</span></p>
+                          <p className="text-emerald-700 dark:text-emerald-300 font-bold">• License Key: $49 one-time 🎉</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-semibold">
-                    Email Address
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="pl-10 h-12 text-base"
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Your license key will be sent to this email after payment
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-lg p-6 border border-primary/20">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    What's Included
-                  </h3>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Instant license key delivery via email after payment
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Valid for 7 days from purchase
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      One-time activation per key
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Step-by-step activation guide included
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Full access to premium features
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Secure payment via Stripe
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <p className="text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    <strong>Secure Payment:</strong> All transactions are processed securely through Stripe with 256-bit SSL encryption.
-                  </p>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary via-purple-600 to-primary hover:from-primary/90 hover:via-purple-700 hover:to-primary/90 shadow-lg shadow-primary/20"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Redirecting to Checkout...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-5 w-5 mr-2" />
-                      Proceed to Checkout
-                      <ArrowRight className="h-5 w-5 ml-2" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  By purchasing, you agree to our Terms of Service and Privacy Policy
-                </p>
-              </form>
-            </Card>
+              </div>
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -235,8 +373,9 @@ export function LicenseKeyPurchase() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3 }}
+            className="max-w-3xl mx-auto"
           >
-            <Card className="glass-card p-8 shadow-xl border-2 border-green-500/20">
+            <Card className="glass-card p-10 shadow-2xl border-2 border-green-500/30 rounded-3xl">
               <div className="text-center mb-8">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -247,31 +386,32 @@ export function LicenseKeyPurchase() {
                     damping: 30,
                     delay: 0.1 
                   }}
-                  className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 mb-6 shadow-lg"
+                  className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 mb-6 shadow-2xl"
                 >
-                  <CheckCircle2 className="h-10 w-10 text-white" />
+                  <CheckCircle2 className="h-12 w-12 text-white" />
                 </motion.div>
-                <h2 className="font-display text-3xl font-bold mb-3">
-                  License Key Generated! 🎉
+                <h2 className="font-display text-4xl font-bold mb-3 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Payment Successful! 🎉
                 </h2>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-xl text-muted-foreground">
                   Your license key has been sent to your email
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-lg p-6 border-2 border-primary/30 mb-6">
-                <Label className="text-sm font-semibold text-muted-foreground mb-3 block uppercase tracking-wide">
+              <div className="bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-950/80 dark:to-emerald-950/80 rounded-2xl p-8 border-2 border-green-500/30 mb-6">
+                <Label className="text-sm font-bold text-green-700 dark:text-green-300 mb-4 block uppercase tracking-wider flex items-center gap-2">
+                  <KeyRound className="h-4 w-4" />
                   Your License Key
                 </Label>
-                <div className="bg-card border-2 border-border rounded-lg p-4 mb-4 relative group">
-                  <p className="font-mono text-2xl font-bold text-center tracking-wider break-all">
+                <div className="bg-card border-2 border-green-500/30 rounded-xl p-6 mb-4 relative group">
+                  <p className="font-mono text-2xl md:text-3xl font-bold text-center tracking-wider break-all bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                     {purchasedKey}
                   </p>
                   <Button
                     onClick={handleCopy}
                     variant="ghost"
                     size="sm"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     {copied ? (
                       <CheckCheck className="h-4 w-4 text-green-500" />
@@ -282,13 +422,12 @@ export function LicenseKeyPurchase() {
                 </div>
                 <Button
                   onClick={handleCopy}
-                  variant="outline"
-                  className="w-full"
+                  className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                 >
                   {copied ? (
                     <>
-                      <CheckCheck className="h-4 w-4 mr-2 text-green-500" />
-                      Copied!
+                      <CheckCheck className="h-4 w-4 mr-2" />
+                      Copied to Clipboard!
                     </>
                   ) : (
                     <>
@@ -299,61 +438,57 @@ export function LicenseKeyPurchase() {
                 </Button>
               </div>
 
-              <div className="space-y-4 mb-6">
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-600" />
+              <div className="space-y-4 mb-8">
+                <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-500/30 rounded-2xl p-6">
+                  <h3 className="font-bold mb-3 flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                    <Mail className="h-5 w-5 text-blue-600" />
                     Check Your Email
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    We've sent detailed activation instructions to your email address. Please check your inbox (and spam folder) for the email.
+                  <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
+                    We've sent detailed activation instructions to your email address. Please check your inbox (and spam folder) for the email containing your license key and setup guide.
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-muted to-muted/50 rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">Next Steps:</h3>
-                  <ol className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                        1
-                      </span>
-                      <span>Copy your license key from above</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                        2
-                      </span>
-                      <span>Go to the login page or register if you don't have an account</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                        3
-                      </span>
-                      <span>Enter your email, password, and paste the license key</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                        4
-                      </span>
-                      <span>Activate and enjoy all premium features!</span>
-                    </li>
+                <div className="bg-gradient-to-br from-muted to-muted/50 rounded-2xl p-6 border border-border/50">
+                  <h3 className="font-bold mb-4 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    How to Activate
+                  </h3>
+                  <ol className="space-y-3">
+                    {[
+                      { step: "Copy your license key from above", icon: <Copy className="h-4 w-4" /> },
+                      { step: "Sign in or create an account", icon: <User className="h-4 w-4" /> },
+                      { step: "Go to Settings → Account", icon: <KeyRound className="h-4 w-4" /> },
+                      { step: "Paste and activate your license", icon: <CheckCircle2 className="h-4 w-4" /> },
+                    ].map((item, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 text-white flex items-center justify-center text-sm font-bold">
+                          {i + 1}
+                        </span>
+                        <div className="flex items-center gap-2 pt-1">
+                          {item.icon}
+                          <span className="text-sm font-medium">{item.step}</span>
+                        </div>
+                      </li>
+                    ))}
                   </ol>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={() => window.location.href = '/login'}
-                  className="flex-1 h-12 bg-gradient-to-r from-primary to-purple-600"
+                  className="flex-1 h-14 text-base font-semibold bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 shadow-lg"
                 >
-                  Go to Login
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  Activate License Now
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
                 <Button
                   onClick={handleReset}
                   variant="outline"
-                  className="h-12"
+                  className="sm:w-auto h-14 border-2"
                 >
+                  <Sparkles className="h-4 w-4 mr-2" />
                   Purchase Another
                 </Button>
               </div>
