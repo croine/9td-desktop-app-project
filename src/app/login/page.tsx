@@ -140,7 +140,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col space-y-3 pt-2">
               <Button
                 type="submit"
-                className="w-full h-9 gap-2"
+                className="w-full h-8 gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -171,7 +171,7 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-9"
+                  className="w-full h-8"
                 >
                   Create Account
                 </Button>
