@@ -263,7 +263,7 @@ export function LicenseKeyInput({
                   }}
                 />
               </motion.div>
-            )
+            )}
             
             {/* Key input segments */}
             <div className="flex gap-3 items-center justify-center relative">
