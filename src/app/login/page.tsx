@@ -96,8 +96,9 @@ export default function LoginPage() {
     try {
       const text = await navigator.clipboard.readText()
       const cleaned = text.replace(/[^A-Z0-9]/gi, '').toUpperCase()
-      if (cleaned.length === 16) {
-        const formatted = cleaned.match(/.{1,4}/g)?.join('-') || cleaned
+      if (cleaned.length >= 16) {
+        const truncated = cleaned.slice(0, 16)
+        const formatted = truncated.match(/.{1,4}/g)?.join('-') || truncated
         setLicenseKey(formatted)
         setLicensePasted(true)
         toast.success('License key pasted successfully!')
@@ -127,37 +128,19 @@ export default function LoginPage() {
     }
   }, [email, username, password, licenseKey, authMethod])
 
-  // Real-time validation
+  // Real-time validation - RELAXED
   useEffect(() => {
-    const validateEmail = (email: string) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      return emailRegex.test(email)
-    }
-
     if (authMethod === 'email' && email.length > 0) {
-      setIsValidating(true)
-      const timer = setTimeout(() => {
-        setEmailValid(validateEmail(email))
-        setIsValidating(false)
-      }, 300)
-      return () => clearTimeout(timer)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      setEmailValid(emailRegex.test(email))
     } else {
       setEmailValid(null)
     }
   }, [email, authMethod])
 
   useEffect(() => {
-    const validateUsername = (username: string) => {
-      return /^[a-zA-Z0-9_-]{3,20}$/.test(username)
-    }
-
     if (authMethod === 'username' && username.length > 0) {
-      setIsValidating(true)
-      const timer = setTimeout(() => {
-        setUsernameValid(validateUsername(username))
-        setIsValidating(false)
-      }, 300)
-      return () => clearTimeout(timer)
+      setUsernameValid(/^[a-zA-Z0-9_-]{3,20}$/.test(username))
     } else {
       setUsernameValid(null)
     }
@@ -165,7 +148,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (password.length > 0) {
-      setPasswordValid(password.length >= 6)
+      setPasswordValid(password.length >= 1)
       setPasswordStrength(calculatePasswordStrength(password))
     } else {
       setPasswordValid(null)
@@ -174,7 +157,7 @@ export default function LoginPage() {
   }, [password])
 
   useEffect(() => {
-    const formatted = licenseKey.replace(/[^A-Z0-9]/gi, '').toUpperCase()
+    const formatted = licenseKey.replace(/[^A-Z0-9]/gi, '')
     if (formatted.length > 0) {
       setLicenseKeyValid(formatted.length === 16)
     } else {
@@ -199,25 +182,22 @@ export default function LoginPage() {
 
     if (isLoading) return
 
-    const identifierValid = authMethod === 'email' ? emailValid : usernameValid
+    // Basic validation - allow submission if fields are filled
+    const identifier = authMethod === 'email' ? email.trim() : username.trim()
     
-    // Enhanced validation with specific error messages
-    if (!identifierValid) {
-      if (authMethod === 'email') {
-        toast.error('Please enter a valid email address')
-      } else {
-        toast.error('Username must be 3-20 characters (letters, numbers, _ or -)')
-      }
+    if (!identifier) {
+      toast.error(`Please enter your ${authMethod === 'email' ? 'email' : 'username'}`)
       return
     }
     
-    if (!passwordValid) {
-      toast.error('Password must be at least 6 characters long')
+    if (!password) {
+      toast.error('Please enter your password')
       return
     }
     
-    if (!licenseKeyValid) {
-      toast.error('Invalid license key format. Expected: XXXX-XXXX-XXXX-XXXX')
+    const cleanLicenseKey = licenseKey.replace(/-/g, '').trim()
+    if (!cleanLicenseKey || cleanLicenseKey.length !== 16) {
+      toast.error('Please enter a valid 16-character license key')
       return
     }
 
@@ -231,11 +211,11 @@ export default function LoginPage() {
         body: JSON.stringify({
           method: authMethod,
           ...(authMethod === 'email' 
-            ? { email: email }
-            : { username: username }
+            ? { email: identifier }
+            : { username: identifier }
           ),
           password,
-          licenseKey: licenseKey.replace(/-/g, ''),
+          licenseKey: cleanLicenseKey,
         })
       })
 
@@ -244,7 +224,7 @@ export default function LoginPage() {
       if (!response.ok) {
         // Enhanced error messages
         if (data.code === 'INVALID_CREDENTIALS') {
-          toast.error('Invalid email, password, or license key. Please check your credentials and try again.')
+          toast.error('Invalid credentials or license key. Please check and try again.')
         } else if (data.code === 'EXPIRED_LICENSE_KEY') {
           toast.error('License key has expired. Please renew your license.', {
             action: {
@@ -254,12 +234,6 @@ export default function LoginPage() {
           })
         } else if (data.code === 'INVALID_LICENSE_KEY') {
           toast.error('License key is not active or invalid.')
-        } else if (data.code === 'MISSING_EMAIL' || data.code === 'MISSING_USERNAME') {
-          toast.error('Please enter your ' + (authMethod === 'email' ? 'email' : 'username'))
-        } else if (data.code === 'MISSING_PASSWORD') {
-          toast.error('Please enter your password')
-        } else if (data.code === 'MISSING_LICENSE_KEY') {
-          toast.error('Please enter your license key')
         } else {
           toast.error(data.error || 'Sign in failed. Please try again.')
         }
@@ -613,14 +587,13 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onKeyUp={handleKeyUp}
-                      placeholder="••••••••"
-                      className="pl-10 pr-20 h-10 text-sm rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
-                      autoComplete="off"
+                      placeholder="Enter your password"
+                      className="pl-10 pr-10 h-10 text-sm rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
+                      autoComplete="current-password"
                       disabled={isLoading}
                       required
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                      <ValidationIcon valid={passwordValid} isValidating={false} />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -634,44 +607,6 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
-
-                  {/* Password Strength Meter */}
-                  <AnimatePresence>
-                    {password.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-1.5 pt-1"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground">Password Strength</span>
-                          <span className={`text-[10px] font-semibold ${
-                            passwordStrength.score === 1 ? 'text-red-500' :
-                            passwordStrength.score === 2 ? 'text-yellow-500' :
-                            'text-green-500'
-                          }`}>
-                            {passwordStrength.label}
-                          </span>
-                        </div>
-                        <div className="flex gap-1.5">
-                          {[1, 2, 3].map((level) => (
-                            <motion.div
-                              key={level}
-                              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                                level <= passwordStrength.score
-                                  ? passwordStrength.color
-                                  : 'bg-muted'
-                              }`}
-                              initial={{ scaleX: 0 }}
-                              animate={{ scaleX: 1 }}
-                              transition={{ duration: 0.3, delay: level * 0.05 }}
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
 
                   {/* Caps Lock Warning */}
                   <AnimatePresence>
@@ -687,17 +622,6 @@ export default function LoginPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  {/* Forgot Password Link */}
-                  <div className="flex justify-end pt-0.5">
-                    <button
-                      type="button"
-                      onClick={handleForgotPassword}
-                      className="text-[10px] text-primary hover:underline font-semibold transition-colors"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
                 </motion.div>
 
                 {/* Step 3: License Key */}
