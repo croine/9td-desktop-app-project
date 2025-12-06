@@ -300,33 +300,6 @@ export function Shoutbox() {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="glass-card p-4 border-2 border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground font-medium mb-1">Total Messages</p>
-              <p className="text-2xl font-bold text-primary">{filteredShouts.length}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="glass-card p-4 border-2 border-green-500/20 hover:border-green-500/40 transition-all hover:shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground font-medium mb-1">Online Users</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{onlineUsers.length}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 flex items-center justify-center">
-              <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
       {/* Main Shoutbox - Full Width */}
       <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden">
         {/* Professional Header */}
@@ -340,11 +313,11 @@ export function Shoutbox() {
                 </div>
                 <div>
                   <h2 className="font-display font-bold text-2xl text-foreground mb-1">
-                    Team Shoutbox
+                    Shoutbox
                   </h2>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Quick team communication
+                      Shoutbox - Community
                     </span>
                   </div>
                 </div>
@@ -363,49 +336,6 @@ export function Shoutbox() {
                   <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
                   <span className="hidden md:inline">Online ({onlineUsers.length})</span>
                 </Button>
-
-                {/* Search */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
-                    >
-                      <Search className="h-4 w-4" />
-                      <span className="hidden md:inline">Search</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 glass-card">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Search className="h-4 w-4 text-primary" />
-                        <Label className="font-semibold">Search Messages</Label>
-                      </div>
-                      <Input
-                        placeholder="Search by message or user..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="border-primary/20"
-                      />
-                      {searchQuery && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            Found {filteredShouts.length} result{filteredShouts.length !== 1 ? 's' : ''}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSearchQuery('')}
-                            className="h-6"
-                          >
-                            Clear
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
 
                 {/* Sound Toggle */}
                 <Button
