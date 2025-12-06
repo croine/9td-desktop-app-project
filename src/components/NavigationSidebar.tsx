@@ -593,29 +593,32 @@ export function NavigationSidebar({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] text-muted-foreground text-center">
-                  Sign in to access all features
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full h-7 text-xs gap-2"
-                    onClick={() => router.push('/login')}
-                  >
-                    <LogIn className="h-3 w-3" />
-                    Sign In
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-7 text-xs"
-                    onClick={() => router.push('/register')}
-                  >
-                    Create Account
-                  </Button>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-center gap-1.5 pb-2">
+                  <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+                  <p className="text-[10px] font-medium text-muted-foreground">
+                    Authentication Required
+                  </p>
+                  <div className="h-1 w-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.5s' }} />
                 </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full h-8 text-xs gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all"
+                  onClick={() => router.push('/login')}
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  Sign In
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs gap-1.5 border-primary/20 hover:bg-primary/5 hover:border-primary/30"
+                  onClick={() => router.push('/register')}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Create Account
+                </Button>
               </div>
             )}
           </div>
