@@ -233,16 +233,16 @@ export default function RegisterPage() {
             </Link>
             
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
-                <Home className="h-4 w-4 mr-2" />
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => router.push('/')}>
+                <Home className="h-3 w-3 mr-1.5" />
                 <span className="hidden sm:inline">Home</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => router.push('/login')}>
-                <LogIn className="h-4 w-4 mr-2" />
+              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => router.push('/login')}>
+                <LogIn className="h-3 w-3 mr-1.5" />
                 <span className="hidden sm:inline">Sign In</span>
               </Button>
-              <Button size="sm" onClick={() => router.push('/pricing')}>
-                <KeyRound className="h-4 w-4 mr-2" />
+              <Button size="sm" className="h-8 px-2 text-xs" onClick={() => router.push('/pricing')}>
+                <KeyRound className="h-3 w-3 mr-1.5" />
                 <span className="hidden sm:inline">Get License</span>
               </Button>
             </div>
