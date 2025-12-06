@@ -6,20 +6,21 @@ import { useSession } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Logo } from '@/components/Logo'
 import { LicenseKeyInput } from '@/components/LicenseKeyInput'
 import { toast } from 'sonner'
-import { Loader2, Shield, ArrowRight, Mail, CheckCircle2, Key, Sparkles, User, AlertCircle } from 'lucide-react'
+import { Loader2, ArrowRight, CheckCircle2, Key, Sparkles, User, AlertCircle, Home, LogIn, KeyRound, Eye, EyeOff, Check } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
-type RegistrationStep = 'email' | 'license-key' | 'complete-profile'
+type RegistrationStep = 'license-key' | 'complete-profile'
 
 export default function RegisterPage() {
   const router = useRouter()
   const { data: session, isPending: sessionPending } = useSession()
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('email')
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('license-key')
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [licenseKey, setLicenseKey] = useState('')
@@ -29,17 +30,34 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: ''
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [checkingUsername, setCheckingUsername] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState(0)
 
-  // Redirect if already logged in
   useEffect(() => {
     if (!sessionPending && session?.user) {
       router.push('/')
     }
   }, [session, sessionPending, router])
 
-  // Check username availability with debounce
+  useEffect(() => {
+    if (!formData.password) {
+      setPasswordStrength(0)
+      return
+    }
+
+    let strength = 0
+    if (formData.password.length >= 8) strength++
+    if (formData.password.length >= 12) strength++
+    if (/[a-z]/.test(formData.password) && /[A-Z]/.test(formData.password)) strength++
+    if (/\d/.test(formData.password)) strength++
+    if (/[^a-zA-Z0-9]/.test(formData.password)) strength++
+    
+    setPasswordStrength(Math.min(strength, 5))
+  }, [formData.password])
+
   useEffect(() => {
     const checkUsername = async () => {
       if (formData.username.length < 3) {
@@ -74,41 +92,6 @@ export default function RegisterPage() {
     return () => clearTimeout(timeoutId)
   }, [formData.username])
 
-  // Step 1: Request license key
-  const handleRequestLicenseKey = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/license-keys/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), sendEmail: true })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || 'Failed to generate license key')
-        setIsLoading(false)
-        return
-      }
-
-      toast.success('🔑 License key generated!', {
-        description: 'Check your email for the activation code'
-      })
-      
-      // Move to license key entry step
-      setCurrentStep('license-key')
-    } catch (error) {
-      console.error('License key generation error:', error)
-      toast.error('Failed to generate license key. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Step 2: Verify license key
   const handleVerifyLicenseKey = async (key: string): Promise<{ valid: boolean; reason?: string }> => {
     try {
       const response = await fetch('/api/license-keys/verify', {
@@ -125,13 +108,13 @@ export default function RegisterPage() {
 
       if (data.valid) {
         setLicenseKey(key)
-        toast.success('✅ License key verified!', {
-          description: 'Proceeding to account creation...'
+        setEmail(data.email || '')
+        toast.success('License key verified!', {
+          description: 'Continue to complete your profile'
         })
-        // Auto-advance to profile completion after successful verification
         setTimeout(() => {
           setCurrentStep('complete-profile')
-        }, 1000)
+        }, 600)
       }
 
       return { valid: data.valid, reason: data.reason }
@@ -141,28 +124,24 @@ export default function RegisterPage() {
     }
   }
 
-  // Step 3: Complete profile and activate account
   const handleCompleteRegistration = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match')
       setIsLoading(false)
       return
     }
 
-    // Validate password length
     if (formData.password.length < 8) {
       toast.error('Password must be at least 8 characters long')
       setIsLoading(false)
       return
     }
 
-    // Validate username if provided
     if (formData.username && !usernameAvailable) {
-      toast.error('Please choose an available username or leave it empty')
+      toast.error('Please choose an available username')
       setIsLoading(false)
       return
     }
@@ -188,44 +167,16 @@ export default function RegisterPage() {
         return
       }
 
-      toast.success('🎉 Account created successfully!', {
+      toast.success('Account created successfully!', {
         description: 'Redirecting to login...'
       })
       
       setTimeout(() => {
         router.push('/login?registered=true')
-      }, 1500)
+      }, 1200)
     } catch (error) {
       console.error('Account activation error:', error)
-      toast.error('Failed to create account. Please try again.')
-      setIsLoading(false)
-    }
-  }
-
-  const handleResendKey = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/license-keys/resend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || 'Failed to resend license key')
-        setIsLoading(false)
-        return
-      }
-
-      toast.success('📧 License key resent!', {
-        description: 'Check your email for the new activation code'
-      })
-    } catch (error) {
-      console.error('Resend error:', error)
-      toast.error('Failed to resend license key')
-    } finally {
+      toast.error('Failed to create account')
       setIsLoading(false)
     }
   }
@@ -233,10 +184,7 @@ export default function RegisterPage() {
   if (sessionPending) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground font-medium">Loading...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -245,359 +193,329 @@ export default function RegisterPage() {
     return null
   }
 
+  const getPasswordStrengthColor = () => {
+    if (passwordStrength <= 1) return 'bg-red-500'
+    if (passwordStrength <= 2) return 'bg-orange-500'
+    if (passwordStrength <= 3) return 'bg-yellow-500'
+    if (passwordStrength <= 4) return 'bg-blue-500'
+    return 'bg-green-500'
+  }
+
+  const getPasswordStrengthText = () => {
+    if (passwordStrength <= 1) return 'Weak'
+    if (passwordStrength <= 2) return 'Fair'
+    if (passwordStrength <= 3) return 'Good'
+    if (passwordStrength <= 4) return 'Strong'
+    return 'Excellent'
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-      
-      {/* Floating particles effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-primary/20 rounded-full"
-            initial={{ 
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000), 
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000)
-            }}
-            animate={{ 
-              y: [null, Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000)],
-              opacity: [0, 1, 0]
-            }}
-            transition={{ 
-              duration: Math.random() * 10 + 10, 
-              repeat: Infinity,
-              ease: 'linear'
-            }}
-          />
-        ))}
-      </div>
-      
-      <div className="w-full max-w-2xl relative z-10">
-        <Card className="glass-card border-2 shadow-xl">
-          <CardHeader className="space-y-4 pb-6">
-            <div className="flex justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 glass-header">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Logo />
+              <span className="font-display font-bold text-xl">9TD</span>
+            </Link>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
+                <Home className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Home</span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/login')}>
+                <LogIn className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Sign In</span>
+              </Button>
+              <Button size="sm" onClick={() => router.push('/pricing')}>
+                <KeyRound className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Get License</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 pt-24 pb-12 flex items-center justify-center min-h-screen">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          {/* Title */}
+          <div className="text-center mb-8">
+            <h1 className="font-display text-3xl font-bold mb-2">Create Account</h1>
+            <p className="text-muted-foreground">
+              {currentStep === 'license-key' 
+                ? 'Enter your license key to get started'
+                : 'Complete your profile information'
+              }
+            </p>
+          </div>
+
+          {/* Progress */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className={`flex items-center gap-2 ${
+              currentStep === 'license-key' ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                currentStep === 'complete-profile'
+                  ? 'bg-primary/20 text-primary'
+                  : 'bg-primary text-primary-foreground'
+              }`}>
+                {currentStep === 'complete-profile' ? <Check className="h-4 w-4" /> : '1'}
+              </div>
             </div>
             
-            {/* Enhanced Step indicator */}
-            <div className="flex items-center justify-center gap-3 pt-2">
-              {['email', 'license-key', 'complete-profile'].map((step, index) => (
-                <div key={step} className="flex items-center">
-                  <motion.div
-                    initial={{ scale: 0.8 }}
-                    animate={{ 
-                      scale: currentStep === step ? 1.3 : 1,
-                    }}
-                    className={`relative w-3 h-3 rounded-full transition-all duration-300 ${
-                      currentStep === step 
-                        ? 'bg-primary ring-4 ring-primary/30' 
-                        : index < ['email', 'license-key', 'complete-profile'].indexOf(currentStep)
-                        ? 'bg-primary/50'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    {currentStep === step && (
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute inset-0 rounded-full bg-primary"
-                      />
-                    )}
-                  </motion.div>
-                  {index < 2 && (
-                    <div className={`w-12 h-0.5 mx-2 transition-all duration-300 ${
-                      index < ['email', 'license-key', 'complete-profile'].indexOf(currentStep)
-                        ? 'bg-primary' 
-                        : 'bg-muted'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
+            <div className={`w-12 h-0.5 rounded-full ${
+              currentStep === 'complete-profile' ? 'bg-primary' : 'bg-muted'
+            }`} />
             
-            <div className="space-y-2 text-center">
-              <CardTitle className="text-2xl font-display flex items-center justify-center gap-2">
-                {currentStep === 'email' && (
-                  <>
-                    <Mail className="h-5 w-5 text-primary" />
-                    Request License Key
-                  </>
-                )}
-                {currentStep === 'license-key' && (
-                  <>
-                    <Key className="h-5 w-5 text-primary" />
-                    Verify License Key
-                  </>
-                )}
-                {currentStep === 'complete-profile' && (
-                  <>
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Complete Your Profile
-                  </>
-                )}
-              </CardTitle>
-              <CardDescription className="text-sm">
-                {currentStep === 'email' && 'Enter your email to receive a secure license key'}
-                {currentStep === 'license-key' && 'Enter the license key sent to your email'}
-                {currentStep === 'complete-profile' && 'Create your account credentials to get started'}
-              </CardDescription>
+            <div className={`flex items-center gap-2 ${
+              currentStep === 'complete-profile' ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                currentStep === 'complete-profile'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              }`}>
+                2
+              </div>
             </div>
-          </CardHeader>
+          </div>
 
-          <AnimatePresence mode="wait">
-            {/* Step 1: Email Entry */}
-            {currentStep === 'email' && (
-              <motion.form
-                key="email-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                onSubmit={handleRequestLicenseKey}
-              >
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={isLoading}
-                      autoComplete="email"
-                      autoFocus
-                      className="h-11"
-                    />
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5 text-primary" />
-                      A secure 16-character license key will be sent to this email
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-3 pt-2">
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 font-semibold"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating key...
-                      </>
-                    ) : (
-                      <>
-                        <Key className="h-4 w-4" />
-                        Generate License Key
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                  
-                  <div className="relative w-full">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground font-medium">
-                        Already have an account?
-                      </span>
+          {/* Form */}
+          <Card className="glass-card p-6">
+            <AnimatePresence mode="wait">
+              {currentStep === 'license-key' && (
+                <motion.div
+                  key="license"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Key className="h-6 w-6 text-primary" />
                     </div>
                   </div>
-                  
-                  <Link href="/login" className="w-full">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-11 font-semibold"
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </motion.form>
-            )}
 
-            {/* Step 2: License Key Entry */}
-            {currentStep === 'license-key' && (
-              <motion.div
-                key="license-key-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-              >
-                <CardContent className="space-y-6 py-6">
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 text-sm text-center">
+                    Don't have a key?{' '}
+                    <Link href="/pricing" className="text-primary hover:underline font-semibold">
+                      Get one here
+                    </Link>
+                  </div>
+
                   <LicenseKeyInput
                     onVerify={handleVerifyLicenseKey}
                     onKeyChange={(key) => setLicenseKey(key)}
                     disabled={isLoading}
                     autoFocus
                   />
-                  
-                  <div className="text-center space-y-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleResendKey}
-                      disabled={isLoading}
-                      className="text-xs font-medium"
-                    >
-                      Didn't receive the key? Click to resend
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Check your spam folder if you don't see the email
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 font-semibold"
-                    onClick={() => setCurrentStep('email')}
-                    disabled={isLoading}
-                  >
-                    ← Back to Email
-                  </Button>
-                </CardFooter>
-              </motion.div>
-            )}
 
-            {/* Step 3: Complete Profile */}
-            {currentStep === 'complete-profile' && (
-              <motion.form
-                key="profile-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                onSubmit={handleCompleteRegistration}
-              >
-                <CardContent className="space-y-4">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="flex items-center justify-center gap-2 text-green-500 bg-green-500/10 rounded-lg p-4 mb-4 border border-green-500/30"
-                  >
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span className="text-sm font-semibold">License key verified successfully!</span>
-                  </motion.div>
-                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-card px-2 text-muted-foreground">
+                        Already registered?
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
+                  </Button>
+                </motion.div>
+              )}
+
+              {currentStep === 'complete-profile' && (
+                <motion.form
+                  key="profile"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={handleCompleteRegistration}
+                  className="space-y-5"
+                >
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-950/20 flex items-center justify-center">
+                      <User className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
-                      type="text"
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                       disabled={isLoading}
-                      autoComplete="name"
                       autoFocus
-                      className="h-11"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="username">Username (Optional)</Label>
+                      <Label htmlFor="username">
+                        Username <span className="text-xs text-muted-foreground">(optional)</span>
+                      </Label>
                       {checkingUsername && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Checking...
-                        </span>
+                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                       )}
                       {!checkingUsername && usernameAvailable === true && formData.username.length >= 3 && (
-                        <span className="text-xs text-green-500 flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
+                        <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400 border-green-600/20">
                           Available
-                        </span>
+                        </Badge>
                       )}
                       {!checkingUsername && usernameAvailable === false && (
-                        <span className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
+                        <Badge variant="outline" className="text-xs text-red-600 dark:text-red-400 border-red-600/20">
                           Taken
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     <Input
                       id="username"
-                      type="text"
-                      placeholder="john_doe"
+                      placeholder="johndoe"
                       value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                       disabled={isLoading}
-                      autoComplete="off"
-                      className="h-11"
                     />
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-primary" />
-                      Create a unique username for quick sign-in (3-20 characters)
-                    </p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      autoComplete="off"
-                      minLength={8}
-                      className="h-11"
-                    />
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5 text-primary" />
-                      Must be at least 8 characters long
-                    </p>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        minLength={8}
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-10 w-10 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {formData.password && (
+                      <div className="space-y-1.5">
+                        <div className="flex gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <div
+                              key={i}
+                              className={`h-1 flex-1 rounded-full transition-all ${
+                                i < passwordStrength ? getPasswordStrengthColor() : 'bg-muted'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Strength: {getPasswordStrengthText()}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      autoComplete="off"
-                      className="h-11"
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-3 pt-2">
-                  <Button
-                    type="submit"
-                    className="w-full h-11 gap-2 font-semibold"
-                    disabled={isLoading || (formData.username && !usernameAvailable)}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" />
-                        Create Account
-                        <ArrowRight className="h-4 w-4" />
-                      </>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-10 w-10 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                      <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Passwords don't match
+                      </p>
                     )}
-                  </Button>
-                </CardFooter>
-              </motion.form>
-            )}
-          </AnimatePresence>
-        </Card>
+                  </div>
+
+                  <div className="pt-2 space-y-3">
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading || (formData.username && !usernameAvailable)}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Create Account
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setCurrentStep('license-key')}
+                      disabled={isLoading}
+                    >
+                      Change License Key
+                    </Button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </Card>
+
+          {/* Footer */}
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            By creating an account, you agree to our{' '}
+            <Link href="/terms" className="text-primary hover:underline">
+              Terms
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
+        </motion.div>
       </div>
     </div>
   )
