@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card } from '@/components/ui/card'
-import { Mail, User, Lock, KeyRound, Eye, EyeOff, Sparkles, Shield, Zap, CheckCircle2, XCircle, Loader2, ArrowRight, Fingerprint, Cpu, Database } from 'lucide-react'
+import { Logo } from '@/components/Logo'
+import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -271,7 +272,7 @@ export default function LoginPage() {
 
   const ValidationIcon = ({ valid, isValidating }: { valid: boolean | null, isValidating: boolean }) => {
     if (isValidating) {
-      return <Loader2 className="h-4 w-4 text-primary animate-spin" />
+      return <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
     }
     if (valid === true) {
       return (
@@ -280,7 +281,7 @@ export default function LoginPage() {
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         >
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
         </motion.div>
       )
     }
@@ -291,7 +292,7 @@ export default function LoginPage() {
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         >
-          <XCircle className="h-4 w-4 text-red-500" />
+          <XCircle className="h-3.5 w-3.5 text-red-500" />
         </motion.div>
       )
     }
@@ -300,21 +301,21 @@ export default function LoginPage() {
 
   const StepIndicator = ({ step, label, isActive, isComplete }: { step: number; label: string; isActive: boolean; isComplete: boolean }) => (
     <motion.div
-      className="flex flex-col items-center gap-2 flex-1"
-      initial={{ opacity: 0, y: 20 }}
+      className="flex flex-col items-center gap-1.5 flex-1"
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: step * 0.1 }}
+      transition={{ duration: 0.3, delay: step * 0.05 }}
     >
       <motion.div
-        className={`relative w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+        className={`relative w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs transition-all duration-300 ${
           isComplete
-            ? 'bg-green-500 text-white shadow-lg shadow-green-500/50'
+            ? 'bg-green-500 text-white shadow-md shadow-green-500/40'
             : isActive
-            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/50 ring-4 ring-primary/20'
+            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/40 ring-2 ring-primary/20'
             : 'bg-muted text-muted-foreground'
         }`}
-        whileHover={{ scale: 1.1 }}
-        animate={isActive ? { scale: [1, 1.05, 1] } : {}}
+        whileHover={{ scale: 1.05 }}
+        animate={isActive ? { scale: [1, 1.03, 1] } : {}}
         transition={{ duration: 2, repeat: isActive ? Infinity : 0 }}
       >
         {isComplete ? (
@@ -323,20 +324,20 @@ export default function LoginPage() {
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
           >
-            <CheckCircle2 className="h-6 w-6" />
+            <CheckCircle2 className="h-4 w-4" />
           </motion.div>
         ) : (
           step
         )}
         {isActive && (
           <motion.div
-            className="absolute inset-0 rounded-full border-2 border-primary"
-            animate={{ scale: [1, 1.5], opacity: [1, 0] }}
+            className="absolute inset-0 rounded-full border border-primary"
+            animate={{ scale: [1, 1.4], opacity: [1, 0] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
         )}
       </motion.div>
-      <span className={`text-xs font-medium transition-colors ${isActive || isComplete ? 'text-foreground' : 'text-muted-foreground'}`}>
+      <span className={`text-[10px] font-medium transition-colors ${isActive || isComplete ? 'text-foreground' : 'text-muted-foreground'}`}>
         {label}
       </span>
     </motion.div>
@@ -354,60 +355,55 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent" />
 
       {/* Main content container */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 py-6">
+        <div className="grid md:grid-cols-2 gap-6 items-center">
           {/* Left side - Branding and features */}
           <motion.div
-            className="space-y-8"
+            className="space-y-6"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
           >
             {/* Logo and title */}
             <div>
               <motion.div
-                className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-primary via-primary to-purple-600 mb-6 shadow-2xl shadow-primary/30"
+                className="mb-4"
                 animate={{
-                  boxShadow: [
-                    '0 25px 50px -12px rgba(59, 130, 246, 0.3)',
-                    '0 25px 50px -12px rgba(147, 51, 234, 0.3)',
-                    '0 25px 50px -12px rgba(59, 130, 246, 0.3)',
-                  ],
+                  y: [0, -5, 0],
                 }}
-                transition={{ duration: 3, repeat: Infinity }}
-                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Sparkles className="h-12 w-12 text-white" />
+                <Logo className="scale-125" />
               </motion.div>
-              <h1 className="text-5xl md:text-6xl font-display font-bold mb-4 bg-gradient-to-r from-primary via-purple-600 to-primary bg-clip-text text-transparent animate-pulse-text">
+              <h1 className="text-3xl md:text-4xl font-display font-bold mb-2 bg-gradient-to-r from-primary via-purple-600 to-primary bg-clip-text text-transparent">
                 Welcome to 9TD
               </h1>
-              <p className="text-xl text-muted-foreground">
-                Advanced three-factor authentication for maximum security
+              <p className="text-sm text-muted-foreground">
+                Three-factor authentication for maximum security
               </p>
             </div>
 
             {/* Security features */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {[
-                { icon: Shield, label: 'Military-Grade Encryption', desc: 'AES-256 end-to-end encryption', color: 'from-green-500 to-emerald-600' },
-                { icon: Fingerprint, label: 'Biometric Security', desc: 'License key verification system', color: 'from-blue-500 to-cyan-600' },
-                { icon: Cpu, label: 'Real-Time Validation', desc: 'Instant credential verification', color: 'from-purple-500 to-pink-600' },
+                { icon: Shield, label: 'Military-Grade Encryption', desc: 'AES-256 protection', color: 'from-green-500 to-emerald-600' },
+                { icon: Fingerprint, label: 'License Verification', desc: 'Unique key authentication', color: 'from-blue-500 to-cyan-600' },
+                { icon: Cpu, label: 'Real-Time Validation', desc: 'Instant credential check', color: 'from-purple-500 to-pink-600' },
               ].map((feature, i) => (
                 <motion.div
                   key={feature.label}
-                  className="flex items-start gap-4 p-4 rounded-2xl glass-card hover:shadow-lg transition-all duration-300"
-                  initial={{ opacity: 0, x: -30 }}
+                  className="flex items-start gap-3 p-3 rounded-xl glass-card hover:shadow-md transition-all duration-300"
+                  initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 + i * 0.1 }}
-                  whileHover={{ x: 10 }}
+                  transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
+                  whileHover={{ x: 8 }}
                 >
-                  <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} shadow-lg`}>
-                    <feature.icon className="h-6 w-6 text-white" />
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${feature.color} shadow-md`}>
+                    <feature.icon className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">{feature.label}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                    <h3 className="font-semibold text-sm mb-0.5">{feature.label}</h3>
+                    <p className="text-xs text-muted-foreground">{feature.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -418,18 +414,18 @@ export default function LoginPage() {
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
           >
-            <Card className="glass-card p-8 shadow-2xl shadow-primary/10 border-2 border-primary/10">
+            <Card className="glass-card p-6 shadow-xl shadow-primary/5 border border-primary/10">
               {/* Step progress indicator */}
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <StepIndicator
                   step={1}
                   label="Identity"
                   isActive={currentStep === 1}
                   isComplete={currentStep > 1}
                 />
-                <div className="flex-1 h-1 bg-muted mx-2 rounded-full overflow-hidden">
+                <div className="flex-1 h-0.5 bg-muted mx-2 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-primary to-purple-600"
                     initial={{ width: '0%' }}
@@ -443,7 +439,7 @@ export default function LoginPage() {
                   isActive={currentStep === 2}
                   isComplete={currentStep > 2}
                 />
-                <div className="flex-1 h-1 bg-muted mx-2 rounded-full overflow-hidden">
+                <div className="flex-1 h-0.5 bg-muted mx-2 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-primary to-purple-600"
                     initial={{ width: '0%' }}
@@ -460,24 +456,24 @@ export default function LoginPage() {
               </div>
 
               {/* Method selector */}
-              <div className="flex gap-2 mb-6 p-1 bg-muted/30 rounded-xl backdrop-blur-sm">
+              <div className="flex gap-2 mb-4 p-0.5 bg-muted/30 rounded-lg backdrop-blur-sm">
                 {(['email', 'username'] as const).map((method) => (
                   <motion.button
                     key={method}
                     onClick={() => setAuthMethod(method)}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
+                    className={`flex-1 py-2 px-3 rounded-md font-medium text-sm transition-all duration-300 ${
                       authMethod === method
-                        ? 'bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/30'
+                        ? 'bg-gradient-to-r from-primary to-purple-600 text-white shadow-md shadow-primary/20'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                   >
                     <div className="flex items-center justify-center gap-2">
                       {method === 'email' ? (
-                        <Mail className="h-5 w-5" />
+                        <Mail className="h-4 w-4" />
                       ) : (
-                        <User className="h-5 w-5" />
+                        <User className="h-4 w-4" />
                       )}
                       <span className="capitalize">{method}</span>
                     </div>
@@ -486,7 +482,7 @@ export default function LoginPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-3.5">
                 {/* Step 1: Email or Username */}
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -494,18 +490,18 @@ export default function LoginPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-2"
+                    transition={{ duration: 0.2 }}
+                    className="space-y-1.5"
                   >
-                    <Label className="text-sm font-semibold">
+                    <Label className="text-xs font-semibold">
                       {authMethod === 'email' ? 'Email Address' : 'Username'}
                     </Label>
                     <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
                         {authMethod === 'email' ? (
-                          <Mail className="h-5 w-5" />
+                          <Mail className="h-4 w-4" />
                         ) : (
-                          <User className="h-5 w-5" />
+                          <User className="h-4 w-4" />
                         )}
                       </div>
                       <Input
@@ -521,11 +517,11 @@ export default function LoginPage() {
                             ? 'you@example.com'
                             : 'your_username'
                         }
-                        className="pl-12 pr-12 h-14 text-base rounded-xl border-2 transition-all duration-300 focus:border-primary focus:shadow-lg focus:shadow-primary/20"
+                        className="pl-10 pr-10 h-10 text-sm rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                         disabled={isLoading}
                         required
                       />
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <ValidationIcon
                           valid={authMethod === 'email' ? emailValid : usernameValid}
                           isValidating={isValidating}
@@ -537,37 +533,37 @@ export default function LoginPage() {
 
                 {/* Step 2: Password */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
-                  className="space-y-2"
+                  transition={{ duration: 0.3, delay: 0.05 }}
+                  className="space-y-1.5"
                 >
-                  <Label className="text-sm font-semibold">Password</Label>
+                  <Label className="text-xs font-semibold">Password</Label>
                   <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                      <Lock className="h-5 w-5" />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                      <Lock className="h-4 w-4" />
                     </div>
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="pl-12 pr-24 h-14 text-base rounded-xl border-2 transition-all duration-300 focus:border-primary focus:shadow-lg focus:shadow-primary/20"
+                      className="pl-10 pr-20 h-10 text-sm rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                       autoComplete="off"
                       disabled={isLoading}
                       required
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                       <ValidationIcon valid={passwordValid} isValidating={false} />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="text-muted-foreground hover:text-primary transition-colors p-1"
+                        className="text-muted-foreground hover:text-primary transition-colors p-0.5"
                       >
                         {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
+                          <EyeOff className="h-4 w-4" />
                         ) : (
-                          <Eye className="h-5 w-5" />
+                          <Eye className="h-4 w-4" />
                         )}
                       </button>
                     </div>
@@ -576,27 +572,27 @@ export default function LoginPage() {
 
                 {/* Step 3: License Key */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                  className="space-y-2"
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="space-y-1.5"
                 >
-                  <Label className="text-sm font-semibold">License Key</Label>
+                  <Label className="text-xs font-semibold">License Key</Label>
                   <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
-                      <KeyRound className="h-5 w-5" />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary">
+                      <KeyRound className="h-4 w-4" />
                     </div>
                     <Input
                       type="text"
                       value={licenseKey}
                       onChange={handleLicenseKeyChange}
                       placeholder="XXXX-XXXX-XXXX-XXXX"
-                      className="pl-12 pr-12 h-14 text-base font-mono tracking-wider rounded-xl border-2 transition-all duration-300 focus:border-primary focus:shadow-lg focus:shadow-primary/20"
+                      className="pl-10 pr-10 h-10 text-sm font-mono tracking-wide rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                       disabled={isLoading}
                       required
                       maxLength={19}
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <ValidationIcon valid={licenseKeyValid} isValidating={false} />
                     </div>
                   </div>
@@ -606,8 +602,8 @@ export default function LoginPage() {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                  className="flex items-center gap-2 pt-2"
+                  transition={{ duration: 0.3, delay: 0.15 }}
+                  className="flex items-center gap-2 pt-1"
                 >
                   <Checkbox
                     id="remember"
@@ -617,7 +613,7 @@ export default function LoginPage() {
                   />
                   <Label
                     htmlFor="remember"
-                    className="text-sm cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Keep me signed in for 30 days
                   </Label>
@@ -625,26 +621,26 @@ export default function LoginPage() {
 
                 {/* Submit button */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
                   className="pt-2"
                 >
                   <Button
                     type="submit"
-                    className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary via-purple-600 to-primary hover:from-primary/90 hover:via-purple-700 hover:to-primary/90 shadow-xl shadow-primary/30 transition-all duration-300 rounded-xl"
+                    className="w-full h-10 text-sm font-semibold bg-gradient-to-r from-primary via-purple-600 to-primary hover:from-primary/90 hover:via-purple-700 hover:to-primary/90 shadow-lg shadow-primary/20 transition-all duration-300 rounded-lg"
                     disabled={isLoading}
                     style={{ backgroundSize: '200% auto' }}
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Authenticating...
                       </>
                     ) : (
                       <>
                         Sign In Securely
-                        <ArrowRight className="h-6 w-6 ml-3" />
+                        <ArrowRight className="h-4 w-4 ml-2" />
                       </>
                     )}
                   </Button>
@@ -655,10 +651,10 @@ export default function LoginPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="mt-8 pt-6 border-t border-border/50 text-center"
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="mt-5 pt-4 border-t border-border/50 text-center"
               >
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   New to 9TD?{' '}
                   <button
                     onClick={() => router.push('/register')}
