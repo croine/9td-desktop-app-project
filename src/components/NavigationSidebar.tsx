@@ -42,6 +42,8 @@ import {
   Orbit,
   Cpu,
   Radio,
+  UserPlus,
+  KeyRound,
 } from 'lucide-react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { authClient, useSession } from '@/lib/auth-client'
@@ -840,7 +842,7 @@ export function NavigationSidebar({
                 onClick={() => router.push('/login')}
               >
                 <LogIn className="h-3 w-3" />
-                Initialize Session
+                Sign In
               </Button>
 
               <Button
@@ -850,7 +852,17 @@ export function NavigationSidebar({
                 onClick={() => router.push('/register')}
               >
                 <Sparkles className="h-3 w-3 text-primary" />
-                Create Account
+                Register
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-[10px] gap-1.5"
+                onClick={() => router.push('/pricing')}
+              >
+                <Fingerprint className="h-3 w-3 text-primary" />
+                Get License Key
               </Button>
 
               <div className="flex gap-2 pt-2 border-t border-border/50">

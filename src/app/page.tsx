@@ -963,39 +963,6 @@ export default function Home() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {/* Quick Access Buttons - Show when NOT logged in */}
-                  {!session?.user && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/login')}
-                        className="gap-2 text-sm"
-                      >
-                        <LogIn className="h-4 w-4" />
-                        <span className="hidden sm:inline">Sign In</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push('/register')}
-                        className="gap-2 text-sm"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Register</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push('/pricing')}
-                        className="gap-2 text-sm"
-                      >
-                        <KeyRound className="h-4 w-4" />
-                        <span className="hidden sm:inline">Get License</span>
-                      </Button>
-                    </>
-                  )}
-                  
                   {/* Logged in user actions */}
                   {session?.user && (
                     <>
