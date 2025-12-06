@@ -389,17 +389,17 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
       <button
         onClick={handleViewPricing}
         className={`
-          group relative h-9 px-4 rounded-full
+          group relative h-7 px-2.5 rounded-full
           ${badgeConfig.gradient}
           ${badgeConfig.glowColor}
           ring-1 ${badgeConfig.ringColor}
-          shadow-lg backdrop-blur-sm
+          shadow-md backdrop-blur-sm
           transition-all duration-500 ease-out
           ${badgeConfig.hoverScale}
           hover:-translate-y-0.5
           ${badgeConfig.animation}
           overflow-hidden
-          flex items-center gap-2
+          flex items-center gap-1.5
         `}
       >
         {/* Animated shimmer overlay */}
@@ -415,26 +415,26 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
         {isPaidPlan && (
           <>
             <div 
-              className="absolute top-1 left-3 w-1 h-1 bg-white/70 rounded-full animate-ping" 
+              className="absolute top-1 left-2 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
               style={{ animationDuration: '2s', animationDelay: '0s' }} 
             />
             <div 
-              className="absolute top-2 right-4 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
+              className="absolute top-1.5 right-3 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
               style={{ animationDuration: '2s', animationDelay: '0.7s' }} 
             />
             <div 
-              className="absolute bottom-1.5 left-5 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
+              className="absolute bottom-1 left-4 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
               style={{ animationDuration: '2s', animationDelay: '1.4s' }} 
             />
           </>
         )}
         
         {/* Content container */}
-        <div className="relative z-10 flex items-center gap-2">
+        <div className="relative z-10 flex items-center gap-1.5">
           {/* Animated Icon */}
           <BadgeIcon 
             className={`
-              h-3.5 w-3.5 ${badgeConfig.iconColor}
+              h-3 w-3 ${badgeConfig.iconColor}
               transition-all duration-300
               ${isPaidPlan ? 'group-hover:rotate-12 group-hover:scale-110' : 'group-hover:scale-110'}
               drop-shadow-sm
@@ -445,7 +445,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
           <span 
             className={`
               ${badgeConfig.textGradient}
-              font-semibold text-xs tracking-wide
+              font-semibold text-[10px] tracking-wide
               drop-shadow-sm
             `}
           >
@@ -453,7 +453,7 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
           </span>
           
           {/* Optional: Emoji badge for extra flair */}
-          <span className="text-xs opacity-90 group-hover:scale-125 transition-transform duration-300">
+          <span className="text-[10px] opacity-90 group-hover:scale-125 transition-transform duration-300">
             {badgeConfig.badge}
           </span>
         </div>
