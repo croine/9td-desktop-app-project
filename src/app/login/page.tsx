@@ -10,11 +10,11 @@ import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Logo } from '@/components/Logo'
 import { toast } from 'sonner'
-import { Loader2, ArrowRight, Key, Shield, Zap, Mail, User, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Activity, Globe, Wifi, Server, Database, Cpu, Binary } from 'lucide-react'
+import { Loader2, ArrowRight, Key, Shield, Mail, User, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Activity, Globe, Wifi, Server, Database, Cpu } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
-type SignInMethod = 'email' | 'username' | 'license-key'
+type SignInMethod = 'email' | 'username'
 
 // Real-time security metrics component
 const SecurityMetrics = () => {
@@ -192,15 +192,9 @@ export default function LoginPage() {
     email: '',
     username: '',
     password: '',
+    licenseKey: '',
     rememberMe: false
   })
-  const [licenseKey, setLicenseKey] = useState(['', '', '', ''])
-  const licenseInputRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null)
-  ]
 
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
@@ -239,57 +233,18 @@ export default function LoginPage() {
     return () => clearTimeout(timer)
   }, [formData.email, formData.username, signInMethod])
 
-  const handleLicenseKeyChange = (index: number, value: string) => {
-    const newKey = [...licenseKey]
-    newKey[index] = value.toUpperCase().slice(0, 4)
-    setLicenseKey(newKey)
-    
-    if (value.length === 4 && index < 3) {
-      licenseInputRefs[index + 1].current?.focus()
-    }
-  }
-
-  const handleLicenseKeySignIn = async () => {
-    const fullKey = licenseKey.join('-')
-    if (licenseKey.some(part => part.length !== 4)) {
-      toast.error('Please enter a complete 16-character license key')
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/auth/signin-multi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'license_key',
-          licenseKey: fullKey
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error('Authentication failed', {
-          description: data.error || 'Invalid license key'
-        })
-        setIsLoading(false)
-        return
-      }
-
-      localStorage.setItem('bearer_token', data.session.token)
-      toast.success('🔐 License key authenticated!')
-      await refetch()
-      router.push('/')
-    } catch (error) {
-      toast.error('An error occurred. Please try again.')
-      setIsLoading(false)
-    }
-  }
-
   const handleCredentialSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate license key format (XXXX-XXXX-XXXX-XXXX)
+    const licenseKeyPattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+    if (!licenseKeyPattern.test(formData.licenseKey.toUpperCase())) {
+      toast.error('Invalid license key format', {
+        description: 'License key must be in format: XXXX-XXXX-XXXX-XXXX'
+      })
+      return
+    }
+    
     setIsLoading(true)
 
     try {
@@ -298,8 +253,18 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           signInMethod === 'email'
-            ? { method: 'email', email: formData.email, password: formData.password }
-            : { method: 'username', username: formData.username, password: formData.password }
+            ? { 
+                method: 'email', 
+                email: formData.email, 
+                password: formData.password,
+                licenseKey: formData.licenseKey.toUpperCase().trim()
+              }
+            : { 
+                method: 'username', 
+                username: formData.username, 
+                password: formData.password,
+                licenseKey: formData.licenseKey.toUpperCase().trim()
+              }
         )
       })
 
@@ -307,14 +272,14 @@ export default function LoginPage() {
 
       if (!response.ok) {
         toast.error('Authentication failed', {
-          description: data.error || 'Invalid credentials'
+          description: data.error || 'Invalid credentials or license key'
         })
         setIsLoading(false)
         return
       }
 
       localStorage.setItem('bearer_token', data.session.token)
-      toast.success('Welcome back!')
+      toast.success('🔐 Three-factor authentication successful!')
       await refetch()
       router.push('/')
     } catch (error) {
@@ -355,7 +320,7 @@ export default function LoginPage() {
               <Logo />
               <div>
                 <h1 className="text-2xl font-bold font-display">9TD Security</h1>
-                <p className="text-sm text-muted-foreground">Enterprise-Grade Authentication</p>
+                <p className="text-sm text-muted-foreground">Three-Factor Authentication</p>
               </div>
             </div>
           </motion.div>
@@ -376,14 +341,13 @@ export default function LoginPage() {
           >
             <h3 className="text-sm font-semibold text-foreground/80 uppercase tracking-wide flex items-center gap-2">
               <Shield className="h-4 w-4" />
-              Security Features
+              Authentication Factors
             </h3>
             
             {[
-              { icon: Lock, text: 'AES-256 End-to-End Encryption', color: 'text-blue-500' },
-              { icon: Wifi, text: 'Real-Time Threat Monitoring', color: 'text-green-500' },
-              { icon: Server, text: '99.9% Uptime Guarantee', color: 'text-purple-500' },
-              { icon: Binary, text: 'Zero-Knowledge Architecture', color: 'text-orange-500' }
+              { icon: Mail, text: 'Email or Username Verification', color: 'text-blue-500' },
+              { icon: Lock, text: 'Password Authentication', color: 'text-green-500' },
+              { icon: Key, text: 'License Key Validation', color: 'text-purple-500' }
             ].map((feature, i) => (
               <motion.div
                 key={i}
@@ -397,16 +361,33 @@ export default function LoginPage() {
               </motion.div>
             ))}
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="glass-card p-4 rounded-lg border border-primary/20 bg-primary/5"
+          >
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-semibold text-foreground mb-1">Enhanced Security</p>
+                <p className="text-muted-foreground">
+                  All three factors are required to verify your identity and protect your account
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
+          transition={{ duration: 0.6, delay: 1.0 }}
           className="text-xs text-muted-foreground"
         >
           <p>© 2024 9TD. All rights reserved.</p>
-          <p className="mt-1">Protected by enterprise-grade security protocols</p>
+          <p className="mt-1">Protected by three-factor authentication</p>
         </motion.div>
       </div>
 
@@ -430,16 +411,15 @@ export default function LoginPage() {
                 Secure Sign In
               </h2>
               <p className="text-sm text-muted-foreground">
-                Choose your authentication method
+                Three-factor authentication required
               </p>
             </div>
 
-            {/* Method Selector Pills */}
+            {/* Method Selector Pills - Only Email and Username */}
             <div className="flex gap-2 mb-8 p-1.5 bg-muted/30 rounded-xl border border-border/50">
               {[
                 { id: 'email' as SignInMethod, icon: Mail, label: 'Email' },
-                { id: 'username' as SignInMethod, icon: User, label: 'Username' },
-                { id: 'license-key' as SignInMethod, icon: Key, label: 'License' }
+                { id: 'username' as SignInMethod, icon: User, label: 'Username' }
               ].map((method) => (
                 <Button
                   key={method.id}
@@ -454,201 +434,182 @@ export default function LoginPage() {
                   onClick={() => setSignInMethod(method.id)}
                 >
                   <method.icon className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{method.label}</span>
+                  {method.label}
                 </Button>
               ))}
             </div>
 
             <AnimatePresence mode="wait">
-              {/* License Key Authentication */}
-              {signInMethod === 'license-key' && (
-                <motion.div
-                  key="license"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-6"
-                >
-                  <div className="space-y-4">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Key className="h-4 w-4 text-primary" />
-                      Enter 16-Character License Key
-                    </Label>
-                    
-                    <div className="flex gap-2 justify-center">
-                      {licenseKey.map((part, i) => (
-                        <div key={i} className="relative">
-                          <Input
-                            ref={licenseInputRefs[i]}
-                            type="text"
-                            value={part}
-                            onChange={(e) => handleLicenseKeyChange(i, e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Backspace' && !part && i > 0) {
-                                licenseInputRefs[i - 1].current?.focus()
-                              }
-                            }}
-                            maxLength={4}
-                            className="w-16 h-14 text-center text-lg font-mono font-bold uppercase tracking-wider border-2 focus:border-primary/50 transition-all"
-                            placeholder="••••"
-                            disabled={isLoading}
-                          />
-                          {part.length === 4 && (
-                            <CheckCircle2 className="absolute -top-2 -right-2 h-5 w-5 text-green-500 bg-background rounded-full" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="glass-card p-4 rounded-lg border border-primary/20 bg-primary/5">
-                      <div className="flex items-start gap-3">
-                        <Zap className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <div className="text-xs">
-                          <p className="font-semibold text-foreground mb-1">Instant Access</p>
-                          <p className="text-muted-foreground">
-                            License keys provide immediate authentication without password requirements
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleLicenseKeySignIn}
-                    disabled={isLoading || licenseKey.some(p => p.length !== 4)}
-                    className="w-full h-12 text-base font-semibold gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Authenticating...
-                      </>
+              <motion.form
+                key={signInMethod}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleCredentialSignIn}
+                className="space-y-6"
+              >
+                {/* Step 1: Email or Username */}
+                <div className="space-y-2">
+                  <Label htmlFor={signInMethod} className="text-sm font-semibold flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+                    {signInMethod === 'email' ? (
+                      <><Mail className="h-4 w-4 text-primary" /> Email Address</>
                     ) : (
-                      <>
-                        <Shield className="h-5 w-5" />
-                        Authenticate with License Key
-                        <ArrowRight className="h-5 w-5" />
-                      </>
+                      <><User className="h-4 w-4 text-primary" /> Username</>
                     )}
-                  </Button>
-                </motion.div>
-              )}
-
-              {/* Email/Username Authentication */}
-              {(signInMethod === 'email' || signInMethod === 'username') && (
-                <motion.form
-                  key="credential"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  onSubmit={handleCredentialSignIn}
-                  className="space-y-6"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor={signInMethod} className="text-sm font-semibold flex items-center gap-2">
-                      {signInMethod === 'email' ? (
-                        <><Mail className="h-4 w-4 text-primary" /> Email Address</>
-                      ) : (
-                        <><User className="h-4 w-4 text-primary" /> Username</>
-                      )}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id={signInMethod}
-                        type={signInMethod === 'email' ? 'email' : 'text'}
-                        placeholder={signInMethod === 'email' ? 'you@example.com' : 'your_username'}
-                        value={signInMethod === 'email' ? formData.email : formData.username}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          [signInMethod]: e.target.value 
-                        })}
-                        className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
-                        required
-                        disabled={isLoading}
-                        autoFocus
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {validationState === 'validating' && (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                        {validationState === 'valid' && (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        )}
-                        {validationState === 'invalid' && (
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-semibold flex items-center gap-2">
-                      <Lock className="h-4 w-4 text-primary" />
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
-                        required
-                        disabled={isLoading}
-                        autoComplete="off"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="remember"
-                      checked={formData.rememberMe}
-                      onCheckedChange={(checked) => 
-                        setFormData({ ...formData, rememberMe: checked as boolean })
-                      }
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id={signInMethod}
+                      type={signInMethod === 'email' ? 'email' : 'text'}
+                      placeholder={signInMethod === 'email' ? 'you@example.com' : 'your_username'}
+                      value={signInMethod === 'email' ? formData.email : formData.username}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        [signInMethod]: e.target.value 
+                      })}
+                      className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
+                      required
                       disabled={isLoading}
+                      autoFocus
                     />
-                    <Label htmlFor="remember" className="text-sm font-medium cursor-pointer">
-                      Keep me signed in for 30 days
-                    </Label>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {validationState === 'validating' && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {validationState === 'valid' && (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                      {validationState === 'invalid' && (
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
                   </div>
+                </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isLoading || validationState === 'invalid'}
-                    className="w-full h-12 text-base font-semibold gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-5 w-5" />
-                        Sign In Securely
-                        <ArrowRight className="h-5 w-5" />
-                      </>
-                    )}
-                  </Button>
-                </motion.form>
-              )}
+                {/* Step 2: Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-semibold flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+                    <Lock className="h-4 w-4 text-primary" />
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="h-12 pr-10 border-2 focus:border-primary/50 transition-all"
+                      required
+                      disabled={isLoading}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step 3: License Key */}
+                <div className="space-y-2">
+                  <Label htmlFor="licenseKey" className="text-sm font-semibold flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+                    <Key className="h-4 w-4 text-primary" />
+                    License Key
+                  </Label>
+                  <Input
+                    id="licenseKey"
+                    type="text"
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    value={formData.licenseKey}
+                    onChange={(e) => {
+                      let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+                      
+                      // Auto-format with dashes
+                      if (value.length > 4 && value[4] !== '-') {
+                        value = value.slice(0, 4) + '-' + value.slice(4)
+                      }
+                      if (value.length > 9 && value[9] !== '-') {
+                        value = value.slice(0, 9) + '-' + value.slice(9)
+                      }
+                      if (value.length > 14 && value[14] !== '-') {
+                        value = value.slice(0, 14) + '-' + value.slice(14)
+                      }
+                      
+                      // Limit to 19 characters (16 chars + 3 dashes)
+                      value = value.slice(0, 19)
+                      
+                      setFormData({ ...formData, licenseKey: value })
+                    }}
+                    className="h-12 font-mono text-center text-lg tracking-wider border-2 focus:border-primary/50 transition-all uppercase"
+                    maxLength={19}
+                    required
+                    disabled={isLoading}
+                  />
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Key className="h-3 w-3" />
+                    Enter the 16-character license key from your registration email
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={formData.rememberMe}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, rememberMe: checked as boolean })
+                    }
+                    disabled={isLoading}
+                  />
+                  <Label htmlFor="remember" className="text-sm font-medium cursor-pointer">
+                    Keep me signed in for 30 days
+                  </Label>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading || validationState === 'invalid'}
+                  className="w-full h-12 text-base font-semibold gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-5 w-5" />
+                      Sign In with 3-Factor Auth
+                      <ArrowRight className="h-5 w-5" />
+                    </>
+                  )}
+                </Button>
+              </motion.form>
             </AnimatePresence>
+
+            {/* Security Notice */}
+            <div className="mt-6 glass-card p-4 rounded-lg border border-primary/10 bg-primary/5">
+              <div className="flex items-start gap-3">
+                <Shield className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <div className="text-xs">
+                  <p className="font-semibold text-foreground mb-1">Enhanced Security Active</p>
+                  <p className="text-muted-foreground">
+                    All three authentication factors are required to access your account
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Divider */}
             <div className="relative my-8">
@@ -671,7 +632,6 @@ export default function LoginPage() {
               >
                 <Key className="h-5 w-5" />
                 Create Account with License Key
-                <Zap className="h-4 w-4 text-primary" />
               </Button>
             </Link>
           </Card>

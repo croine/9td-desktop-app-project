@@ -4,33 +4,30 @@ import { user, account, licenseKeys, session } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import crypto from 'crypto';
 
-type SignInMethod = 'license_key' | 'email' | 'username';
-
-interface LicenseKeyRequest {
-  method: 'license_key';
-  licenseKey: string;
-}
+type SignInMethod = 'email' | 'username';
 
 interface EmailPasswordRequest {
   method: 'email';
   email: string;
   password: string;
+  licenseKey: string;
 }
 
 interface UsernamePasswordRequest {
   method: 'username';
   username: string;
   password: string;
+  licenseKey: string;
 }
 
-type SignInRequest = LicenseKeyRequest | EmailPasswordRequest | UsernamePasswordRequest;
+type SignInRequest = EmailPasswordRequest | UsernamePasswordRequest;
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as SignInRequest;
 
     // Validate method field
-    if (!body.method || !['license_key', 'email', 'username'].includes(body.method)) {
+    if (!body.method || !['email', 'username'].includes(body.method)) {
       return NextResponse.json({
         error: 'Invalid or missing authentication method',
         code: 'INVALID_METHOD'
@@ -39,79 +36,11 @@ export async function POST(request: NextRequest) {
 
     let authenticatedUser: typeof user.$inferSelect | null = null;
 
-    // LICENSE KEY AUTHENTICATION
-    if (body.method === 'license_key') {
-      const { licenseKey } = body as LicenseKeyRequest;
+    // EMAIL + PASSWORD + LICENSE KEY AUTHENTICATION
+    if (body.method === 'email') {
+      const { email: rawEmail, password, licenseKey } = body as EmailPasswordRequest;
 
-      // Validate license key is provided
-      if (!licenseKey || typeof licenseKey !== 'string' || licenseKey.trim() === '') {
-        return NextResponse.json({
-          error: 'License key is required',
-          code: 'MISSING_LICENSE_KEY'
-        }, { status: 400 });
-      }
-
-      // Query license key
-      const licenseKeyRecord = await db.select()
-        .from(licenseKeys)
-        .where(eq(licenseKeys.key, licenseKey.trim()))
-        .limit(1);
-
-      if (licenseKeyRecord.length === 0) {
-        return NextResponse.json({
-          error: 'Invalid credentials',
-          code: 'INVALID_CREDENTIALS'
-        }, { status: 401 });
-      }
-
-      const licenseData = licenseKeyRecord[0];
-
-      // Verify license key status
-      if (licenseData.status !== 'active') {
-        return NextResponse.json({
-          error: 'Invalid credentials',
-          code: 'INVALID_CREDENTIALS'
-        }, { status: 401 });
-      }
-
-      // Verify license key is activated (userId is not null)
-      if (!licenseData.userId) {
-        return NextResponse.json({
-          error: 'Invalid credentials',
-          code: 'INVALID_CREDENTIALS'
-        }, { status: 401 });
-      }
-
-      // Verify license key is not expired
-      const now = new Date();
-      if (licenseData.expiresAt && new Date(licenseData.expiresAt) <= now) {
-        return NextResponse.json({
-          error: 'Invalid credentials',
-          code: 'INVALID_CREDENTIALS'
-        }, { status: 401 });
-      }
-
-      // Get user data
-      const userData = await db.select()
-        .from(user)
-        .where(eq(user.id, licenseData.userId))
-        .limit(1);
-
-      if (userData.length === 0) {
-        return NextResponse.json({
-          error: 'User account not found',
-          code: 'USER_NOT_FOUND'
-        }, { status: 404 });
-      }
-
-      authenticatedUser = userData[0];
-    }
-
-    // EMAIL + PASSWORD AUTHENTICATION
-    else if (body.method === 'email') {
-      const { email: rawEmail, password } = body as EmailPasswordRequest;
-
-      // Validate email and password are provided
+      // Validate all required fields
       if (!rawEmail || typeof rawEmail !== 'string' || rawEmail.trim() === '') {
         return NextResponse.json({
           error: 'Email is required',
@@ -123,6 +52,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: 'Password is required',
           code: 'MISSING_PASSWORD'
+        }, { status: 400 });
+      }
+
+      if (!licenseKey || typeof licenseKey !== 'string' || licenseKey.trim() === '') {
+        return NextResponse.json({
+          error: 'License key is required',
+          code: 'MISSING_LICENSE_KEY'
         }, { status: 400 });
       }
 
@@ -146,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       if (userData.length === 0) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
         }, { status: 401 });
       }
@@ -166,7 +102,7 @@ export async function POST(request: NextRequest) {
 
       if (accountData.length === 0) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
         }, { status: 401 });
       }
@@ -176,19 +112,59 @@ export async function POST(request: NextRequest) {
       // Verify password (plain text comparison)
       if (foundAccount.password !== password) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      // Verify license key
+      const licenseKeyRecord = await db.select()
+        .from(licenseKeys)
+        .where(eq(licenseKeys.key, licenseKey.trim()))
+        .limit(1);
+
+      if (licenseKeyRecord.length === 0) {
+        return NextResponse.json({
+          error: 'Invalid credentials or license key',
+          code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      const licenseData = licenseKeyRecord[0];
+
+      // Verify license key belongs to this user
+      if (licenseData.userId !== foundUser.id) {
+        return NextResponse.json({
+          error: 'Invalid credentials or license key',
+          code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      // Verify license key status
+      if (licenseData.status !== 'active') {
+        return NextResponse.json({
+          error: 'License key is not active',
+          code: 'INVALID_LICENSE_KEY'
+        }, { status: 401 });
+      }
+
+      // Verify license key is not expired
+      const now = new Date();
+      if (licenseData.expiresAt && new Date(licenseData.expiresAt) <= now) {
+        return NextResponse.json({
+          error: 'License key has expired',
+          code: 'EXPIRED_LICENSE_KEY'
         }, { status: 401 });
       }
 
       authenticatedUser = foundUser;
     }
 
-    // USERNAME + PASSWORD AUTHENTICATION
+    // USERNAME + PASSWORD + LICENSE KEY AUTHENTICATION
     else if (body.method === 'username') {
-      const { username: rawUsername, password } = body as UsernamePasswordRequest;
+      const { username: rawUsername, password, licenseKey } = body as UsernamePasswordRequest;
 
-      // Validate username and password are provided
+      // Validate all required fields
       if (!rawUsername || typeof rawUsername !== 'string' || rawUsername.trim() === '') {
         return NextResponse.json({
           error: 'Username is required',
@@ -200,6 +176,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: 'Password is required',
           code: 'MISSING_PASSWORD'
+        }, { status: 400 });
+      }
+
+      if (!licenseKey || typeof licenseKey !== 'string' || licenseKey.trim() === '') {
+        return NextResponse.json({
+          error: 'License key is required',
+          code: 'MISSING_LICENSE_KEY'
         }, { status: 400 });
       }
 
@@ -223,7 +206,7 @@ export async function POST(request: NextRequest) {
 
       if (userData.length === 0) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
         }, { status: 401 });
       }
@@ -243,7 +226,7 @@ export async function POST(request: NextRequest) {
 
       if (accountData.length === 0) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
         }, { status: 401 });
       }
@@ -253,8 +236,48 @@ export async function POST(request: NextRequest) {
       // Verify password (plain text comparison)
       if (foundAccount.password !== password) {
         return NextResponse.json({
-          error: 'Invalid credentials',
+          error: 'Invalid credentials or license key',
           code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      // Verify license key
+      const licenseKeyRecord = await db.select()
+        .from(licenseKeys)
+        .where(eq(licenseKeys.key, licenseKey.trim()))
+        .limit(1);
+
+      if (licenseKeyRecord.length === 0) {
+        return NextResponse.json({
+          error: 'Invalid credentials or license key',
+          code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      const licenseData = licenseKeyRecord[0];
+
+      // Verify license key belongs to this user
+      if (licenseData.userId !== foundUser.id) {
+        return NextResponse.json({
+          error: 'Invalid credentials or license key',
+          code: 'INVALID_CREDENTIALS'
+        }, { status: 401 });
+      }
+
+      // Verify license key status
+      if (licenseData.status !== 'active') {
+        return NextResponse.json({
+          error: 'License key is not active',
+          code: 'INVALID_LICENSE_KEY'
+        }, { status: 401 });
+      }
+
+      // Verify license key is not expired
+      const now = new Date();
+      if (licenseData.expiresAt && new Date(licenseData.expiresAt) <= now) {
+        return NextResponse.json({
+          error: 'License key has expired',
+          code: 'EXPIRED_LICENSE_KEY'
         }, { status: 401 });
       }
 
