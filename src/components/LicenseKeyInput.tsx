@@ -36,7 +36,6 @@ export function LicenseKeyInput({
     }
   }, [autoFocus])
 
-  // Scanning animation for futuristic effect
   useEffect(() => {
     if (isVerifying) {
       const interval = setInterval(() => {
@@ -49,7 +48,6 @@ export function LicenseKeyInput({
   }, [isVerifying])
 
   const handleSegmentChange = async (index: number, value: string) => {
-    // Allow alphanumeric and special characters for more secure keys
     const sanitized = value.toUpperCase().replace(/[^A-Z0-9!@#$%^&*]/g, '')
     
     if (sanitized.length <= 4) {
@@ -57,22 +55,18 @@ export function LicenseKeyInput({
       newSegments[index] = sanitized
       setSegments(newSegments)
       
-      // Reset verification status when user types
       if (verificationStatus !== 'idle') {
         setVerificationStatus('idle')
         setErrorMessage('')
       }
       
-      // Notify parent of key change
       const fullKey = newSegments.join('-')
       onKeyChange?.(fullKey)
       
-      // Auto-advance to next field when segment is complete
       if (sanitized.length === 4 && index < 3) {
         inputRefs.current[index + 1]?.focus()
       }
       
-      // Auto-verify when all segments are complete
       if (index === 3 && sanitized.length === 4) {
         const allFilled = newSegments.every(seg => seg.length === 4)
         if (allFilled) {
@@ -83,25 +77,21 @@ export function LicenseKeyInput({
   }
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    // Move to previous field on backspace if current field is empty
     if (e.key === 'Backspace' && segments[index] === '' && index > 0) {
       e.preventDefault()
       inputRefs.current[index - 1]?.focus()
     }
     
-    // Move to next field on dash
     if (e.key === '-' && index < 3) {
       e.preventDefault()
       inputRefs.current[index + 1]?.focus()
     }
     
-    // Move right with arrow key
     if (e.key === 'ArrowRight' && index < 3) {
       e.preventDefault()
       inputRefs.current[index + 1]?.focus()
     }
     
-    // Move left with arrow key
     if (e.key === 'ArrowLeft' && index > 0) {
       e.preventDefault()
       inputRefs.current[index - 1]?.focus()
@@ -112,7 +102,6 @@ export function LicenseKeyInput({
     e.preventDefault()
     const pastedText = e.clipboardData.getData('text')
     
-    // Try to parse license key format
     const cleanText = pastedText.toUpperCase().replace(/[^A-Z0-9!@#$%^&*-]/g, '')
     const parts = cleanText.split('-').filter(p => p.length > 0)
     
@@ -128,7 +117,6 @@ export function LicenseKeyInput({
     setVerificationStatus('idle')
     setErrorMessage('')
     
-    // Create enhanced particle burst effect
     createEnhancedParticleBurst()
     
     try {
@@ -198,30 +186,30 @@ export function LicenseKeyInput({
       {/* Futuristic Header */}
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-xl animate-pulse-smooth" />
-        <div className="relative glass-card p-6 rounded-xl border-2 border-primary/20">
-          <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="relative glass-card p-4 sm:p-6 rounded-xl border-2 border-primary/20">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4">
             <div className="relative">
-              <Shield className="h-8 w-8 text-primary animate-pulse-smooth" />
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary animate-pulse-smooth" />
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 className="absolute inset-0"
               >
-                <Zap className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+                <Zap className="h-2 w-2 sm:h-3 sm:w-3 text-yellow-500 absolute -top-1 -right-1" />
               </motion.div>
             </div>
             <div className="text-center">
-              <h3 className="font-display font-bold text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h3 className="font-display font-bold text-base sm:text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 SECURE LICENSE AUTHENTICATION
               </h3>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-mono">
                 NEURAL VERIFICATION SYSTEM • AES-256 ENCRYPTED
               </p>
             </div>
           </div>
 
-          {/* Key Input Area */}
-          <div className="relative py-6">
+          {/* Key Input Area - RESPONSIVE */}
+          <div className="relative py-4 sm:py-6">
             {/* Holographic background layers */}
             <AnimatePresence>
               {verificationStatus === 'valid' && (
@@ -234,7 +222,6 @@ export function LicenseKeyInput({
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-green-500/30 via-emerald-500/30 to-green-500/30 blur-2xl animate-pulse" />
                   </motion.div>
-                  {/* Success grid overlay */}
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 0.3 }}
@@ -248,7 +235,6 @@ export function LicenseKeyInput({
               )}
             </AnimatePresence>
 
-            {/* Scanning line effect during verification */}
             {isVerifying && (
               <motion.div
                 className="absolute inset-0 pointer-events-none z-10"
@@ -265,8 +251,8 @@ export function LicenseKeyInput({
               </motion.div>
             )}
             
-            {/* Key input segments */}
-            <div className="flex gap-3 items-center justify-center relative">
+            {/* Key input segments - MADE RESPONSIVE */}
+            <div className="flex flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 items-center justify-center relative">
               {/* Enhanced particle effects */}
               <AnimatePresence>
                 {particles.map(particle => (
@@ -294,7 +280,7 @@ export function LicenseKeyInput({
               </AnimatePresence>
               
               {segments.map((segment, index) => (
-                <div key={index} className="flex items-center gap-3">
+                <div key={index} className="flex items-center gap-1.5 sm:gap-2">
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0, y: 20 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -314,7 +300,7 @@ export function LicenseKeyInput({
                       disabled={disabled || isVerifying}
                       maxLength={4}
                       className={`
-                        relative w-24 h-14 text-center text-lg font-mono font-extrabold
+                        relative w-16 h-12 sm:w-20 sm:h-14 text-center text-base sm:text-lg font-mono font-extrabold
                         uppercase tracking-widest backdrop-blur-md
                         ${getSegmentStyle(index)}
                         focus:ring-4 focus:ring-primary/50 focus:border-primary focus:scale-105
@@ -323,11 +309,11 @@ export function LicenseKeyInput({
                       placeholder="••••"
                     />
                     
-                    {/* Corner accents */}
-                    <div className="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-primary/50 rounded-tl" />
-                    <div className="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-primary/50 rounded-tr" />
-                    <div className="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-primary/50 rounded-bl" />
-                    <div className="absolute -bottom-1 -right-1 w-2 h-2 border-b-2 border-r-2 border-primary/50 rounded-br" />
+                    {/* Corner accents - smaller */}
+                    <div className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 border-t-2 border-l-2 border-primary/50 rounded-tl" />
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 border-t-2 border-r-2 border-primary/50 rounded-tr" />
+                    <div className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b-2 border-l-2 border-primary/50 rounded-bl" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b-2 border-r-2 border-primary/50 rounded-br" />
                     
                     {/* Holographic shine effect */}
                     {segment.length === 4 && verificationStatus === 'idle' && (
@@ -356,7 +342,7 @@ export function LicenseKeyInput({
                   
                   {index < 3 && (
                     <motion.span 
-                      className="text-muted-foreground/50 font-bold text-2xl font-mono"
+                      className="text-muted-foreground/50 font-bold text-lg sm:text-2xl font-mono"
                       animate={{ opacity: [0.3, 1, 0.3] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >
@@ -366,7 +352,7 @@ export function LicenseKeyInput({
                 </div>
               ))}
               
-              {/* Verification status indicator */}
+              {/* Verification status indicator - positioned better on mobile */}
               <AnimatePresence mode="wait">
                 {isVerifying && (
                   <motion.div
@@ -374,10 +360,10 @@ export function LicenseKeyInput({
                     initial={{ scale: 0, opacity: 0, rotate: -180 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     exit={{ scale: 0, opacity: 0, rotate: 180 }}
-                    className="ml-4"
+                    className="ml-2 sm:ml-4"
                   >
                     <div className="relative">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
                       <motion.div
                         animate={{ rotate: 360, scale: [1, 1.2, 1] }}
                         transition={{ duration: 1, repeat: Infinity }}
@@ -393,10 +379,10 @@ export function LicenseKeyInput({
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     exit={{ scale: 0, rotate: 180 }}
-                    className="ml-4"
+                    className="ml-2 sm:ml-4"
                   >
                     <div className="relative">
-                      <Check className="h-8 w-8 text-green-500 drop-shadow-lg" />
+                      <Check className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 drop-shadow-lg" />
                       <motion.div
                         initial={{ scale: 1, opacity: 1 }}
                         animate={{ scale: 3, opacity: 0 }}
@@ -413,13 +399,13 @@ export function LicenseKeyInput({
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     exit={{ scale: 0, rotate: 180 }}
-                    className="ml-4"
+                    className="ml-2 sm:ml-4"
                   >
                     <motion.div
                       animate={{ rotate: [0, -10, 10, -10, 0] }}
                       transition={{ duration: 0.5 }}
                     >
-                      <AlertCircle className="h-8 w-8 text-red-500 drop-shadow-lg" />
+                      <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 drop-shadow-lg" />
                     </motion.div>
                   </motion.div>
                 )}
@@ -428,7 +414,7 @@ export function LicenseKeyInput({
           </div>
           
           {/* Status Messages */}
-          <div className="min-h-[60px] flex items-center justify-center">
+          <div className="min-h-[50px] sm:min-h-[60px] flex items-center justify-center px-2">
             <AnimatePresence mode="wait">
               {errorMessage && (
                 <motion.div
@@ -436,11 +422,11 @@ export function LicenseKeyInput({
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="glass-card border-red-500/50 bg-red-500/10 px-4 py-3 rounded-lg"
+                  className="glass-card border-red-500/50 bg-red-500/10 px-3 sm:px-4 py-2 sm:py-3 rounded-lg"
                 >
-                  <p className="text-sm text-red-500 flex items-center gap-2 font-medium">
-                    <AlertCircle className="h-4 w-4" />
-                    {errorMessage}
+                  <p className="text-xs sm:text-sm text-red-500 flex items-center gap-2 font-medium">
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="break-words">{errorMessage}</span>
                   </p>
                 </motion.div>
               )}
@@ -451,11 +437,11 @@ export function LicenseKeyInput({
                   initial={{ opacity: 0, y: -10, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                  className="glass-card border-green-500/50 bg-green-500/10 px-4 py-3 rounded-lg"
+                  className="glass-card border-green-500/50 bg-green-500/10 px-3 sm:px-4 py-2 sm:py-3 rounded-lg"
                 >
-                  <p className="text-sm text-green-500 flex items-center gap-2 font-semibold">
-                    <Sparkles className="h-4 w-4 animate-pulse" />
-                    AUTHENTICATION SUCCESSFUL • ACCESS GRANTED
+                  <p className="text-xs sm:text-sm text-green-500 flex items-center gap-2 font-semibold">
+                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 animate-pulse flex-shrink-0" />
+                    <span className="break-words">AUTHENTICATION SUCCESSFUL • ACCESS GRANTED</span>
                   </p>
                 </motion.div>
               )}
@@ -466,7 +452,7 @@ export function LicenseKeyInput({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-xs text-muted-foreground text-center font-mono"
+                  className="text-[10px] sm:text-xs text-muted-foreground text-center font-mono px-2"
                 >
                   <span className="opacity-50">▸</span> Enter 16-character key in format: XXXX-XXXX-XXXX-XXXX <span className="opacity-50">◂</span>
                 </motion.p>
