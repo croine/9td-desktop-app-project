@@ -420,3 +420,20 @@ export const taskAttachments = sqliteTable('task_attachments', {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+// License key management table
+export const licenseKeys = sqliteTable('license_keys', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  key: text('key').notNull().unique(),
+  userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  status: text('status').notNull().default('pending'),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  activatedAt: integer('activated_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});

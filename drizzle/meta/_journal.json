@@ -57,6 +57,13 @@
       "when": 1764269519209,
       "tag": "0007_kind_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1765041937385,
+      "tag": "0008_clean_pyro",
+      "breakpoints": true
     }
   ]
 }
