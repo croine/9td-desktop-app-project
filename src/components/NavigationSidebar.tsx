@@ -73,6 +73,7 @@ export type SidebarView =
   | 'activity-logs'
   | 'owner-panel'
   | 'message-system'
+  | 'shoutbox'
   | 'settings'
 
 interface NavigationSidebarProps {
@@ -417,18 +418,28 @@ export function NavigationSidebar({
           icon: TagIcon,
           description: 'Workspace mgmt',
           requiresAuth: true,
-          angle: 90,
+          angle: 60,
+          distance: 320,
+          color: '#10b981'
+        },
+        { 
+          id: 'shoutbox', 
+          label: 'Shoutbox', 
+          icon: MessageSquare,
+          description: 'Live chat feed',
+          requiresAuth: true,
+          angle: 180,
           distance: 320,
           color: '#10b981'
         },
         { 
           id: 'message-system', 
           label: 'Messages', 
-          icon: MessageSquare,
+          icon: Users,
           description: 'Team chat',
           requiresAuth: true,
           isPro: true,
-          angle: 270,
+          angle: 300,
           distance: 320,
           color: '#10b981'
         },

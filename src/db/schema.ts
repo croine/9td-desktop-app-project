@@ -438,3 +438,20 @@ export const licenseKeys = sqliteTable('license_keys', {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+export const shouts = sqliteTable('shouts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  message: text('message').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  isDeleted: integer('is_deleted', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+});
