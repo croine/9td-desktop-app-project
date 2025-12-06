@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card } from '@/components/ui/card'
 import { Logo } from '@/components/Logo'
-import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight, AlertTriangle } from 'lucide-react'
+import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight, AlertTriangle, Clipboard, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 
 type AuthMethod = 'email' | 'username'
 
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const [showLicenseKey, setShowLicenseKey] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [capsLockOn, setCapsLockOn] = useState(false)
+  const [licensePasted, setLicensePasted] = useState(false)
   
   // Validation states
   const [emailValid, setEmailValid] = useState<boolean | null>(null)
@@ -86,6 +88,25 @@ export default function LoginPage() {
       setCapsLockOn(true)
     } else {
       setCapsLockOn(false)
+    }
+  }
+
+  // Handle paste license key
+  const handlePasteLicense = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      const cleaned = text.replace(/[^A-Z0-9]/gi, '').toUpperCase()
+      if (cleaned.length === 16) {
+        const formatted = cleaned.match(/.{1,4}/g)?.join('-') || cleaned
+        setLicenseKey(formatted)
+        setLicensePasted(true)
+        toast.success('License key pasted successfully!')
+        setTimeout(() => setLicensePasted(false), 2000)
+      } else {
+        toast.error('Invalid license key format. Expected: 16 characters')
+      }
+    } catch (err) {
+      toast.error('Failed to paste. Please paste manually.')
     }
   }
 
@@ -179,8 +200,24 @@ export default function LoginPage() {
     if (isLoading) return
 
     const identifierValid = authMethod === 'email' ? emailValid : usernameValid
-    if (!identifierValid || !passwordValid || !licenseKeyValid) {
-      toast.error('Please fill all fields correctly')
+    
+    // Enhanced validation with specific error messages
+    if (!identifierValid) {
+      if (authMethod === 'email') {
+        toast.error('Please enter a valid email address')
+      } else {
+        toast.error('Username must be 3-20 characters (letters, numbers, _ or -)')
+      }
+      return
+    }
+    
+    if (!passwordValid) {
+      toast.error('Password must be at least 6 characters long')
+      return
+    }
+    
+    if (!licenseKeyValid) {
+      toast.error('Invalid license key format. Expected: XXXX-XXXX-XXXX-XXXX')
       return
     }
 
@@ -195,7 +232,24 @@ export default function LoginPage() {
       })
 
       if (error?.code) {
-        toast.error('Invalid credentials. Please check your email, password, and license key.')
+        // Enhanced error messages based on error type
+        if (error.code === 'USER_NOT_FOUND') {
+          toast.error(
+            authMethod === 'email' 
+              ? 'Email not found. Did you mean to register?' 
+              : 'Username not found. Did you mean to register?',
+            {
+              action: {
+                label: 'Register',
+                onClick: () => router.push('/register')
+              }
+            }
+          )
+        } else if (error.code === 'INVALID_PASSWORD') {
+          toast.error('Incorrect password. Please try again or reset your password.')
+        } else {
+          toast.error('Invalid credentials. Please check your details and try again.')
+        }
         setIsLoading(false)
         return
       }
@@ -215,7 +269,19 @@ export default function LoginPage() {
       const licenseData = await licenseResponse.json()
 
       if (!licenseResponse.ok) {
-        toast.error(licenseData.error || 'License key verification failed')
+        // Enhanced license key error messages
+        if (licenseData.error?.includes('expired')) {
+          toast.error('License key has expired. Please renew your license.', {
+            action: {
+              label: 'Renew',
+              onClick: () => router.push('/pricing')
+            }
+          })
+        } else if (licenseData.error?.includes('Invalid')) {
+          toast.error('Invalid license key. Please check your key and try again.')
+        } else {
+          toast.error(licenseData.error || 'License verification failed')
+        }
         setIsLoading(false)
         return
       }
@@ -226,7 +292,7 @@ export default function LoginPage() {
       }, 500)
     } catch (error) {
       console.error('Sign in error:', error)
-      toast.error('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please check your internet connection and try again.')
       setIsLoading(false)
     }
   }
@@ -599,7 +665,7 @@ export default function LoginPage() {
                       value={licenseKey}
                       onChange={handleLicenseKeyChange}
                       placeholder="XXXX-XXXX-XXXX-XXXX"
-                      className="pl-10 pr-20 h-10 text-sm font-mono tracking-wide rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
+                      className="pl-10 pr-28 h-10 text-sm font-mono tracking-wide rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                       disabled={isLoading}
                       required
                       maxLength={19}
@@ -607,6 +673,23 @@ export default function LoginPage() {
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                       <ValidationIcon valid={licenseKeyValid} isValidating={false} />
+                      
+                      {/* Paste button */}
+                      <motion.button
+                        type="button"
+                        onClick={handlePasteLicense}
+                        className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        title="Paste license key"
+                      >
+                        {licensePasted ? (
+                          <ClipboardCheck className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Clipboard className="h-4 w-4" />
+                        )}
+                      </motion.button>
+                      
                       <button
                         type="button"
                         onClick={() => setShowLicenseKey(!showLicenseKey)}
@@ -619,6 +702,16 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
+                  </div>
+                  
+                  {/* License key helper links */}
+                  <div className="flex justify-between items-center pt-0.5">
+                    <p className="text-[10px] text-muted-foreground">
+                      Need a license key?{' '}
+                      <Link href="/pricing" className="text-primary hover:underline font-semibold">
+                        Get one here
+                      </Link>
+                    </p>
                   </div>
                 </motion.div>
 
