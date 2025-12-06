@@ -68,8 +68,44 @@ const premiumFeatures: PremiumFeature[] = [
   }
 ]
 
-export const PremiumFeaturePreview = () => {
+export const LimitedTimeOfferBanner = () => {
   const router = useRouter()
+
+  return (
+    <Card className="glass-card p-3 text-center space-y-2 border-2 border-primary/20 max-w-2xl mx-auto">
+      <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-primary/10">
+        <Zap className="h-3 w-3 text-primary animate-pulse" />
+        <span className="text-xs font-semibold text-primary">Limited Time Offer</span>
+      </div>
+      <h3 className="font-display text-lg font-bold">
+        Get Full Access Now
+      </h3>
+      <p className="text-xs text-muted-foreground max-w-md mx-auto">
+        Join thousands of users who have supercharged their productivity with 9TD Pro
+      </p>
+      <div className="flex gap-2 justify-center pt-1">
+        <Button 
+          size="sm"
+          onClick={() => router.push('/register')}
+          className="gap-1.5 shadow-lg shadow-primary/25 text-xs h-7 px-3"
+        >
+          <Sparkles className="h-3 w-3" />
+          Start Free Trial
+        </Button>
+        <Button 
+          size="sm"
+          variant="outline"
+          onClick={() => router.push('/pricing')}
+          className="gap-1.5 text-xs h-7 px-3"
+        >
+          View Pricing
+        </Button>
+      </div>
+    </Card>
+  )
+}
+
+export const PremiumFeaturePreview = () => {
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null)
 
   return (
@@ -173,38 +209,6 @@ export const PremiumFeaturePreview = () => {
           )
         })}
       </div>
-
-      {/* CTA Section */}
-      <Card className="glass-card p-4 text-center space-y-3 border-2 border-primary/20">
-        <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-primary/10">
-          <Zap className="h-3 w-3 text-primary animate-pulse" />
-          <span className="text-xs font-semibold text-primary">Limited Time Offer</span>
-        </div>
-        <h3 className="font-display text-lg font-bold">
-          Get Full Access Now
-        </h3>
-        <p className="text-xs text-muted-foreground max-w-md mx-auto">
-          Join thousands of users who have supercharged their productivity with 9TD Pro
-        </p>
-        <div className="flex gap-2 justify-center pt-1">
-          <Button 
-            size="sm"
-            onClick={() => router.push('/register')}
-            className="gap-1.5 shadow-lg shadow-primary/25 text-xs h-8 px-3"
-          >
-            <Sparkles className="h-4 w-4" />
-            Start Free Trial
-          </Button>
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={() => router.push('/pricing')}
-            className="gap-1.5 text-xs h-8 px-3"
-          >
-            View Pricing
-          </Button>
-        </div>
-      </Card>
     </div>
   )
 }

@@ -88,7 +88,7 @@ import Loading from '@/app/loading'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useGuestTrial } from '@/hooks/useGuestTrial'
 import { GuestTrialBanner, CompactGuestTrialBanner } from '@/components/GuestTrialBanner'
-import { PremiumFeaturePreview } from '@/components/PremiumFeaturePreview'
+import { PremiumFeaturePreview, LimitedTimeOfferBanner } from '@/components/PremiumFeaturePreview'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION + ERROR HANDLING
@@ -1004,6 +1004,13 @@ export default function Home() {
             {!session?.user && guestTrial.trialData && (
               <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
                 <GuestTrialBanner />
+              </div>
+            )}
+
+            {/* Limited Time Offer Banner for non-authenticated users */}
+            {!session?.user && (
+              <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
+                <LimitedTimeOfferBanner />
               </div>
             )}
 
