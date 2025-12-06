@@ -8,7 +8,6 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 interface Props {
   children: ReactNode
   fallback?: ReactNode
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void
 }
 
 interface State {
@@ -42,11 +41,6 @@ export class ErrorBoundary extends Component<Props, State> {
       error,
       errorInfo
     })
-
-    // Call optional error handler
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo)
-    }
 
     // Log to external service (optional)
     // logErrorToService(error, errorInfo)
@@ -172,14 +166,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-// Functional wrapper for easier use with hooks
+// Functional wrapper for easier use
 export const ErrorBoundaryWrapper = ({ 
   children, 
-  fallback,
-  onError 
+  fallback
 }: Props) => {
   return (
-    <ErrorBoundary fallback={fallback} onError={onError}>
+    <ErrorBoundary fallback={fallback}>
       {children}
     </ErrorBoundary>
   )

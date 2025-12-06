@@ -25,14 +25,7 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={inter.className}>
-        <ErrorBoundary
-          onError={(error, errorInfo) => {
-            // Log errors to console in development
-            console.error('🚨 Application Error:', error, errorInfo)
-            // You can add external error logging service here
-            // Example: Sentry.captureException(error)
-          }}
-        >
+        <ErrorBoundary>
           <CustomAutumnProvider>
             <ThemeProvider>
               {children}
