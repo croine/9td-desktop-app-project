@@ -944,14 +944,6 @@ export default function Home() {
               {settings.showLogo && <Logo />}
               <DashboardTitle settings={settings} />
               <AnimatedTitle />
-              
-              {/* Workspace Selector */}
-              {session?.user && currentWorkspace && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
-                  <span className="text-xl">{currentWorkspace.icon || '📁'}</span>
-                  <span className="text-sm font-semibold">{currentWorkspace.name}</span>
-                </div>
-              )}
             </div>
             
             {/* Search Bar and Actions */}
