@@ -381,9 +381,9 @@ export default function LoginPage() {
             transition={{ duration: 0.6 }}
           >
             {/* Logo and title */}
-            <div>
+            <div className="text-center">
               <motion.div
-                className="mb-4"
+                className="mb-4 flex justify-center"
                 animate={{
                   y: [0, -5, 0],
                 }}
