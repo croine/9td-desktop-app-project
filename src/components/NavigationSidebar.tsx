@@ -538,7 +538,7 @@ export function NavigationSidebar({
       >
         <div ref={contentRef} className="py-4 px-3 space-y-4">
           {/* User Section */}
-          <div className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20">
+          <div className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20 shadow-sm">
             {sessionPending ? (
               <div className="flex items-center justify-center py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -593,32 +593,67 @@ export function NavigationSidebar({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-center gap-1.5 pb-2">
-                  <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                  <p className="text-[10px] font-medium text-muted-foreground">
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-1.5 pb-1.5">
+                  <motion.div 
+                    className="h-1 w-1 rounded-full bg-primary"
+                    animate={{ 
+                      opacity: [0.3, 1, 0.3],
+                      scale: [0.8, 1.2, 0.8]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <p className="text-[10px] font-semibold text-primary/80 tracking-wide">
                     Authentication Required
                   </p>
-                  <div className="h-1 w-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.5s' }} />
+                  <motion.div 
+                    className="h-1 w-1 rounded-full bg-primary"
+                    animate={{ 
+                      opacity: [0.3, 1, 0.3],
+                      scale: [0.8, 1.2, 0.8]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: 0.5
+                    }}
+                  />
                 </div>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full h-8 text-xs gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all"
-                  onClick={() => router.push('/login')}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <LogIn className="h-3.5 w-3.5" />
-                  Sign In
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs gap-1.5 border-primary/20 hover:bg-primary/5 hover:border-primary/30"
-                  onClick={() => router.push('/register')}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full h-7 text-[11px] gap-1.5 bg-gradient-to-r from-primary via-primary to-primary/90 hover:from-primary/95 hover:via-primary/90 hover:to-primary/85 shadow-sm hover:shadow-md transition-all duration-200 font-medium relative overflow-hidden group"
+                    onClick={() => router.push('/login')}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    <LogIn className="h-3 w-3 relative z-10" />
+                    <span className="relative z-10">Sign In</span>
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <Sparkles className="h-3 w-3" />
-                  Create Account
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-[11px] gap-1.5 border-primary/30 hover:bg-primary/8 hover:border-primary/40 transition-all duration-200 font-medium relative overflow-hidden group"
+                    onClick={() => router.push('/register')}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <Sparkles className="h-3 w-3 text-primary relative z-10" />
+                    <span className="relative z-10">Create Account</span>
+                  </Button>
+                </motion.div>
               </div>
             )}
           </div>
