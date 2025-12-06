@@ -627,7 +627,45 @@ export function NavigationSidebar({
                     showFrame={false}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate">{userName}</p>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <p className="text-xs font-semibold truncate">{userName}</p>
+                      {/* Membership Icon Indicator */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {isPro ? (
+                            <div className="shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 shadow-sm">
+                              <Sparkles className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          ) : (
+                            <div className="shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 shadow-sm">
+                              <motion.div
+                                animate={{
+                                  scale: [1, 1.2, 1],
+                                  rotate: [0, 5, -5, 0],
+                                }}
+                                transition={{
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  ease: "easeInOut"
+                                }}
+                              >
+                                <Sparkles className="h-2.5 w-2.5 text-slate-500 dark:text-slate-400" />
+                              </motion.div>
+                            </div>
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p className="text-xs font-semibold">
+                            {isPro ? '💎 Pro Member' : '⭐ Free Plan'}
+                          </p>
+                          {!isPro && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              Upgrade to unlock all features
+                            </p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     {preferences.showEmail && (
                       <p className={`text-[10px] text-muted-foreground truncate ${preferences.blurEmail ? 'blur-sm select-none' : ''}`}>
                         {session.user.email}
