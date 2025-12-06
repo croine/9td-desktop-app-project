@@ -34,6 +34,11 @@ import {
   Zap,
   Users,
   Workflow,
+  Shield,
+  Fingerprint,
+  Chrome,
+  Github,
+  Command,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authClient, useSession } from '@/lib/auth-client'
@@ -593,37 +598,34 @@ export function NavigationSidebar({
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-1.5 pb-1.5">
-                  <motion.div 
-                    className="h-1 w-1 rounded-full bg-primary"
-                    animate={{ 
-                      opacity: [0.3, 1, 0.3],
-                      scale: [0.8, 1.2, 0.8]
+              <div className="space-y-2.5">
+                {/* Guest Mode Badge */}
+                <div className="flex items-center justify-center gap-2 pb-2">
+                  <Badge 
+                    variant="outline" 
+                    className="h-5 px-2 text-[10px] font-semibold border-primary/30 bg-primary/5"
+                  >
+                    <Shield className="h-2.5 w-2.5 mr-1" />
+                    Guest Mode
+                  </Badge>
+                </div>
+
+                {/* Subtle animated line separator */}
+                <div className="relative h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent overflow-hidden">
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent"
+                    animate={{
+                      x: ['-100%', '100%']
                     }}
                     transition={{
                       duration: 2,
                       repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  />
-                  <p className="text-[10px] font-semibold text-primary/80 tracking-wide">
-                    Authentication Required
-                  </p>
-                  <motion.div 
-                    className="h-1 w-1 rounded-full bg-primary"
-                    animate={{ 
-                      opacity: [0.3, 1, 0.3],
-                      scale: [0.8, 1.2, 0.8]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: 0.5
+                      ease: "linear"
                     }}
                   />
                 </div>
+
+                {/* Sign In Button */}
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -639,6 +641,8 @@ export function NavigationSidebar({
                     <span className="relative z-10">Sign In</span>
                   </Button>
                 </motion.div>
+
+                {/* Create Account Button */}
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -654,6 +658,68 @@ export function NavigationSidebar({
                     <span className="relative z-10">Create Account</span>
                   </Button>
                 </motion.div>
+
+                {/* Divider */}
+                <div className="relative py-1.5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="px-2 text-[9px] text-muted-foreground bg-gradient-to-br from-primary/5 to-accent/10">
+                      or continue with
+                    </span>
+                  </div>
+                </div>
+
+                {/* Social Login Icons */}
+                <div className="flex gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 px-2 border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
+                        onClick={() => router.push('/login')}
+                      >
+                        <Chrome className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Sign in with Google</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 px-2 border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
+                        onClick={() => router.push('/login')}
+                      >
+                        <Github className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Sign in with GitHub</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {/* Advanced Features Hints */}
+                <div className="pt-2 space-y-1.5 border-t border-border/30">
+                  {/* Biometric Hint */}
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <Fingerprint className="h-3 w-3 text-primary/60" />
+                    <span>Biometric auth coming soon</span>
+                  </div>
+
+                  {/* Keyboard Shortcut */}
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <Command className="h-3 w-3 text-primary/60" />
+                    <span>Press ⌘K to sign in</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -777,32 +843,6 @@ export function NavigationSidebar({
               </motion.div>
             )
           })}
-
-          {/* Help Card */}
-          <motion.div 
-            className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Zap className="h-3.5 w-3.5 text-yellow-500" />
-                <p className="text-[10px] font-semibold text-foreground">
-                  Revolutionary Sidebar
-                </p>
-              </div>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Features:
-              </p>
-              <ul className="text-[9px] text-muted-foreground space-y-0.5 pl-2">
-                <li>• 📊 Smart Minimap Navigation</li>
-                <li>• 🎯 Magnetic Section Snapping</li>
-                <li>• 🌈 Color-coded Categories</li>
-                <li>• ⚡ Collapsible Groups</li>
-              </ul>
-            </div>
-          </motion.div>
         </div>
       </div>
 
