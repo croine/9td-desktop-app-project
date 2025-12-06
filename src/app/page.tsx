@@ -86,6 +86,9 @@ import { PrintView } from '@/components/PrintView'
 import { cloneTask, bulkCloneTasks } from '@/lib/storage'
 import Loading from '@/app/loading'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { useGuestTrial } from '@/hooks/useGuestTrial'
+import { GuestTrialBanner, CompactGuestTrialBanner } from '@/components/GuestTrialBanner'
+import { PremiumFeaturePreview } from '@/components/PremiumFeaturePreview'
 
 // ========================================================================
 // VERSION v8.0 - ALL FEATURES + NOTIFICATIONS + AUTOMATION + ERROR HANDLING
@@ -97,6 +100,10 @@ export default function Home() {
   const router = useRouter()
   const { data: session, isPending: sessionPending } = useSession()
   const { customer, check, track, refetch: refetchCustomer, isLoading: isLoadingCustomer } = useCustomer()
+  
+  // Guest trial hook for non-authenticated users
+  const guestTrial = useGuestTrial()
+  
   const [currentView, setCurrentView] = useState<SidebarView>('dashboard')
   const [tasks, setTasks] = useState<Task[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -943,16 +950,17 @@ export default function Home() {
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-3">
-                    <DashboardTitle settings={settings} />
-                    <AnimatedTitle />
-                  </div>
-                  {settings.showLogo && (
-                    <Logo />
-                  )}
-                </div>
+                {settings.showLogo && <Logo />}
+                <DashboardTitle settings={settings} />
+                <AnimatedTitle />
               </div>
+              
+              {/* Trial Timer for Guest Users */}
+              {!session?.user && guestTrial.trialData && (
+                <div className="hidden lg:block">
+                  <CompactGuestTrialBanner />
+                </div>
+              )}
               
               {/* Search Bar and Actions */}
               <div className="flex items-center gap-4 flex-shrink-0">
@@ -992,6 +1000,13 @@ export default function Home() {
           </header>
 
           <main className="flex-1 overflow-y-auto">
+            {/* Guest Trial Banner for non-authenticated users */}
+            {!session?.user && guestTrial.trialData && (
+              <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
+                <GuestTrialBanner />
+              </div>
+            )}
+
             {/* Payment Warning */}
             {session?.user && (
               <div className="w-full max-w-7xl mx-auto px-4 md:px-8 pt-4">
@@ -1007,7 +1022,13 @@ export default function Home() {
                   ) : (
                     <PageContainer key={currentView}>
                       {currentView === 'dashboard' && (
-                        <div className="mt-0">
+                        <div className="space-y-6">
+                          {/* Show premium feature preview for guest users */}
+                          {!session?.user && (
+                            <PremiumFeaturePreview />
+                          )}
+                          
+                          {/* Regular dashboard */}
                           <Dashboard 
                             tasks={sortedTasks} 
                             tags={tags} 
