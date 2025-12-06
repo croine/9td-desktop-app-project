@@ -39,16 +39,19 @@ import {
   Chrome,
   Github,
   Command,
+  Orbit,
+  Cpu,
+  Radio,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { authClient, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useCustomer } from 'autumn-js/react'
 
 // ========================================================================
-// NAVIGATION SIDEBAR v9.0 - REVOLUTIONARY GROUPED DESIGN WITH SMART MINIMAP
-// Updated: JAN-2025 - Multi-level categories, innovative scrollbar
+// ORBITAL NAVIGATION SYSTEM v10.0 - REVOLUTIONARY NEURAL NETWORK DESIGN
+// Updated: JAN-2025 - Physics-based, particle effects, 3D transforms
 // ========================================================================
 
 export type SidebarView = 
@@ -79,7 +82,7 @@ interface NavigationSidebarProps {
   sessionPending: boolean
 }
 
-interface NavigationItem {
+interface NavigationNode {
   id: SidebarView
   label: string
   icon: any
@@ -87,15 +90,18 @@ interface NavigationItem {
   description: string
   requiresAuth: boolean
   isPro?: boolean
+  angle: number // For orbital positioning
+  distance: number // Distance from center
+  color: string
 }
 
-interface NavigationCategory {
+interface OrbitalRing {
   id: string
   label: string
-  icon: any
+  nodes: NavigationNode[]
+  radius: number
   color: string
-  items: NavigationItem[]
-  defaultExpanded?: boolean
+  icon: any
 }
 
 interface UserPreferences {
@@ -132,6 +138,16 @@ interface ActiveFrame {
   isActive: boolean
 }
 
+interface Particle {
+  id: number
+  x: number
+  y: number
+  vx: number
+  vy: number
+  life: number
+  color: string
+}
+
 export function NavigationSidebar({ 
   currentView, 
   onViewChange, 
@@ -142,8 +158,10 @@ export function NavigationSidebar({
   const router = useRouter()
   const { refetch: refetchSession } = useSession()
   const { customer, isLoading: isLoadingCustomer } = useCustomer()
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
   
   const [preferences, setPreferences] = useState<UserPreferences>({
     customTitle: 'Account Secured',
@@ -159,16 +177,18 @@ export function NavigationSidebar({
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [status, setStatus] = useState<UserStatus | null>(null)
   const [activeFrame, setActiveFrame] = useState<ActiveFrame | null>(null)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['core', 'productivity']))
-  const [scrollProgress, setScrollProgress] = useState(0)
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
-  const [sessionDuration, setSessionDuration] = useState<string>('')
+  const [activeRing, setActiveRing] = useState<string | null>(null)
+  const [hoveredNode, setHoveredNode] = useState<SidebarView | null>(null)
+  const [particles, setParticles] = useState<Particle[]>([])
+  const [orbitalMode, setOrbitalMode] = useState<'collapsed' | 'expanded'>('collapsed')
+  const [navigationHistory, setNavigationHistory] = useState<SidebarView[]>([])
   
   // Calculate session duration for signed-in users
+  const [sessionDuration, setSessionDuration] = useState<string>('')
+  
   useEffect(() => {
     if (session?.user) {
       const updateDuration = () => {
-        // Simple session time tracker (you could enhance this with actual session start time)
         const now = new Date()
         const hours = now.getHours()
         const minutes = now.getMinutes()
@@ -176,7 +196,7 @@ export function NavigationSidebar({
       }
       
       updateDuration()
-      const interval = setInterval(updateDuration, 60000) // Update every minute
+      const interval = setInterval(updateDuration, 60000)
       return () => clearInterval(interval)
     }
   }, [session])
@@ -187,204 +207,306 @@ export function NavigationSidebar({
   )
 
   // ==========================================
-  // GROUPED NAVIGATION CATEGORIES
+  // ORBITAL RINGS CONFIGURATION
   // ==========================================
-  const navigationCategories: NavigationCategory[] = [
+  const orbitalRings: OrbitalRing[] = [
     {
       id: 'core',
-      label: 'Core Hub',
-      icon: LayoutDashboard,
+      label: 'Core',
+      radius: 80,
       color: '#3b82f6',
-      defaultExpanded: true,
-      items: [
+      icon: Cpu,
+      nodes: [
         { 
           id: 'dashboard', 
           label: 'Dashboard', 
           icon: LayoutDashboard,
           description: 'Overview and statistics',
-          requiresAuth: false
+          requiresAuth: false,
+          angle: 0,
+          distance: 80,
+          color: '#3b82f6'
         },
         { 
           id: 'your-tasks', 
-          label: 'Your Tasks', 
+          label: 'Tasks', 
           icon: CheckSquare, 
           badge: taskCount,
           description: 'Manage active tasks',
-          requiresAuth: true
+          requiresAuth: true,
+          angle: 120,
+          distance: 80,
+          color: '#3b82f6'
+        },
+        { 
+          id: 'settings', 
+          label: 'Settings', 
+          icon: Settings,
+          description: 'Configure workspace',
+          requiresAuth: true,
+          angle: 240,
+          distance: 80,
+          color: '#3b82f6'
         },
       ]
     },
     {
       id: 'productivity',
-      label: 'Productivity Suite',
-      icon: Target,
+      label: 'Productivity',
+      radius: 140,
       color: '#8b5cf6',
-      defaultExpanded: true,
-      items: [
+      icon: Target,
+      nodes: [
         { 
           id: 'daily-planning', 
-          label: 'Daily Planning', 
+          label: 'Daily', 
           icon: Clock,
           description: 'Plan your day',
-          requiresAuth: true
+          requiresAuth: true,
+          angle: 30,
+          distance: 140,
+          color: '#8b5cf6'
         },
         { 
           id: 'focus-mode', 
-          label: 'Focus Mode', 
+          label: 'Focus', 
           icon: Brain,
-          description: 'Deep work environment',
+          description: 'Deep work mode',
           requiresAuth: true,
-          isPro: true
+          isPro: true,
+          angle: 90,
+          distance: 140,
+          color: '#8b5cf6'
         },
         { 
           id: 'pomodoro', 
-          label: 'Pomodoro Timer', 
+          label: 'Pomodoro', 
           icon: Timer,
-          description: 'Focus timer intervals',
+          description: 'Focus timer',
           requiresAuth: true,
-          isPro: true
+          isPro: true,
+          angle: 150,
+          distance: 140,
+          color: '#8b5cf6'
         },
         { 
           id: 'time-blocking', 
-          label: 'Time Blocking', 
+          label: 'Time Block', 
           icon: Clock,
           description: 'Weekly schedule',
           requiresAuth: true,
-          isPro: true
+          isPro: true,
+          angle: 210,
+          distance: 140,
+          color: '#8b5cf6'
         },
       ]
     },
     {
       id: 'views',
-      label: 'Advanced Views',
-      icon: Trello,
+      label: 'Views',
+      radius: 200,
       color: '#ec4899',
-      items: [
+      icon: Trello,
+      nodes: [
         { 
           id: 'calendar', 
           label: 'Calendar', 
           icon: CalendarIcon,
           description: 'Calendar view',
-          requiresAuth: true
+          requiresAuth: true,
+          angle: 0,
+          distance: 200,
+          color: '#ec4899'
         },
         { 
           id: 'kanban', 
-          label: 'Kanban Board', 
+          label: 'Kanban', 
           icon: Trello,
-          description: 'Drag-and-drop tasks',
+          description: 'Drag-drop board',
           requiresAuth: true,
-          isPro: true
+          isPro: true,
+          angle: 60,
+          distance: 200,
+          color: '#ec4899'
         },
         { 
           id: 'gantt', 
-          label: 'Gantt Chart', 
+          label: 'Gantt', 
           icon: GanttChartSquare,
-          description: 'Timeline visualization',
+          description: 'Timeline view',
           requiresAuth: true,
-          isPro: true
+          isPro: true,
+          angle: 120,
+          distance: 200,
+          color: '#ec4899'
         },
         { 
           id: 'dependencies', 
           label: 'Dependencies', 
           icon: Workflow,
-          description: 'Task relationships',
-          requiresAuth: true
+          description: 'Task relations',
+          requiresAuth: true,
+          angle: 180,
+          distance: 200,
+          color: '#ec4899'
         },
       ]
     },
     {
-      id: 'analytics',
-      label: 'Analytics & Insights',
-      icon: BarChart3,
+      id: 'insights',
+      label: 'Insights',
+      radius: 260,
       color: '#f59e0b',
-      items: [
+      icon: BarChart3,
+      nodes: [
         { 
           id: 'analytics', 
           label: 'Analytics', 
           icon: BarChart3,
-          description: 'Productivity insights',
-          requiresAuth: true
+          description: 'Insights',
+          requiresAuth: true,
+          angle: 45,
+          distance: 260,
+          color: '#f59e0b'
         },
         { 
           id: 'activity-logs', 
-          label: 'Activity Logs', 
+          label: 'Activity', 
           icon: History,
-          description: 'Track all changes',
-          requiresAuth: true
+          description: 'Track changes',
+          requiresAuth: true,
+          angle: 135,
+          distance: 260,
+          color: '#f59e0b'
         },
-      ]
-    },
-    {
-      id: 'gamification',
-      label: 'Achievements & Profile',
-      icon: Trophy,
-      color: '#10b981',
-      items: [
         { 
           id: 'gamification', 
           label: 'Achievements', 
           icon: Trophy,
-          description: 'Track XP and streaks',
-          requiresAuth: true
+          description: 'XP & levels',
+          requiresAuth: true,
+          angle: 225,
+          distance: 260,
+          color: '#f59e0b'
         },
         { 
           id: 'avatar-customization', 
-          label: 'Avatar Studio', 
+          label: 'Avatar', 
           icon: Palette,
-          description: 'Customize avatar',
-          requiresAuth: true
+          description: 'Customize',
+          requiresAuth: true,
+          angle: 315,
+          distance: 260,
+          color: '#f59e0b'
         },
       ]
     },
     {
-      id: 'collaboration',
-      label: 'Team & Communication',
-      icon: Users,
-      color: '#06b6d4',
-      items: [
+      id: 'advanced',
+      label: 'Advanced',
+      radius: 320,
+      color: '#10b981',
+      icon: Zap,
+      nodes: [
+        { 
+          id: 'owner-panel', 
+          label: 'Owner', 
+          icon: TagIcon,
+          description: 'Workspace mgmt',
+          requiresAuth: true,
+          angle: 90,
+          distance: 320,
+          color: '#10b981'
+        },
         { 
           id: 'message-system', 
           label: 'Messages', 
           icon: MessageSquare,
-          description: 'Team collaboration',
+          description: 'Team chat',
           requiresAuth: true,
-          isPro: true
-        },
-      ]
-    },
-    {
-      id: 'management',
-      label: 'Management & Settings',
-      icon: Settings,
-      color: '#64748b',
-      items: [
-        { 
-          id: 'owner-panel', 
-          label: 'Owner Panel', 
-          icon: TagIcon,
-          description: 'Manage workspace',
-          requiresAuth: true
-        },
-        { 
-          id: 'settings', 
-          label: 'Settings Hub', 
-          icon: Settings,
-          description: 'Advanced configuration',
-          requiresAuth: true
+          isPro: true,
+          angle: 270,
+          distance: 320,
+          color: '#10b981'
         },
       ]
     },
   ]
 
-  // Initialize expanded categories from defaults
+  // Track mouse movement
   useEffect(() => {
-    const defaults = new Set(
-      navigationCategories
-        .filter(cat => cat.defaultExpanded)
-        .map(cat => cat.id)
-    )
-    setExpandedCategories(defaults)
-  }, [])
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        mouseX.set(e.clientX - rect.left)
+        mouseY.set(e.clientY - rect.top)
+      }
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Particle system animation
+  useEffect(() => {
+    if (orbitalMode === 'expanded') {
+      const interval = setInterval(() => {
+        setParticles(prev => {
+          // Add new particles
+          const newParticles = [...prev]
+          
+          if (newParticles.length < 50 && Math.random() > 0.7) {
+            newParticles.push({
+              id: Date.now() + Math.random(),
+              x: 128,
+              y: 200,
+              vx: (Math.random() - 0.5) * 2,
+              vy: (Math.random() - 0.5) * 2,
+              life: 1,
+              color: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][Math.floor(Math.random() * 5)]
+            })
+          }
+          
+          // Update and filter particles
+          return newParticles
+            .map(p => ({
+              ...p,
+              x: p.x + p.vx,
+              y: p.y + p.vy,
+              life: p.life - 0.02
+            }))
+            .filter(p => p.life > 0)
+        })
+      }, 50)
+      
+      return () => clearInterval(interval)
+    }
+  }, [orbitalMode])
+
+  // Draw particles on canvas
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      particles.forEach(p => {
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2)
+        ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2, '0')
+        ctx.fill()
+      })
+      
+      requestAnimationFrame(draw)
+    }
+    
+    draw()
+  }, [particles])
 
   // Fetch all user data when session is available
   useEffect(() => {
@@ -404,23 +526,6 @@ export function NavigationSidebar({
       return () => clearInterval(interval)
     }
   }, [session, currentView, refetchSession])
-
-  // Track scroll progress for minimap
-  useEffect(() => {
-    const handleScroll = () => {
-      if (scrollRef.current && contentRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-        const progress = scrollTop / (scrollHeight - clientHeight)
-        setScrollProgress(progress)
-      }
-    }
-
-    const scrollElement = scrollRef.current
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', handleScroll)
-      return () => scrollElement.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
 
   const fetchAllData = async () => {
     const token = localStorage.getItem("bearer_token")
@@ -518,24 +623,28 @@ export function NavigationSidebar({
     }
   }
 
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev)
-      if (next.has(categoryId)) {
-        next.delete(categoryId)
-      } else {
-        next.add(categoryId)
-      }
-      return next
-    })
-  }
-
-  const scrollToCategory = (categoryId: string) => {
-    const element = document.getElementById(`category-${categoryId}`)
-    if (element && scrollRef.current) {
-      const offsetTop = element.offsetTop - 80
-      scrollRef.current.scrollTo({ top: offsetTop, behavior: 'smooth' })
+  const handleNodeClick = (nodeId: SidebarView) => {
+    // Add to navigation history
+    setNavigationHistory(prev => [...prev, nodeId].slice(-5))
+    
+    // Trigger view change
+    onViewChange(nodeId)
+    
+    // Create particle burst effect
+    const burstParticles: Particle[] = []
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 * i) / 20
+      burstParticles.push({
+        id: Date.now() + i,
+        x: 128,
+        y: 200,
+        vx: Math.cos(angle) * 3,
+        vy: Math.sin(angle) * 3,
+        life: 1,
+        color: orbitalRings.find(r => r.nodes.some(n => n.id === nodeId))?.color || '#3b82f6'
+      })
     }
+    setParticles(prev => [...prev, ...burstParticles])
   }
 
   const initials = userName
@@ -548,67 +657,105 @@ export function NavigationSidebar({
     : session?.user?.email?.charAt(0).toUpperCase() || 'U'
 
   return (
-    <div className="flex flex-col h-full border-r bg-sidebar/50 backdrop-blur-sm relative">
-      {/* Smart Minimap Scrollbar */}
-      <SmartMinimapScrollbar
-        categories={navigationCategories}
-        expandedCategories={expandedCategories}
-        currentView={currentView}
-        scrollProgress={scrollProgress}
-        hoveredCategory={hoveredCategory}
-        onCategoryClick={scrollToCategory}
-        onCategoryHover={setHoveredCategory}
+    <div 
+      ref={containerRef}
+      className="flex flex-col h-full border-r relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%)',
+      }}
+    >
+      {/* Canvas for particle effects */}
+      <canvas
+        ref={canvasRef}
+        width={256}
+        height={800}
+        className="absolute inset-0 pointer-events-none z-10"
       />
 
-      {/* Scrollable Content */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto pr-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        <div ref={contentRef} className="py-4 px-3 space-y-4">
-          {/* User Section */}
-          <div className="px-2 py-3 bg-gradient-to-br from-primary/5 to-accent/10 rounded-lg border border-primary/20 shadow-sm">
-            {sessionPending ? (
-              <div className="flex items-center justify-center py-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              </div>
-            ) : session?.user ? (
-              <div className="space-y-2">
-                {/* Status Mode Badge - Workspace Active */}
-                <div className="flex items-center justify-between gap-2 pb-2">
-                  <Badge 
-                    variant="outline" 
-                    className="h-5 px-2 text-[10px] font-semibold border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  >
-                    <motion.div
-                      animate={{
-                        scale: [1, 1.2, 1],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <Zap className="h-2.5 w-2.5 mr-1" />
-                    </motion.div>
-                    Workspace Active
-                  </Badge>
-                  
-                  {/* Pro Member Badge (if applicable) */}
-                  {isPro && (
-                    <Badge 
-                      variant="outline" 
-                      className="h-5 px-2 text-[10px] font-semibold border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
-                    >
-                      <Sparkles className="h-2.5 w-2.5 mr-1" />
-                      Pro
-                    </Badge>
-                  )}
-                </div>
+      {/* Neural Network Background Pattern */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <svg width="100%" height="100%">
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <circle cx="20" cy="20" r="1" fill="#3b82f6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        </svg>
+      </div>
 
+      {/* User Command Center */}
+      <motion.div
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="px-3 py-4 relative z-20"
+      >
+        <div className="glass-card p-3 rounded-xl border-2 border-primary/20 shadow-xl relative overflow-hidden">
+          {/* Holographic shine effect */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+            animate={{
+              x: ['-100%', '200%']
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: 'linear'
+            }}
+          />
+
+          {sessionPending ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : session?.user ? (
+            <div className="space-y-3 relative z-10">
+              {/* Command Center Header */}
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{
+                      rotate: { duration: 20, repeat: Infinity, ease: 'linear' },
+                      scale: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+                    }}
+                  >
+                    <Orbit className="h-4 w-4 text-primary" />
+                  </motion.div>
+                  <span className="text-xs font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                    COMMAND CENTER
+                  </span>
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className="h-5 px-2 text-[9px] border-emerald-500/50 bg-emerald-500/10 text-emerald-600"
+                >
+                  <Radio className="h-2 w-2 mr-1 animate-pulse" />
+                  ONLINE
+                </Badge>
+              </div>
+
+              {/* Avatar with 3D transform */}
+              <motion.div
+                className="flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+              >
+                <motion.div
+                  animate={{
+                    rotateY: [0, 360],
+                  }}
+                  transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: 'linear'
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                  }}
+                >
                   <AvatarWithRings
                     avatarUrl={preferences.avatarUrl}
                     initials={initials}
@@ -621,502 +768,568 @@ export function NavigationSidebar({
                     avatarColorScheme={preferences.avatarColorScheme}
                     avatarBorderColor={preferences.avatarBorderColor}
                     size="sm"
-                    showRings={false}
+                    showRings={true}
                     showAchievements={false}
                     showStatus={true}
                     showFrame={false}
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <p className="text-xs font-semibold truncate">{userName}</p>
-                      {/* Membership Icon Indicator */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          {isPro ? (
-                            <div className="shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 shadow-sm">
-                              <Sparkles className="h-2.5 w-2.5 text-white" />
-                            </div>
-                          ) : (
-                            <div className="shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 shadow-sm">
-                              <motion.div
-                                animate={{
-                                  scale: [1, 1.2, 1],
-                                  rotate: [0, 5, -5, 0],
-                                }}
-                                transition={{
-                                  duration: 2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut"
-                                }}
-                              >
-                                <Sparkles className="h-2.5 w-2.5 text-slate-500 dark:text-slate-400" />
-                              </motion.div>
-                            </div>
-                          )}
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <p className="text-xs font-semibold">
-                            {isPro ? '💎 Pro Member' : '⭐ Free Plan'}
-                          </p>
-                          {!isPro && (
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              Upgrade to unlock all features
-                            </p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                    {preferences.showEmail && (
-                      <p className={`text-[10px] text-muted-foreground truncate ${preferences.blurEmail ? 'blur-sm select-none' : ''}`}>
-                        {session.user.email}
-                      </p>
-                    )}
-                    {/* Session Time */}
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                      <span className="text-[9px] text-muted-foreground">
-                        Active since {sessionDuration}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-1.5 border-t border-border/50">
-                  <StatusPicker
-                    currentStatus={status?.status || 'active'}
-                    customMessage={status?.customMessage}
-                    onStatusChange={handleStatusChange}
-                    compact
-                  />
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-7 text-xs gap-2"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-3 w-3" />
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {/* Guest Mode Badge */}
-                <div className="flex items-center justify-center gap-2 pb-2">
-                  <Badge 
-                    variant="outline" 
-                    className="h-5 px-2 text-[10px] font-semibold border-primary/30 bg-primary/5"
-                  >
-                    <Shield className="h-2.5 w-2.5 mr-1" />
-                    Guest Mode
-                  </Badge>
-                </div>
-
-                {/* Subtle animated line separator */}
-                <div className="relative h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent overflow-hidden">
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent"
-                    animate={{
-                      x: ['-100%', '100%']
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear"
-                    }}
-                  />
-                </div>
-
-                {/* Sign In Button */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full h-7 text-[11px] gap-1.5 bg-gradient-to-r from-primary via-primary to-primary/90 hover:from-primary/95 hover:via-primary/90 hover:to-primary/85 shadow-sm hover:shadow-md transition-all duration-200 font-medium relative overflow-hidden group"
-                    onClick={() => router.push('/login')}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    <LogIn className="h-3 w-3 relative z-10" />
-                    <span className="relative z-10">Sign In</span>
-                  </Button>
                 </motion.div>
-
-                {/* Create Account Button */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-7 text-[11px] gap-1.5 border-primary/30 hover:bg-primary/8 hover:border-primary/40 transition-all duration-200 font-medium relative overflow-hidden group"
-                    onClick={() => router.push('/register')}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <Sparkles className="h-3 w-3 text-primary relative z-10" />
-                    <span className="relative z-10">Create Account</span>
-                  </Button>
-                </motion.div>
-
-                {/* Divider */}
-                <div className="relative py-1.5">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border/50" />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="px-2 text-[9px] text-muted-foreground bg-gradient-to-br from-primary/5 to-accent/10">
-                      or continue with
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold truncate">{userName}</p>
+                  {preferences.showEmail && (
+                    <p className={`text-[9px] text-muted-foreground truncate ${preferences.blurEmail ? 'blur-sm' : ''}`}>
+                      {session.user.email}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[8px] text-emerald-600 font-semibold">
+                      {sessionDuration}
                     </span>
                   </div>
                 </div>
+                {isPro && (
+                  <motion.div
+                    animate={{
+                      rotate: [0, 5, 0, -5, 0],
+                      scale: [1, 1.1, 1]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'easeInOut'
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                  </motion.div>
+                )}
+              </motion.div>
 
-                {/* Social Login Icons */}
-                <div className="flex gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-7 px-2 border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
-                        onClick={() => router.push('/login')}
-                      >
-                        <Chrome className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p className="text-xs">Sign in with Google</p>
-                    </TooltipContent>
-                  </Tooltip>
+              {/* Quick Status */}
+              <StatusPicker
+                currentStatus={status?.status || 'active'}
+                customMessage={status?.customMessage}
+                onStatusChange={handleStatusChange}
+                compact
+              />
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-7 px-2 border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all group"
-                        onClick={() => router.push('/login')}
-                      >
-                        <Github className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p className="text-xs">Sign in with GitHub</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {/* Advanced Features Hints */}
-                <div className="pt-2 space-y-1.5 border-t border-border/30">
-                  {/* Biometric Hint */}
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <Fingerprint className="h-3 w-3 text-primary/60" />
-                    <span>Biometric auth coming soon</span>
-                  </div>
-
-                  {/* Keyboard Shortcut */}
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                    <Command className="h-3 w-3 text-primary/60" />
-                    <span>Press ⌘K to sign in</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Grouped Navigation Categories */}
-          {navigationCategories.map((category, categoryIndex) => {
-            const isExpanded = expandedCategories.has(category.id)
-            const CategoryIcon = category.icon
-            const hasActiveItem = category.items.some(item => item.id === currentView)
-
-            return (
-              <motion.div
-                key={category.id}
-                id={`category-${category.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: categoryIndex * 0.05 }}
-                onMouseEnter={() => setHoveredCategory(category.id)}
-                onMouseLeave={() => setHoveredCategory(null)}
+              {/* Sign Out */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-[10px] gap-1.5 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
+                onClick={handleSignOut}
               >
-                {/* Category Header */}
+                <LogOut className="h-3 w-3" />
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2.5 relative z-10">
+              <div className="flex items-center justify-center gap-2 pb-2">
+                <Shield className="h-4 w-4 text-primary animate-pulse" />
+                <span className="text-xs font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  GUEST MODE
+                </span>
+              </div>
+
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full h-7 text-[10px] gap-1.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85"
+                onClick={() => router.push('/login')}
+              >
+                <LogIn className="h-3 w-3" />
+                Initialize Session
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-[10px] gap-1.5"
+                onClick={() => router.push('/register')}
+              >
+                <Sparkles className="h-3 w-3 text-primary" />
+                Create Account
+              </Button>
+
+              <div className="flex gap-2 pt-2 border-t border-border/50">
                 <Button
                   variant="ghost"
-                  className={cn(
-                    "w-full justify-between h-8 font-semibold text-xs mb-1 group transition-all",
-                    hasActiveItem && "bg-primary/5"
-                  )}
-                  onClick={() => toggleCategory(category.id)}
+                  size="sm"
+                  className="flex-1 h-6 px-2"
+                  onClick={() => router.push('/login')}
                 >
-                  <div className="flex items-center gap-2">
-                    <motion.div
-                      animate={isExpanded ? { rotate: 0 } : { rotate: -90 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </motion.div>
-                    <CategoryIcon 
-                      className="h-3.5 w-3.5" 
-                      style={{ color: category.color }}
-                    />
-                    <span>{category.label}</span>
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className="h-4 px-1.5 text-[9px]"
-                  >
-                    {category.items.length}
-                  </Badge>
+                  <Chrome className="h-3 w-3" />
                 </Button>
-
-                {/* Category Items */}
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-0.5 pl-2 mb-2 overflow-hidden"
-                    >
-                      {category.items.map((item, itemIndex) => {
-                        const Icon = item.icon
-                        const isActive = currentView === item.id
-                        const isLocked = item.requiresAuth && !session?.user
-
-                        return (
-                          <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: itemIndex * 0.03 }}
-                            whileHover={{ x: 4, scale: 1.01 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant={isActive ? "secondary" : "ghost"}
-                                  className={cn(
-                                    "w-full justify-start gap-2 h-8 font-medium text-xs transition-all",
-                                    isActive && "bg-primary/10 text-primary hover:bg-primary/15 shadow-sm",
-                                    isLocked && "opacity-60"
-                                  )}
-                                  onClick={() => onViewChange(item.id)}
-                                  style={isActive ? {
-                                    borderLeft: `2px solid ${category.color}`
-                                  } : undefined}
-                                >
-                                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="flex-1 text-left truncate">{item.label}</span>
-                                  {item.isPro && (
-                                    <Sparkles className="h-3 w-3 text-yellow-500" />
-                                  )}
-                                  {item.badge !== undefined && item.badge > 0 && (
-                                    <Badge 
-                                      variant={isActive ? "default" : "secondary"}
-                                      className="h-4 min-w-4 px-1 text-[10px]"
-                                    >
-                                      {item.badge}
-                                    </Badge>
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="right" className="max-w-xs">
-                                <p className="font-semibold">{item.label}</p>
-                                <p className="text-xs opacity-90">{item.description}</p>
-                                {isLocked && (
-                                  <p className="text-xs text-yellow-500 mt-1">🔒 Sign in required</p>
-                                )}
-                                {item.isPro && (
-                                  <p className="text-xs text-yellow-500 mt-1">✨ Pro Feature</p>
-                                )}
-                              </TooltipContent>
-                            </Tooltip>
-                          </motion.div>
-                        )
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )
-          })}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-6 px-2"
+                  onClick={() => router.push('/login')}
+                >
+                  <Github className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
+      </motion.div>
+
+      {/* Orbital Navigation Toggle */}
+      <div className="px-3 py-2 relative z-20">
+        <Button
+          variant={orbitalMode === 'expanded' ? 'default' : 'outline'}
+          size="sm"
+          className="w-full h-8 text-xs gap-2 font-semibold"
+          onClick={() => setOrbitalMode(mode => mode === 'collapsed' ? 'expanded' : 'collapsed')}
+        >
+          <motion.div
+            animate={{
+              rotate: orbitalMode === 'expanded' ? 360 : 0
+            }}
+            transition={{ duration: 0.5 }}
+          >
+            <Orbit className="h-4 w-4" />
+          </motion.div>
+          {orbitalMode === 'expanded' ? 'Collapse Orbit' : 'Expand Orbit'}
+        </Button>
       </div>
+
+      {/* Main Navigation Area */}
+      <div className="flex-1 relative z-20 overflow-hidden">
+        <AnimatePresence mode="wait">
+          {orbitalMode === 'expanded' ? (
+            <OrbitalNavigationView
+              key="orbital"
+              rings={orbitalRings}
+              currentView={currentView}
+              hoveredNode={hoveredNode}
+              onNodeClick={handleNodeClick}
+              onNodeHover={setHoveredNode}
+              session={session}
+            />
+          ) : (
+            <CompactListView
+              key="list"
+              rings={orbitalRings}
+              currentView={currentView}
+              onNodeClick={handleNodeClick}
+              session={session}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Navigation History Trail */}
+      {navigationHistory.length > 0 && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="px-3 py-2 border-t border-border/50 relative z-20"
+        >
+          <div className="text-[9px] text-muted-foreground mb-1 flex items-center gap-1">
+            <History className="h-2.5 w-2.5" />
+            Recent
+          </div>
+          <div className="flex gap-1 overflow-x-auto">
+            {navigationHistory.slice(-5).map((viewId, index) => {
+              const node = orbitalRings.flatMap(r => r.nodes).find(n => n.id === viewId)
+              if (!node) return null
+              const Icon = node.icon
+              return (
+                <motion.button
+                  key={`${viewId}-${index}`}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center border"
+                  style={{
+                    backgroundColor: node.color + '20',
+                    borderColor: node.color + '50',
+                  }}
+                  onClick={() => onViewChange(viewId)}
+                >
+                  <Icon className="h-3 w-3" style={{ color: node.color }} />
+                </motion.button>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Footer */}
-      <div className="p-3 border-t bg-muted/30">
-        <div className="text-xs text-muted-foreground text-center space-y-0.5">
-          <p className="font-semibold text-[10px]">9TD v9.0 Revolutionary</p>
-          <p className="text-[9px]">Smart Minimap Sidebar</p>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="p-3 border-t relative z-20"
+      >
+        <div className="text-xs text-center space-y-0.5">
+          <div className="flex items-center justify-center gap-1">
+            <motion.div
+              animate={{
+                rotate: 360
+              }}
+              transition={{
+                duration: 8,
+                repeat: Infinity,
+                ease: 'linear'
+              }}
+            >
+              <Cpu className="h-3 w-3 text-primary" />
+            </motion.div>
+            <span className="font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              9TD v10.0 ORBITAL
+            </span>
+          </div>
+          <p className="text-[9px] text-muted-foreground">Neural Navigation System</p>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
 
 // ========================================================================
-// SMART MINIMAP SCROLLBAR - REVOLUTIONARY NAVIGATION COMPONENT
+// ORBITAL NAVIGATION VIEW - 3D ROTATING RINGS
 // ========================================================================
-interface SmartMinimapScrollbarProps {
-  categories: NavigationCategory[]
-  expandedCategories: Set<string>
+interface OrbitalNavigationViewProps {
+  rings: OrbitalRing[]
   currentView: SidebarView
-  scrollProgress: number
-  hoveredCategory: string | null
-  onCategoryClick: (categoryId: string) => void
-  onCategoryHover: (categoryId: string | null) => void
+  hoveredNode: SidebarView | null
+  onNodeClick: (nodeId: SidebarView) => void
+  onNodeHover: (nodeId: SidebarView | null) => void
+  session: any
 }
 
-function SmartMinimapScrollbar({
-  categories,
-  expandedCategories,
+function OrbitalNavigationView({
+  rings,
   currentView,
-  scrollProgress,
-  hoveredCategory,
-  onCategoryClick,
-  onCategoryHover,
-}: SmartMinimapScrollbarProps) {
+  hoveredNode,
+  onNodeClick,
+  onNodeHover,
+  session
+}: OrbitalNavigationViewProps) {
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-2 z-50 group">
-      {/* Background Track */}
-      <div className="absolute inset-y-0 right-0 w-1 bg-border/20 rounded-full" />
-      
-      {/* Color-coded Sections */}
-      <div className="absolute inset-y-0 right-0 w-1 flex flex-col">
-        {categories.map((category, index) => {
-          const hasActiveItem = category.items.some(item => item.id === currentView)
-          const isHovered = hoveredCategory === category.id
-          const heightPercent = 100 / categories.length
-          
-          return (
-            <Tooltip key={category.id}>
-              <TooltipTrigger asChild>
-                <motion.button
-                  className="relative"
-                  style={{
-                    height: `${heightPercent}%`,
-                  }}
-                  whileHover={{ scale: 1.5, x: -2 }}
-                  onClick={() => onCategoryClick(category.id)}
-                  onMouseEnter={() => onCategoryHover(category.id)}
-                  onMouseLeave={() => onCategoryHover(null)}
-                >
-                  {/* Section Color */}
-                  <div 
-                    className={cn(
-                      "absolute inset-0 right-0 w-1 transition-all",
-                      hasActiveItem && "w-2 shadow-lg",
-                      isHovered && "w-3"
-                    )}
-                    style={{
-                      backgroundColor: category.color,
-                      opacity: hasActiveItem ? 0.9 : isHovered ? 0.6 : 0.3,
-                    }}
-                  />
-                  
-                  {/* Active Indicator */}
-                  {hasActiveItem && (
-                    <motion.div
-                      className="absolute inset-0 right-0"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div 
-                        className="absolute inset-0 right-0 w-2 animate-pulse-smooth"
-                        style={{
-                          backgroundColor: category.color,
-                          boxShadow: `0 0 8px ${category.color}`,
-                        }}
-                      />
-                    </motion.div>
-                  )}
-                  
-                  {/* Hover Glow */}
-                  {isHovered && (
-                    <motion.div
-                      className="absolute inset-0 right-0 w-3"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.4 }}
-                      style={{
-                        backgroundColor: category.color,
-                        filter: 'blur(4px)',
-                      }}
-                    />
-                  )}
-                </motion.button>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <span className="font-semibold">{category.label}</span>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-      </div>
-      
-      {/* Scroll Progress Thumb */}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      className="relative w-full h-full flex items-center justify-center"
+    >
+      {/* Central Hub */}
       <motion.div
-        className="absolute right-0 w-2 h-12 bg-primary rounded-full shadow-lg pointer-events-none"
+        className="absolute"
         style={{
-          top: `${scrollProgress * (100 - 12)}%`,
-          boxShadow: '0 0 12px var(--primary)',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
         }}
         animate={{
-          opacity: [0.6, 1, 0.6],
+          scale: [1, 1.1, 1],
+          rotate: 360
         }}
         transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
+          scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+          rotate: { duration: 20, repeat: Infinity, ease: 'linear' }
         }}
-      />
-      
-      {/* Minimap Labels (on hover) */}
-      <AnimatePresence>
-        {hoveredCategory && (
+      >
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary via-purple-600 to-pink-600 flex items-center justify-center shadow-2xl relative overflow-hidden">
           <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+            animate={{
+              x: ['-100%', '200%']
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: 'linear'
+            }}
+          />
+          <Cpu className="h-6 w-6 text-white relative z-10" />
+        </div>
+      </motion.div>
+
+      {/* Orbital Rings with Nodes */}
+      {rings.map((ring, ringIndex) => {
+        const RingIcon = ring.icon
+        return (
+          <motion.div
+            key={ring.id}
+            className="absolute"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
+            animate={{
+              rotate: 360
+            }}
+            transition={{
+              duration: 30 + ringIndex * 10,
+              repeat: Infinity,
+              ease: 'linear'
+            }}
           >
-            <div className="glass-card px-3 py-2 rounded-lg shadow-xl border">
-              <div className="flex items-center gap-2">
-                {categories.find(c => c.id === hoveredCategory)?.icon && (
-                  <div>
-                    {(() => {
-                      const Icon = categories.find(c => c.id === hoveredCategory)!.icon
-                      return <Icon className="h-4 w-4" style={{ 
-                        color: categories.find(c => c.id === hoveredCategory)!.color 
-                      }} />
-                    })()}
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-semibold">
-                    {categories.find(c => c.id === hoveredCategory)?.label}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {categories.find(c => c.id === hoveredCategory)?.items.length} items
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Ring circle */}
+            <div
+              className="absolute rounded-full border border-dashed opacity-20"
+              style={{
+                width: ring.radius * 2,
+                height: ring.radius * 2,
+                left: -ring.radius,
+                top: -ring.radius,
+                borderColor: ring.color,
+              }}
+            />
+
+            {/* Nodes on the ring */}
+            {ring.nodes.map((node, nodeIndex) => {
+              const Icon = node.icon
+              const isActive = currentView === node.id
+              const isHovered = hoveredNode === node.id
+              const isLocked = node.requiresAuth && !session?.user
+              
+              const x = Math.cos((node.angle * Math.PI) / 180) * ring.radius
+              const y = Math.sin((node.angle * Math.PI) / 180) * ring.radius
+
+              return (
+                <Tooltip key={node.id}>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      className="absolute"
+                      style={{
+                        left: x - 16,
+                        top: y - 16,
+                      }}
+                      animate={{
+                        scale: isActive ? 1.3 : isHovered ? 1.2 : 1,
+                        rotate: isActive ? 360 : 0,
+                      }}
+                      whileHover={{ scale: 1.4 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{
+                        rotate: { duration: 0.5 }
+                      }}
+                      onClick={() => onNodeClick(node.id)}
+                      onMouseEnter={() => onNodeHover(node.id)}
+                      onMouseLeave={() => onNodeHover(null)}
+                      disabled={isLocked}
+                    >
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all relative overflow-hidden",
+                          isActive && "shadow-2xl ring-2 ring-offset-2",
+                          isLocked && "opacity-50 cursor-not-allowed"
+                        )}
+                        style={{
+                          backgroundColor: isActive ? ring.color : ring.color + '30',
+                          borderColor: ring.color,
+                          boxShadow: isActive ? `0 0 20px ${ring.color}` : 'none',
+                        }}
+                      >
+                        {/* Holographic effect */}
+                        {isActive && (
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                            animate={{
+                              x: ['-100%', '200%']
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: 'linear'
+                            }}
+                          />
+                        )}
+                        
+                        <Icon 
+                          className={cn(
+                            "h-5 w-5 relative z-10",
+                            isActive ? "text-white" : ""
+                          )} 
+                          style={{ color: isActive ? 'white' : ring.color }}
+                        />
+                        
+                        {node.isPro && (
+                          <Sparkles className="absolute top-0 right-0 h-3 w-3 text-yellow-500" />
+                        )}
+                        
+                        {node.badge !== undefined && node.badge > 0 && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">
+                            {node.badge}
+                          </div>
+                        )}
+                      </div>
+                    </motion.button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-xs">{node.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{node.description}</p>
+                      {isLocked && (
+                        <p className="text-[10px] text-yellow-500">🔒 Sign in required</p>
+                      )}
+                      {node.isPro && (
+                        <p className="text-[10px] text-yellow-500">✨ Pro Feature</p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )
+            })}
           </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        )
+      })}
+    </motion.div>
+  )
+}
+
+// ========================================================================
+// COMPACT LIST VIEW - TRADITIONAL FALLBACK
+// ========================================================================
+interface CompactListViewProps {
+  rings: OrbitalRing[]
+  currentView: SidebarView
+  onNodeClick: (nodeId: SidebarView) => void
+  session: any
+}
+
+function CompactListView({
+  rings,
+  currentView,
+  onNodeClick,
+  session
+}: CompactListViewProps) {
+  const [expandedRings, setExpandedRings] = useState<Set<string>>(new Set(['core']))
+
+  const toggleRing = (ringId: string) => {
+    setExpandedRings(prev => {
+      const next = new Set(prev)
+      if (next.has(ringId)) {
+        next.delete(ringId)
+      } else {
+        next.add(ringId)
+      }
+      return next
+    })
+  }
+
+  return (
+    <ScrollArea className="h-full px-3">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="space-y-2 py-2"
+      >
+        {rings.map((ring, ringIndex) => {
+          const RingIcon = ring.icon
+          const isExpanded = expandedRings.has(ring.id)
+          const hasActiveNode = ring.nodes.some(n => n.id === currentView)
+
+          return (
+            <motion.div
+              key={ring.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: ringIndex * 0.05 }}
+            >
+              {/* Ring Header */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "w-full justify-between h-7 text-xs font-semibold mb-1",
+                  hasActiveNode && "bg-primary/5"
+                )}
+                onClick={() => toggleRing(ring.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ rotate: isExpanded ? 0 : -90 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </motion.div>
+                  <RingIcon className="h-3.5 w-3.5" style={{ color: ring.color }} />
+                  <span>{ring.label}</span>
+                </div>
+                <Badge 
+                  variant="secondary" 
+                  className="h-4 px-1.5 text-[9px]"
+                  style={{ backgroundColor: ring.color + '20', color: ring.color }}
+                >
+                  {ring.nodes.length}
+                </Badge>
+              </Button>
+
+              {/* Ring Nodes */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-0.5 pl-2 mb-2 overflow-hidden"
+                  >
+                    {ring.nodes.map((node, nodeIndex) => {
+                      const Icon = node.icon
+                      const isActive = currentView === node.id
+                      const isLocked = node.requiresAuth && !session?.user
+
+                      return (
+                        <motion.div
+                          key={node.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: nodeIndex * 0.03 }}
+                          whileHover={{ x: 4 }}
+                        >
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={isActive ? "secondary" : "ghost"}
+                                size="sm"
+                                className={cn(
+                                  "w-full justify-start gap-2 h-7 text-xs",
+                                  isActive && "bg-primary/10 text-primary shadow-sm",
+                                  isLocked && "opacity-50"
+                                )}
+                                onClick={() => onNodeClick(node.id)}
+                                style={isActive ? {
+                                  borderLeft: `2px solid ${ring.color}`
+                                } : undefined}
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                                <span className="flex-1 text-left truncate">{node.label}</span>
+                                {node.isPro && <Sparkles className="h-3 w-3 text-yellow-500" />}
+                                {node.badge !== undefined && node.badge > 0 && (
+                                  <Badge 
+                                    variant={isActive ? "default" : "secondary"}
+                                    className="h-4 px-1 text-[9px]"
+                                  >
+                                    {node.badge}
+                                  </Badge>
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <p className="font-semibold text-xs">{node.label}</p>
+                              <p className="text-[10px]">{node.description}</p>
+                              {isLocked && <p className="text-[10px] text-yellow-500">🔒 Sign in required</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </motion.div>
+                      )
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )
+        })}
+      </motion.div>
+    </ScrollArea>
   )
 }
