@@ -943,9 +943,15 @@ export default function Home() {
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
-                {settings.showLogo && <Logo />}
-                <DashboardTitle settings={settings} />
-                <AnimatedTitle />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <DashboardTitle settings={settings} />
+                    <AnimatedTitle />
+                  </div>
+                  {settings.showLogo && (
+                    <Logo />
+                  )}
+                </div>
               </div>
               
               {/* Search Bar and Actions */}
