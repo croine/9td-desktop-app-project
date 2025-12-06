@@ -5,9 +5,10 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { KeyRound, Mail, User, Loader2, CheckCircle2, Copy, CheckCheck, ArrowRight, CreditCard, Zap, Shield, Lock, Clock, Infinity, Sparkles, Star } from 'lucide-react'
+import { KeyRound, Mail, User, Loader2, CheckCircle2, Copy, CheckCheck, ArrowRight, CreditCard, Zap, Shield, Lock, Clock, Infinity, Sparkles, Star, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 
 export function LicenseKeyPurchase() {
   const [email, setEmail] = useState('')
@@ -231,7 +232,7 @@ export function LicenseKeyPurchase() {
               </div>
 
               {/* Right: Purchase Form */}
-              <div className="relative">
+              <div className="relative space-y-6">
                 <Card className="relative p-10 rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xl shadow-xl">
                   <div className="space-y-8">
                     <div className="space-y-2">
@@ -276,10 +277,14 @@ export function LicenseKeyPurchase() {
                           disabled={isLoading}
                           required
                         />
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Clock className="h-3 w-3" />
-                          License key will be sent instantly after payment
-                        </p>
+                        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-500/30 rounded-xl p-3 mt-2">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2 font-medium">
+                            <Mail className="h-4 w-4 shrink-0 mt-0.5" />
+                            <span>
+                              <strong className="font-bold">License key will be sent to this email</strong> immediately after payment. Please ensure it's correct and check your spam folder.
+                            </span>
+                          </p>
+                        </div>
                       </div>
 
                       <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-2xl p-6 border border-border/50">
@@ -314,11 +319,11 @@ export function LicenseKeyPurchase() {
                         {isLoading ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Opening Checkout...
+                            Opening Stripe Checkout...
                           </>
                         ) : (
                           <>
-                            <CreditCard className="h-5 w-5 mr-2" />
+                            <Lock className="h-5 w-5 mr-2" />
                             Proceed to Secure Checkout
                             <ArrowRight className="h-5 w-5 ml-2" />
                           </>
@@ -343,26 +348,91 @@ export function LicenseKeyPurchase() {
                   </div>
                 </Card>
 
-                {/* Comparison callout */}
-                <div className="mt-6">
-                  <Card className="p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/50 dark:to-orange-950/50">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
-                        <Star className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="font-semibold text-amber-900 dark:text-amber-100">
-                          Compare: Pro Subscription vs License
-                        </p>
-                        <div className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
-                          <p>• Pro Monthly: <span className="font-semibold">$12/month = $144/year</span></p>
-                          <p>• Pro Annual: <span className="font-semibold">$115/year</span></p>
-                          <p className="text-emerald-700 dark:text-emerald-300 font-bold">• License Key: $49 one-time 🎉</p>
-                        </div>
+                {/* Payment Methods & Stripe Badge */}
+                <Card className="p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-xl">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                        Accepted Payment Methods
+                      </h3>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#635BFF]/10 border border-[#635BFF]/20">
+                        <svg className="h-4 w-4" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M13.3 11.5c0-.7.6-1.2 1.4-1.2 1.2 0 2.8.4 4 1.1V8.5c-1.3-.5-2.6-.8-4-.8-3.3 0-5.5 1.7-5.5 4.6 0 4.5 6.2 3.8 6.2 5.7 0 .7-.7 1.3-1.6 1.3-1.4 0-3.2-.6-4.6-1.4v2.9c1.5.7 3 1 4.6 1 3.4 0 5.7-1.7 5.7-4.6-.1-4.8-6.2-4-6.2-5.7z" fill="#635BFF"/>
+                        </svg>
+                        <span className="text-xs font-bold text-[#635BFF]">Powered by Stripe</span>
                       </div>
                     </div>
-                  </Card>
-                </div>
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                      {/* Credit Card Icons */}
+                      <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-muted-foreground">Visa</span>
+                      </div>
+                      <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-muted-foreground">Mastercard</span>
+                      </div>
+                      <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-muted-foreground">Amex</span>
+                      </div>
+                      <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+                        <CreditCard className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-muted-foreground">Discover</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        All major credit cards and debit cards accepted. Secured by bank-level encryption.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Email Guarantee Badge */}
+                <Card className="p-6 rounded-2xl border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/50 dark:to-teal-950/50">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shrink-0">
+                      <Mail className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        Guaranteed Email Delivery
+                      </p>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                        Your license key will be automatically sent to your email <strong>within seconds</strong> of completing payment. We use reliable email infrastructure to ensure delivery.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <AlertCircle className="h-4 w-4 text-emerald-600" />
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          Don't see it? Check your spam/junk folder or contact support
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Comparison callout */}
+                <Card className="p-6 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/50 dark:to-orange-950/50">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
+                      <Star className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-semibold text-amber-900 dark:text-amber-100">
+                        Compare: Pro Subscription vs License
+                      </p>
+                      <div className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                        <p>• Pro Monthly: <span className="font-semibold">$12/month = $144/year</span></p>
+                        <p>• Pro Annual: <span className="font-semibold">$115/year</span></p>
+                        <p className="text-emerald-700 dark:text-emerald-300 font-bold">• License Key: $49 one-time 🎉</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
             </div>
           </motion.div>
