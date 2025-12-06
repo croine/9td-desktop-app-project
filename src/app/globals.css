@@ -185,22 +185,22 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    /* Enhanced Background with Better Definition */
+    /* Much Darker Background for Actual Visibility */
     background: linear-gradient(135deg, 
-      oklch(0.96 0.008 280) 0%, 
-      oklch(0.94 0.015 260) 30%,
-      oklch(0.95 0.012 270) 60%, 
-      oklch(0.93 0.018 300) 100%);
+      oklch(0.88 0.015 280) 0%, 
+      oklch(0.85 0.020 260) 30%,
+      oklch(0.86 0.018 270) 60%, 
+      oklch(0.83 0.025 300) 100%);
     background-attachment: fixed;
-    /* Add subtle texture pattern */
+    /* Add visible texture pattern */
     background-image: 
       linear-gradient(135deg, 
-        oklch(0.96 0.008 280) 0%, 
-        oklch(0.94 0.015 260) 30%,
-        oklch(0.95 0.012 270) 60%, 
-        oklch(0.93 0.018 300) 100%),
-      radial-gradient(circle at 20% 50%, rgba(147, 51, 234, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
+        oklch(0.88 0.015 280) 0%, 
+        oklch(0.85 0.020 260) 30%,
+        oklch(0.86 0.018 270) 60%, 
+        oklch(0.83 0.025 300) 100%),
+      radial-gradient(circle at 20% 50%, rgba(147, 51, 234, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
   }
   .dark body {
     /* Dark Mode Professional Gradient */
