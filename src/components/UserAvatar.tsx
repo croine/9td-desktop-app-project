@@ -35,7 +35,10 @@ import {
   Crown,
   CreditCard,
   Star,
-  Users
+  Users,
+  Sparkles,
+  Zap,
+  TrendingUp
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -106,41 +109,53 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
   const planName = currentPlan?.name || 'Free'
   const isPaidPlan = planName !== 'Free'
 
-  // Plan badge styling based on tier
-  const getPlanBadgeStyles = () => {
+  // Enhanced Plan Badge Configuration with modern, eye-catching designs
+  const getPlanBadgeConfig = () => {
     switch (planName.toLowerCase()) {
       case 'pro':
         return {
-          container: 'relative overflow-hidden bg-gradient-to-br from-violet-500/90 via-purple-500/90 to-fuchsia-500/90 dark:from-violet-400/90 dark:via-purple-400/90 dark:to-fuchsia-400/90 border-2 border-violet-300/60 dark:border-violet-400/60 shadow-2xl shadow-violet-500/50 dark:shadow-violet-400/50 hover:shadow-violet-500/70 dark:hover:shadow-violet-400/70 hover:scale-[1.08] hover:-translate-y-0.5',
-          text: 'relative z-10 text-white dark:text-white font-bold tracking-wide drop-shadow-lg',
-          icon: 'relative z-10 text-white/90 dark:text-white/90 drop-shadow-md',
-          shimmer: true,
-          particles: true,
-          iconComponent: Crown
+          gradient: 'bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600',
+          glowColor: 'shadow-violet-500/50 hover:shadow-violet-500/80',
+          ringColor: 'ring-violet-400/30',
+          textGradient: 'bg-gradient-to-r from-violet-100 to-fuchsia-100 bg-clip-text text-transparent',
+          icon: Sparkles,
+          iconColor: 'text-violet-200',
+          shimmer: 'from-transparent via-white/40 to-transparent',
+          badge: '✨',
+          hoverScale: 'hover:scale-105',
+          animation: 'animate-pulse-smooth'
         }
       case 'team':
         return {
-          container: 'relative overflow-hidden bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 dark:from-amber-300 dark:via-yellow-400 dark:to-orange-400 border-2 border-amber-200/80 dark:border-amber-300/80 shadow-2xl shadow-amber-500/60 dark:shadow-amber-400/60 hover:shadow-amber-500/80 dark:hover:shadow-amber-400/80 hover:scale-[1.08] hover:-translate-y-0.5',
-          text: 'relative z-10 text-amber-900 dark:text-amber-950 font-bold tracking-wide drop-shadow-lg',
-          icon: 'relative z-10 text-amber-800/90 dark:text-amber-900/90 drop-shadow-md',
-          shimmer: true,
-          particles: true,
-          iconComponent: Users
+          gradient: 'bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500',
+          glowColor: 'shadow-amber-500/50 hover:shadow-amber-500/80',
+          ringColor: 'ring-amber-400/30',
+          textGradient: 'bg-gradient-to-r from-amber-50 to-yellow-50 bg-clip-text text-transparent',
+          icon: Crown,
+          iconColor: 'text-amber-100',
+          shimmer: 'from-transparent via-white/50 to-transparent',
+          badge: '👑',
+          hoverScale: 'hover:scale-105',
+          animation: 'animate-pulse-smooth'
         }
       default: // Free
         return {
-          container: 'relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-2 border-slate-300/60 dark:border-slate-600/60 shadow-lg shadow-slate-500/20 dark:shadow-slate-900/40 hover:shadow-slate-500/30 dark:hover:shadow-slate-800/50 hover:scale-105',
-          text: 'relative z-10 text-slate-700 dark:text-slate-200 font-semibold tracking-wide',
-          icon: 'relative z-10 text-slate-600 dark:text-slate-300',
-          shimmer: false,
-          particles: false,
-          iconComponent: Star
+          gradient: 'bg-gradient-to-r from-slate-500 via-slate-600 to-slate-500',
+          glowColor: 'shadow-slate-500/20 hover:shadow-slate-500/40',
+          ringColor: 'ring-slate-400/20',
+          textGradient: 'text-slate-100',
+          icon: Star,
+          iconColor: 'text-slate-300',
+          shimmer: 'from-transparent via-white/20 to-transparent',
+          badge: '⭐',
+          hoverScale: 'hover:scale-105',
+          animation: ''
         }
     }
   }
 
-  const badgeStyles = getPlanBadgeStyles()
-  const BadgeIcon = badgeStyles.iconComponent
+  const badgeConfig = getPlanBadgeConfig()
+  const BadgeIcon = badgeConfig.icon
 
   // Fetch user preferences when session changes
   useEffect(() => {
@@ -370,40 +385,89 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
 
   return (
     <div className="flex items-center gap-3">
-      {/* Enhanced Plan Badge - Always Visible */}
-      <Button
-        variant="ghost"
-        size="sm"
+      {/* Revolutionary Modern Plan Badge */}
+      <button
         onClick={handleViewPricing}
-        className={`group relative h-10 px-5 gap-2.5 font-display text-sm transition-all duration-300 ${badgeStyles.container}`}
+        className={`
+          group relative h-9 px-4 rounded-full
+          ${badgeConfig.gradient}
+          ${badgeConfig.glowColor}
+          ring-1 ${badgeConfig.ringColor}
+          shadow-lg backdrop-blur-sm
+          transition-all duration-500 ease-out
+          ${badgeConfig.hoverScale}
+          hover:-translate-y-0.5
+          ${badgeConfig.animation}
+          overflow-hidden
+          flex items-center gap-2
+        `}
       >
-        {/* Shimmer effect for premium plans */}
-        {badgeStyles.shimmer && (
-          <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-        )}
+        {/* Animated shimmer overlay */}
+        <div 
+          className={`
+            absolute inset-0 -translate-x-full 
+            bg-gradient-to-r ${badgeConfig.shimmer}
+            ${isPaidPlan ? 'group-hover:animate-[shimmer_1.5s_ease-in-out_infinite]' : ''}
+          `}
+        />
         
-        {/* Animated particles for premium plans */}
-        {badgeStyles.particles && (
+        {/* Subtle particles for premium plans */}
+        {isPaidPlan && (
           <>
-            <div className="absolute top-1 left-2 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.5s' }} />
-            <div className="absolute top-2 right-3 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '500ms', animationDuration: '1.5s' }} />
-            <div className="absolute bottom-2 left-4 w-1 h-1 bg-white/60 rounded-full animate-pulse" style={{ animationDelay: '1000ms', animationDuration: '1.5s' }} />
+            <div 
+              className="absolute top-1 left-3 w-1 h-1 bg-white/70 rounded-full animate-ping" 
+              style={{ animationDuration: '2s', animationDelay: '0s' }} 
+            />
+            <div 
+              className="absolute top-2 right-4 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
+              style={{ animationDuration: '2s', animationDelay: '0.7s' }} 
+            />
+            <div 
+              className="absolute bottom-1.5 left-5 w-0.5 h-0.5 bg-white/70 rounded-full animate-ping" 
+              style={{ animationDuration: '2s', animationDelay: '1.4s' }} 
+            />
           </>
         )}
         
-        {/* Icon - Now shown for ALL plans */}
-        <BadgeIcon className={`h-4 w-4 ${badgeStyles.icon} transition-transform duration-300 group-hover:scale-110 ${isPaidPlan ? 'group-hover:-rotate-12' : 'group-hover:rotate-12'}`} />
+        {/* Content container */}
+        <div className="relative z-10 flex items-center gap-2">
+          {/* Animated Icon */}
+          <BadgeIcon 
+            className={`
+              h-3.5 w-3.5 ${badgeConfig.iconColor}
+              transition-all duration-300
+              ${isPaidPlan ? 'group-hover:rotate-12 group-hover:scale-110' : 'group-hover:scale-110'}
+              drop-shadow-sm
+            `}
+          />
+          
+          {/* Plan Name with gradient text */}
+          <span 
+            className={`
+              ${badgeConfig.textGradient}
+              font-semibold text-xs tracking-wide
+              drop-shadow-sm
+            `}
+          >
+            {planName}
+          </span>
+          
+          {/* Optional: Emoji badge for extra flair */}
+          <span className="text-xs opacity-90 group-hover:scale-125 transition-transform duration-300">
+            {badgeConfig.badge}
+          </span>
+        </div>
         
-        {/* Text */}
-        <span className={`${badgeStyles.text} uppercase text-xs tracking-wider`}>
-          {planName}
-        </span>
-        
-        {/* Hover gradient overlay */}
-        {isPaidPlan && (
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        )}
-      </Button>
+        {/* Hover glow effect */}
+        <div 
+          className="
+            absolute inset-0 rounded-full
+            bg-gradient-to-r from-white/0 via-white/10 to-white/0
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-500
+          "
+        />
+      </button>
 
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
