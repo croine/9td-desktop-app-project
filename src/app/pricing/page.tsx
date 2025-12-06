@@ -9,10 +9,12 @@ import { PlanUsageIndicator } from "@/components/PlanUsageIndicator"
 import { LicenseKeyPurchase } from "@/components/LicenseKeyPurchase"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Check, Zap, Crown, Users, Star, Sparkles, Lock, TrendingUp, Shield, Rocket, Target, Brain, Palette, FileDown, Puzzle, Workflow, Mail, HardDrive, ListChecks, Filter, Flag, BarChart3, Bell, Database, KeyRound, CreditCard, CheckCircle2, XCircle, ArrowRight, Info } from "lucide-react"
+import { ArrowLeft, Check, Zap, Crown, Users, Star, Sparkles, Lock, TrendingUp, Shield, Rocket, Target, Brain, Palette, FileDown, Puzzle, Workflow, Mail, HardDrive, ListChecks, Filter, Flag, BarChart3, Bell, Database, KeyRound, CreditCard, CheckCircle2, XCircle, ArrowRight, Info, Clock, Infinity, MessageSquare, Calendar, Globe, X } from "lucide-react"
 import { PageContainer } from "@/components/LoadingStates"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 const productDetails = [
   {
@@ -228,6 +230,7 @@ export default function PricingPage() {
   
   const urlTab = searchParams.get('tab')
   const [activeTab, setActiveTab] = useState(urlTab === 'license' ? 'license' : 'subscription')
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   
   const currentPlan = customer?.products?.at(-1)
   const planName = currentPlan?.name || "Free"
@@ -264,11 +267,24 @@ export default function PricingPage() {
     }
   }, [urlTab])
 
+  const getPrice = (baseMonthly: number) => {
+    if (billingCycle === 'annual') {
+      return Math.floor(baseMonthly * 0.8) // 20% discount for annual
+    }
+    return baseMonthly
+  }
+
   return (
     <PageContainer>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        {/* Decorative Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-purple-500/10 to-transparent rounded-full blur-3xl" />
+        </div>
+
         {/* Navigation */}
-        <div className="border-b border-border/50">
+        <div className="relative border-b border-border/50 bg-background/80 backdrop-blur-sm">
           <div className="container mx-auto px-4 py-4">
             <Button
               variant="ghost"
@@ -276,51 +292,69 @@ export default function PricingPage() {
               className="gap-2 hover:bg-accent"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              Back
             </Button>
           </div>
         </div>
 
-        {/* Hero Section - Clean & Focused */}
-        <div className="container mx-auto px-4 py-20">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
+        {/* Hero Section */}
+        <div className="relative container mx-auto px-4 py-16 md:py-24">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
             {session?.user && !isLoading && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
-                <div className={`w-2 h-2 rounded-full ${
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
+                <div className={`w-2 h-2 rounded-full animate-pulse ${
                   planName === "Free" ? "bg-slate-500" :
-                  planName === "Pro" ? "bg-primary" :
-                  "bg-amber-500"
+                  planName === "Pro" ? "bg-blue-500" :
+                  "bg-purple-500"
                 }`} />
-                <span className="text-sm text-muted-foreground">Currently on</span>
-                <span className="text-sm font-semibold text-foreground">{planName}</span>
+                <span className="text-sm text-muted-foreground">Your current plan:</span>
+                <span className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{planName}</span>
               </div>
             )}
             
-            <h1 className="font-display text-5xl md:text-6xl font-bold tracking-tight">
-              Simple, Transparent Pricing
-            </h1>
-            
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose the plan that fits your workflow. Upgrade, downgrade, or cancel anytime.
-            </p>
+            <div className="space-y-4">
+              <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                Pricing that grows with you
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto font-medium">
+                Start free, upgrade when you're ready. No hidden fees, no surprises.
+              </p>
+            </div>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-6 pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>14-day money back</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>Cancel anytime</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span>No credit card required</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Pricing Tabs */}
-        <div className="container mx-auto px-4 pb-16">
+        <div className="relative container mx-auto px-4 pb-24">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex justify-center mb-12">
-              <TabsList className="inline-flex h-11 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+              <TabsList className="inline-flex h-14 items-center justify-center rounded-xl bg-muted/50 backdrop-blur-sm p-1.5 border border-border/50">
                 <TabsTrigger 
                   value="subscription" 
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+                  className="relative px-8 py-3 text-sm font-semibold rounded-lg transition-all data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-foreground gap-2"
                 >
                   <CreditCard className="h-4 w-4" />
-                  Subscription
+                  Subscription Plans
                 </TabsTrigger>
                 <TabsTrigger 
                   value="license" 
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-2"
+                  className="relative px-8 py-3 text-sm font-semibold rounded-lg transition-all data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-foreground gap-2"
                 >
                   <KeyRound className="h-4 w-4" />
                   One-Time License
@@ -328,194 +362,420 @@ export default function PricingPage() {
               </TabsList>
             </div>
 
-            <TabsContent value="subscription" className="space-y-16 mt-0">
-              {/* Pricing Table */}
-              <PricingTable productDetails={productDetails} />
-
-              {/* Current Usage - Only show for logged in users */}
-              {session?.user && (
-                <div className="max-w-3xl mx-auto">
-                  <div className="mb-8">
-                    <h2 className="font-display text-2xl font-semibold mb-2">Your Usage</h2>
-                    <p className="text-muted-foreground">
-                      Track your feature usage across the current billing period
-                    </p>
-                  </div>
-                  <PlanUsageIndicator />
+            <TabsContent value="subscription" className="space-y-20 mt-0">
+              {/* Billing Toggle */}
+              <div className="flex justify-center">
+                <div className="inline-flex items-center gap-4 p-2 rounded-xl bg-muted/50 backdrop-blur-sm border border-border/50">
+                  <Label 
+                    htmlFor="billing-toggle" 
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-all ${
+                      billingCycle === 'monthly' ? 'bg-background shadow-md' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setBillingCycle('monthly')}
+                  >
+                    Monthly
+                  </Label>
+                  <Switch
+                    id="billing-toggle"
+                    checked={billingCycle === 'annual'}
+                    onCheckedChange={(checked) => setBillingCycle(checked ? 'annual' : 'monthly')}
+                  />
+                  <Label 
+                    htmlFor="billing-toggle" 
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-all flex items-center gap-2 ${
+                      billingCycle === 'annual' ? 'bg-background shadow-md' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setBillingCycle('annual')}
+                  >
+                    Annual
+                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold">
+                      Save 20%
+                    </span>
+                  </Label>
                 </div>
-              )}
+              </div>
 
-              {/* Feature Comparison */}
-              <div className="max-w-6xl mx-auto">
-                <div className="mb-12">
-                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
-                    What's included in each plan
-                  </h2>
-                  <p className="text-center text-muted-foreground">
-                    All plans include our core features. Upgrade for advanced capabilities.
-                  </p>
+              {/* Pricing Cards */}
+              <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                {/* Free Plan */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+                  <Card className="relative h-full p-8 rounded-3xl border-2 border-border/50 bg-gradient-to-br from-slate-50/80 to-slate-100/80 dark:from-slate-900/80 dark:to-slate-800/80 backdrop-blur-xl overflow-hidden">
+                    {/* Decorative pattern */}
+                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+                      <div className="grid grid-cols-4 gap-2 rotate-12">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                          <div key={i} className="w-2 h-2 rounded-sm bg-slate-500" />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="relative space-y-6">
+                      <div className="space-y-2">
+                        <h3 className="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">
+                          Starter
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                          For individuals just getting started
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-display text-5xl font-bold text-slate-900 dark:text-slate-100">
+                            $0
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">
+                            /month
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-500">
+                          Free forever
+                        </p>
+                      </div>
+
+                      <Button 
+                        className="w-full h-12 rounded-xl font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-900 shadow-lg hover:shadow-xl transition-all"
+                        onClick={() => router.push(session?.user ? "/" : "/register")}
+                      >
+                        Get Started Free
+                      </Button>
+
+                      <div className="space-y-4 pt-6 border-t border-slate-300 dark:border-slate-700">
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          What's included:
+                        </p>
+                        <ul className="space-y-3">
+                          {[
+                            "50 tasks per month",
+                            "2 projects",
+                            "Basic task views",
+                            "Mobile app access",
+                            "7-day activity history"
+                          ].map((feature) => (
+                            <li key={feature} className="flex items-start gap-3">
+                              <div className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-slate-900/10 dark:bg-slate-100/10 flex items-center justify-center">
+                                <Check className="h-3 w-3 text-slate-700 dark:text-slate-300" />
+                              </div>
+                              <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-6">
-                  {/* Pro Features */}
-                  <Card className="p-6 border-2">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Zap className="h-4 w-4 text-primary" />
-                      </div>
-                      <h3 className="font-semibold">Pro Features</h3>
+                {/* Pro Plan */}
+                <div className="relative group lg:-mt-4">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-3xl blur-xl opacity-60 group-hover:opacity-80 transition-opacity" />
+                  <Card className="relative h-full p-8 rounded-3xl border-2 border-blue-500/50 bg-gradient-to-br from-blue-50/90 to-purple-50/90 dark:from-blue-950/90 dark:to-purple-950/90 backdrop-blur-xl overflow-hidden shadow-2xl">
+                    {/* Popular Badge */}
+                    <div className="absolute -top-1 -right-1 px-4 py-2 rounded-bl-2xl rounded-tr-3xl bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold shadow-lg">
+                      MOST POPULAR
                     </div>
-                    <ul className="space-y-3 text-sm">
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>1,000 tasks per month</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>Advanced views (Kanban, Gantt, Timeline)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>AI-powered suggestions</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>Time tracking & analytics</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <span>Custom automation rules</span>
-                      </li>
-                    </ul>
-                  </Card>
 
-                  {/* Team Features */}
-                  <Card className="p-6 border-2">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                        <Users className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                    {/* Decorative pattern */}
+                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+                      <div className="grid grid-cols-4 gap-2 -rotate-12">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                          <div key={i} className="w-2 h-2 rounded-full bg-blue-500" />
+                        ))}
                       </div>
-                      <h3 className="font-semibold">Team Features</h3>
                     </div>
-                    <ul className="space-y-3 text-sm">
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                        <span>Unlimited tasks</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                        <span>Team messaging & collaboration</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                        <span>Advanced permissions</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                        <span>Team analytics dashboard</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                        <span>API access & integrations</span>
-                      </li>
-                    </ul>
-                  </Card>
+                    
+                    <div className="relative space-y-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                          <h3 className="font-display text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            Pro
+                          </h3>
+                        </div>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                          For professionals who need more power
+                        </p>
+                      </div>
 
-                  {/* Enterprise */}
-                  <Card className="p-6 border-2">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                        <Shield className="h-4 w-4 text-purple-600 dark:text-purple-500" />
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          {billingCycle === 'annual' && (
+                            <span className="text-2xl font-bold text-blue-500 line-through">
+                              $12
+                            </span>
+                          )}
+                          <span className="font-display text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            ${getPrice(12)}
+                          </span>
+                          <span className="text-blue-600 dark:text-blue-400 font-medium">
+                            /{billingCycle === 'annual' ? 'month' : 'month'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-blue-500 dark:text-blue-400 font-semibold">
+                          {billingCycle === 'annual' ? `$${getPrice(12) * 12} billed annually` : 'Billed monthly'}
+                        </p>
                       </div>
-                      <h3 className="font-semibold">Enterprise Add-ons</h3>
+
+                      <Button 
+                        className="w-full h-12 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all"
+                      >
+                        Upgrade to Pro
+                        <Sparkles className="h-4 w-4 ml-2" />
+                      </Button>
+
+                      <div className="space-y-4 pt-6 border-t border-blue-300 dark:border-blue-800">
+                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                          Everything in Starter, plus:
+                        </p>
+                        <ul className="space-y-3">
+                          {[
+                            "1,000 tasks per month",
+                            "Unlimited projects",
+                            "Advanced views (Kanban, Gantt)",
+                            "Pomodoro timer",
+                            "Time tracking & analytics",
+                            "AI task assistant",
+                            "Custom themes & branding",
+                            "Advanced export (PDF, Excel)",
+                            "Automation workflows",
+                            "5 GB file storage",
+                            "Priority support (24h)"
+                          ].map((feature) => (
+                            <li key={feature} className="flex items-start gap-3">
+                              <div className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                <Check className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                    <ul className="space-y-3 text-sm">
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
-                        <span>SSO & SAML authentication</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
-                        <span>Custom data retention</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
-                        <span>Dedicated account manager</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
-                        <span>SLA guarantees</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-purple-600 dark:text-purple-500 shrink-0 mt-0.5" />
-                        <span>Custom integrations</span>
-                      </li>
-                    </ul>
+                  </Card>
+                </div>
+
+                {/* Team Plan */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-pink-500 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+                  <Card className="relative h-full p-8 rounded-3xl border-2 border-purple-500/50 bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-950/80 dark:to-pink-950/80 backdrop-blur-xl overflow-hidden">
+                    {/* Decorative pattern */}
+                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
+                      <div className="grid grid-cols-4 gap-2">
+                        {Array.from({ length: 16 }).map((_, i) => (
+                          <div key={i} className="w-2 h-2 rounded-full bg-purple-500" />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="relative space-y-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                          <h3 className="font-display text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            Team
+                          </h3>
+                        </div>
+                        <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+                          For teams that need to collaborate
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          {billingCycle === 'annual' && (
+                            <span className="text-2xl font-bold text-purple-500 line-through">
+                              $24
+                            </span>
+                          )}
+                          <span className="font-display text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            ${getPrice(24)}
+                          </span>
+                          <span className="text-purple-600 dark:text-purple-400 font-medium">
+                            /{billingCycle === 'annual' ? 'month' : 'month'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-purple-500 dark:text-purple-400 font-semibold">
+                          {billingCycle === 'annual' ? `$${getPrice(24) * 12} billed annually` : 'Per user, billed monthly'}
+                        </p>
+                      </div>
+
+                      <Button 
+                        className="w-full h-12 rounded-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all"
+                      >
+                        Upgrade to Team
+                        <Users className="h-4 w-4 ml-2" />
+                      </Button>
+
+                      <div className="space-y-4 pt-6 border-t border-purple-300 dark:border-purple-800">
+                        <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                          Everything in Pro, plus:
+                        </p>
+                        <ul className="space-y-3">
+                          {[
+                            "Unlimited tasks",
+                            "Team messaging",
+                            "Advanced permissions",
+                            "Team analytics dashboard",
+                            "Workload balancing",
+                            "API access",
+                            "Third-party integrations",
+                            "50 GB file storage",
+                            "Daily backups",
+                            "Dedicated support (12h)",
+                            "Advanced security"
+                          ].map((feature) => (
+                            <li key={feature} className="flex items-start gap-3">
+                              <div className="mt-0.5 shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                <Check className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-sm text-purple-900 dark:text-purple-100 font-medium">
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   </Card>
                 </div>
               </div>
 
-              {/* FAQ */}
-              <div className="max-w-3xl mx-auto">
-                <div className="mb-12">
-                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
+              {/* Enterprise CTA */}
+              <div className="max-w-5xl mx-auto">
+                <Card className="relative p-12 rounded-3xl border-2 border-border/50 bg-gradient-to-br from-amber-50/80 to-orange-50/80 dark:from-amber-950/80 dark:to-orange-950/80 backdrop-blur-xl overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-800 dark:to-orange-900 rounded-full blur-3xl opacity-20" />
+                  
+                  <div className="relative grid md:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-4">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                        <Crown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <span className="text-sm font-bold text-amber-700 dark:text-amber-300">ENTERPRISE</span>
+                      </div>
+                      
+                      <h2 className="font-display text-4xl font-bold text-amber-900 dark:text-amber-100">
+                        Need something more?
+                      </h2>
+                      
+                      <p className="text-lg text-amber-700 dark:text-amber-300 font-medium">
+                        Get custom solutions, dedicated support, and enterprise-grade security for large organizations.
+                      </p>
+
+                      <ul className="space-y-2 pt-2">
+                        {[
+                          "Custom user limits",
+                          "SSO & SAML authentication",
+                          "Dedicated account manager",
+                          "SLA guarantees",
+                          "On-premise deployment"
+                        ].map((feature) => (
+                          <li key={feature} className="flex items-center gap-3">
+                            <Check className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="text-amber-800 dark:text-amber-200 font-medium">
+                              {feature}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Button 
+                        size="lg"
+                        className="w-full h-14 rounded-xl font-semibold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <MessageSquare className="h-5 w-5 mr-2" />
+                        Contact Sales
+                      </Button>
+                      
+                      <Button 
+                        size="lg"
+                        variant="outline"
+                        className="w-full h-14 rounded-xl font-semibold border-2 border-amber-300 dark:border-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                      >
+                        <Calendar className="h-5 w-5 mr-2" />
+                        Schedule a Demo
+                      </Button>
+
+                      <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
+                        <Globe className="h-4 w-4 inline mr-1" />
+                        Available worldwide • 24/7 support
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Current Usage - Only show for logged in users */}
+              {session?.user && (
+                <div className="max-w-4xl mx-auto">
+                  <Card className="p-8 rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xl">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="font-display text-2xl font-bold mb-2">Your Current Usage</h2>
+                          <p className="text-muted-foreground">
+                            Track your feature usage for this billing period
+                          </p>
+                        </div>
+                        <Clock className="h-8 w-8 text-primary" />
+                      </div>
+                      <PlanUsageIndicator />
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* FAQ Section */}
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-12">
+                  <h2 className="font-display text-4xl font-bold mb-4">
                     Frequently Asked Questions
                   </h2>
-                  <p className="text-center text-muted-foreground">
-                    Common questions about our pricing and plans
+                  <p className="text-xl text-muted-foreground">
+                    Everything you need to know about our pricing
                   </p>
                 </div>
                 
-                <div className="space-y-4">
-                  <details className="group border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <span className="font-medium">Can I switch plans anytime?</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
-                      Yes, you can upgrade or downgrade at any time. When you upgrade, you'll be charged the prorated difference. When you downgrade, you'll receive credit toward your next billing cycle.
-                    </div>
-                  </details>
-
-                  <details className="group border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <span className="font-medium">What happens if I exceed my task limit?</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
-                      You'll receive a notification when you're approaching your limit. If you reach it, you can either upgrade to a higher plan or wait until the next billing cycle. Your existing tasks remain accessible.
-                    </div>
-                  </details>
-
-                  <details className="group border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <span className="font-medium">Do you offer refunds?</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
-                      We offer a 14-day money-back guarantee on all plans. If you're not satisfied, contact our support team for a full refund.
-                    </div>
-                  </details>
-
-                  <details className="group border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <span className="font-medium">Is my data secure?</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
-                      Yes. All data is encrypted in transit and at rest. We use industry-standard security practices and never share your data with third parties.
-                    </div>
-                  </details>
-
-                  <details className="group border border-border rounded-lg overflow-hidden">
-                    <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-accent/50 transition-colors">
-                      <span className="font-medium">What payment methods do you accept?</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                    </summary>
-                    <div className="px-6 pb-4 text-sm text-muted-foreground border-t border-border pt-4">
-                      We accept all major credit cards through Stripe, our secure payment processor. All transactions are PCI-compliant.
-                    </div>
-                  </details>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {[
+                    {
+                      q: "Can I change plans anytime?",
+                      a: "Yes! Upgrade or downgrade whenever you want. Changes take effect immediately."
+                    },
+                    {
+                      q: "What happens if I exceed my limit?",
+                      a: "We'll notify you before you hit your limit. You can upgrade or wait for the next cycle."
+                    },
+                    {
+                      q: "Do you offer refunds?",
+                      a: "We offer a 14-day money-back guarantee on all paid plans. No questions asked."
+                    },
+                    {
+                      q: "Is my data secure?",
+                      a: "Absolutely. We use bank-level encryption and never share your data with third parties."
+                    },
+                    {
+                      q: "Can I pay annually?",
+                      a: "Yes! Annual billing saves you 20% compared to monthly billing."
+                    },
+                    {
+                      q: "What payment methods do you accept?",
+                      a: "We accept all major credit cards and debit cards through our secure payment processor."
+                    }
+                  ].map((faq, i) => (
+                    <Card key={i} className="p-6 rounded-2xl border-2 border-border/50 bg-card/50 backdrop-blur-xl hover:border-primary/50 transition-colors">
+                      <h3 className="font-semibold text-lg mb-3 text-foreground">
+                        {faq.q}
+                      </h3>
+                      <p className="text-muted-foreground font-medium leading-relaxed">
+                        {faq.a}
+                      </p>
+                    </Card>
+                  ))}
                 </div>
               </div>
             </TabsContent>
@@ -525,82 +785,109 @@ export default function PricingPage() {
               <LicenseKeyPurchase />
 
               {/* License Benefits */}
-              <div className="max-w-4xl mx-auto">
-                <div className="mb-12">
-                  <h2 className="font-display text-3xl font-semibold mb-3 text-center">
-                    One-Time Purchase Benefits
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-12">
+                  <h2 className="font-display text-4xl font-bold mb-4">
+                    Why choose a one-time license?
                   </h2>
-                  <p className="text-center text-muted-foreground">
-                    Prefer to own your software? Purchase a perpetual license.
+                  <p className="text-xl text-muted-foreground">
+                    Own your software forever with a single payment
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Zap className="h-6 w-6 text-green-600 dark:text-green-500" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Instant Delivery</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Receive your license key via email immediately after purchase
-                    </p>
-                  </Card>
-
-                  <Card className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Shield className="h-6 w-6 text-blue-600 dark:text-blue-500" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Secure Activation</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Cryptographically secure keys with email verification
-                    </p>
-                  </Card>
-
-                  <Card className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-                      <Mail className="h-6 w-6 text-purple-600 dark:text-purple-500" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Easy Setup</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Step-by-step activation instructions included
-                    </p>
-                  </Card>
+                <div className="grid md:grid-cols-3 gap-8">
+                  {[
+                    {
+                      icon: <Zap className="h-8 w-8" />,
+                      title: "Instant Delivery",
+                      description: "Get your license key via email within seconds of purchase",
+                      gradient: "from-green-500 to-emerald-500"
+                    },
+                    {
+                      icon: <Shield className="h-8 w-8" />,
+                      title: "Lifetime Access",
+                      description: "Pay once, use forever. No recurring subscription fees",
+                      gradient: "from-blue-500 to-cyan-500"
+                    },
+                    {
+                      icon: <Lock className="h-8 w-8" />,
+                      title: "Secure Activation",
+                      description: "Military-grade encryption with email verification",
+                      gradient: "from-purple-500 to-pink-500"
+                    }
+                  ].map((benefit, i) => (
+                    <Card key={i} className="relative p-8 rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xl overflow-hidden group hover:border-primary/50 transition-all">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-2xl group-hover:scale-150 transition-transform" />
+                      
+                      <div className="relative space-y-4">
+                        <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${benefit.gradient} flex items-center justify-center text-white shadow-lg`}>
+                          {benefit.icon}
+                        </div>
+                        
+                        <div>
+                          <h3 className="font-display text-xl font-bold mb-2">
+                            {benefit.title}
+                          </h3>
+                          <p className="text-muted-foreground font-medium">
+                            {benefit.description}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               </div>
             </TabsContent>
           </Tabs>
         </div>
 
-        {/* CTA Section */}
-        <div className="border-t border-border/50 bg-muted/30">
-          <div className="container mx-auto px-4 py-16">
-            <div className="max-w-3xl mx-auto text-center space-y-6">
-              <h2 className="font-display text-3xl font-semibold">
-                Ready to get started?
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Join thousands of professionals who trust 9TD for their task management.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+        {/* Final CTA */}
+        <div className="relative border-t border-border/50 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5 backdrop-blur-sm">
+          <div className="container mx-auto px-4 py-20">
+            <div className="max-w-4xl mx-auto text-center space-y-8">
+              <div className="space-y-4">
+                <h2 className="font-display text-4xl md:text-5xl font-bold">
+                  Ready to supercharge your productivity?
+                </h2>
+                <p className="text-xl text-muted-foreground">
+                  Join thousands of professionals who trust 9TD for their task management
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <Button 
                   size="lg" 
                   onClick={() => router.push(session?.user ? "/" : "/register")}
-                  className="gap-2"
+                  className="h-14 px-8 rounded-xl font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all text-lg"
                 >
                   {session?.user ? "Go to Dashboard" : "Start Free Trial"}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
                 <Button 
                   size="lg" 
                   variant="outline"
                   onClick={() => router.push("/")}
+                  className="h-14 px-8 rounded-xl font-semibold border-2 text-lg"
                 >
-                  Learn More
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  Talk to Sales
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                No credit card required • Cancel anytime • 14-day money-back guarantee
-              </p>
+
+              <div className="flex flex-wrap items-center justify-center gap-6 pt-6 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>Free for 14 days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>Cancel anytime</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
