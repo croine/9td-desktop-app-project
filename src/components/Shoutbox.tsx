@@ -12,7 +12,7 @@ import {
   Smile, Pin, Heart, ThumbsUp, Reply, Edit2, Bookmark,
   Users, Volume2, VolumeX, Palette, Clock, Type,
   ChevronDown, ChevronUp, Search, Filter, Mic, Gift,
-  Zap, TrendingUp, Star, Award, Image, Code, BarChart3
+  Zap, TrendingUp, Star, Award, Image, Code, BarChart3, X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -382,586 +382,734 @@ export function Shoutbox() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-      {/* Main Shoutbox */}
-      <div className="lg:col-span-3 space-y-4">
-        <div className="glass-card rounded-xl overflow-hidden border-2 border-primary/20 shadow-xl">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-blue-800 dark:via-blue-900 dark:to-blue-800 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-white text-lg">Shoutbox</h3>
-                  <p className="text-xs text-white/70">Live chat • {displayShouts.length} shouts</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* Search */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 text-white/80 hover:text-white hover:bg-white/10"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="space-y-2">
-                      <Label>Search messages</Label>
-                      <Input
-                        placeholder="Search..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* Sound Toggle */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSettings(prev => ({ ...prev, playSound: !prev.playSound }))}
-                  className="h-8 px-2 text-white/80 hover:text-white hover:bg-white/10"
-                  title={settings.playSound ? 'Mute notifications' : 'Unmute notifications'}
-                >
-                  {settings.playSound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
-
-                {/* Refresh */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="h-8 px-2 text-white/80 hover:text-white hover:bg-white/10"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </Button>
-
-                {/* Settings Dialog */}
-                <Dialog open={showSettings} onOpenChange={setShowSettings}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 text-white/80 hover:text-white hover:bg-white/10"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Settings className="h-5 w-5 text-primary" />
-                        Shoutbox Settings
-                      </DialogTitle>
-                    </DialogHeader>
-                    
-                    <Tabs defaultValue="appearance" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="appearance">Appearance</TabsTrigger>
-                        <TabsTrigger value="behavior">Behavior</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="appearance" className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Message Highlight Color</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {HIGHLIGHT_COLORS.map(color => (
-                              <Button
-                                key={color.name}
-                                variant={settings.highlightColor === color.value ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setSettings(prev => ({ ...prev, highlightColor: color.value }))}
-                                className="w-full"
-                              >
-                                {color.name}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Text Color</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {TEXT_COLORS.map(color => (
-                              <Button
-                                key={color.name}
-                                variant={settings.textColor === color.value ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setSettings(prev => ({ ...prev, textColor: color.value }))}
-                                className="w-full"
-                              >
-                                {color.name}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="compact-mode">Compact Mode</Label>
-                          <Switch
-                            id="compact-mode"
-                            checked={settings.compactMode}
-                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, compactMode: checked }))}
-                          />
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="behavior" className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="play-sound">Sound Notifications</Label>
-                          <Switch
-                            id="play-sound"
-                            checked={settings.playSound}
-                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, playSound: checked }))}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="show-timestamps">Show Timestamps</Label>
-                          <Switch
-                            id="show-timestamps"
-                            checked={settings.showTimestamps}
-                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, showTimestamps: checked }))}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="enable-colors">Enable Text Colors</Label>
-                          <Switch
-                            id="enable-colors"
-                            checked={settings.enableColors}
-                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableColors: checked }))}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="auto-scroll">Auto-scroll to New Messages</Label>
-                          <Switch
-                            id="auto-scroll"
-                            checked={settings.autoScroll}
-                            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoScroll: checked }))}
-                          />
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </DialogContent>
-                </Dialog>
-              </div>
+    <div className="space-y-6">
+      {/* Header Stats Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="glass-card p-4 border-2 border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground font-medium mb-1">Total Messages</p>
+              <p className="text-2xl font-bold text-primary">{displayShouts.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+              <MessageSquare className="h-6 w-6 text-primary" />
             </div>
           </div>
+        </Card>
 
-          {/* Messages */}
-          <div 
-            ref={scrollRef}
-            className="h-[500px] overflow-y-auto bg-background/30 dark:bg-background/20"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'oklch(0.50 0.20 240) transparent'
-            }}
-          >
-            <div className="p-4 space-y-2">
-              <AnimatePresence mode="popLayout">
-                {displayShouts.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-center py-12"
-                  >
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare className="h-10 w-10 text-primary" />
+        <Card className="glass-card p-4 border-2 border-green-500/20 hover:border-green-500/40 transition-all hover:shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground font-medium mb-1">Online Users</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{onlineUsers.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 flex items-center justify-center">
+              <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="glass-card p-4 border-2 border-purple-500/20 hover:border-purple-500/40 transition-all hover:shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground font-medium mb-1">Bookmarked</p>
+              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{bookmarkedShouts.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 flex items-center justify-center">
+              <Bookmark className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="glass-card p-4 border-2 border-orange-500/20 hover:border-orange-500/40 transition-all hover:shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground font-medium mb-1">Pinned</p>
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{pinnedShouts.length}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/10 flex items-center justify-center">
+              <Pin className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Content - Wider Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* Main Shoutbox - Takes up more space */}
+        <div className="xl:col-span-9 space-y-4">
+          <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden">
+            {/* Professional Header */}
+            <div className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
+              <div className="relative px-6 py-5 border-b-2 border-primary/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 flex items-center justify-center shadow-lg ring-4 ring-primary/10">
+                      <MessageSquare className="h-7 w-7 text-white" />
                     </div>
-                    <p className="text-muted-foreground font-medium">
-                      No shouts yet. Be the first! 🚀
-                    </p>
-                  </motion.div>
-                ) : (
-                  displayShouts.map((shout, index) => (
-                    <motion.div
-                      key={shout.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.02 }}
-                      className={`group relative ${settings.highlightColor} ${
-                        settings.compactMode ? 'p-2' : 'p-3'
-                      } rounded-lg border hover:shadow-md transition-all`}
-                    >
-                      {/* Pinned indicator */}
-                      {shout.isPinned && (
-                        <div className="absolute -top-1 -right-1">
-                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <Pin className="h-3 w-3 text-primary-foreground" />
-                          </div>
+                    <div>
+                      <h2 className="font-display font-bold text-2xl text-foreground mb-1">
+                        Team Shoutbox
+                      </h2>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="text-muted-foreground font-medium">
+                          Live Communication Hub
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-green-600 dark:text-green-400 font-medium">
+                            Live
+                          </span>
                         </div>
-                      )}
-
-                      {/* Bookmark indicator */}
-                      {bookmarkedShouts.includes(shout.id) && (
-                        <div className="absolute -top-1 -left-1">
-                          <div className="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center">
-                            <Bookmark className="h-3 w-3 text-white fill-white" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Search */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                        >
+                          <Search className="h-4 w-4" />
+                          <span className="hidden md:inline">Search</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 glass-card">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Search className="h-4 w-4 text-primary" />
+                            <Label className="font-semibold">Search Messages</Label>
                           </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-3">
-                        {/* Avatar */}
-                        <Avatar className={`${settings.compactMode ? 'h-8 w-8' : 'h-10 w-10'} shrink-0 border-2 border-primary/30 ring-2 ring-primary/10`}>
-                          <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-primary/20 to-primary/30 text-primary">
-                            {getInitials(shout.user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className="font-bold text-sm text-primary">
-                              {shout.user.name}
-                            </span>
-                            {settings.showTimestamps && (
-                              <>
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
-                                </span>
-                                {shout.editedAt && (
-                                  <Badge variant="outline" className="text-[10px] h-4">
-                                    edited
-                                  </Badge>
-                                )}
-                              </>
-                            )}
-                          </div>
-
-                          {/* Reply indicator */}
-                          {shout.replyToId && (
-                            <div className="flex items-center gap-1 mb-1 text-xs text-muted-foreground">
-                              <Reply className="h-3 w-3" />
-                              <span>Replying to message</span>
-                            </div>
-                          )}
-
-                          <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
-                            settings.compactMode ? 'text-sm' : 'text-base'
-                          } break-words leading-relaxed`}>
-                            {shout.message}
-                          </p>
-
-                          {/* Reactions */}
-                          {shout.reactions && Object.keys(shout.reactions).length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {Object.entries(shout.reactions).map(([emoji, users]) => (
-                                <Button
-                                  key={emoji}
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs gap-1"
-                                  onClick={() => handleReaction(shout.id, emoji)}
-                                >
-                                  <span>{emoji}</span>
-                                  <span className="text-muted-foreground">{users.length}</span>
-                                </Button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Popover>
-                            <PopoverTrigger asChild>
+                          <Input
+                            placeholder="Search by message or user..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="border-primary/20"
+                          />
+                          {searchQuery && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                Found {displayShouts.length} result{displayShouts.length !== 1 ? 's' : ''}
+                              </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0"
-                                title="Add reaction"
+                                onClick={() => setSearchQuery('')}
+                                className="h-6"
                               >
-                                <Smile className="h-3.5 w-3.5" />
+                                Clear
                               </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2">
-                              <div className="grid grid-cols-6 gap-1">
-                                {['❤️', '👍', '😂', '😮', '😢', '🎉', '🔥', '⭐', '✨', '💯', '👏', '🚀'].map(emoji => (
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Sound Toggle */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSettings(prev => ({ ...prev, playSound: !prev.playSound }))}
+                      className={`h-9 w-9 p-0 border-primary/20 hover:border-primary/40 ${
+                        settings.playSound ? 'bg-primary/10 border-primary/30' : 'hover:bg-primary/5'
+                      }`}
+                      title={settings.playSound ? 'Mute notifications' : 'Unmute notifications'}
+                    >
+                      {settings.playSound ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+                    </Button>
+
+                    {/* Refresh */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="h-9 w-9 p-0 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+                    </Button>
+
+                    {/* Settings Dialog */}
+                    <Dialog open={showSettings} onOpenChange={setShowSettings}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                        >
+                          <Settings className="h-4 w-4" />
+                          <span className="hidden md:inline">Settings</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-lg glass-card">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-3 text-xl">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                              <Settings className="h-5 w-5 text-primary" />
+                            </div>
+                            <span>Shoutbox Settings</span>
+                          </DialogTitle>
+                        </DialogHeader>
+                        
+                        <Tabs defaultValue="appearance" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 h-11">
+                            <TabsTrigger value="appearance" className="gap-2">
+                              <Palette className="h-4 w-4" />
+                              Appearance
+                            </TabsTrigger>
+                            <TabsTrigger value="behavior" className="gap-2">
+                              <Zap className="h-4 w-4" />
+                              Behavior
+                            </TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="appearance" className="space-y-5 mt-4">
+                            <div className="space-y-3">
+                              <Label className="text-sm font-semibold">Message Highlight Color</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {HIGHLIGHT_COLORS.map(color => (
                                   <Button
-                                    key={emoji}
-                                    variant="ghost"
+                                    key={color.name}
+                                    variant={settings.highlightColor === color.value ? 'default' : 'outline'}
                                     size="sm"
-                                    className="h-8 w-8 p-0 text-lg"
-                                    onClick={() => handleReaction(shout.id, emoji)}
+                                    onClick={() => setSettings(prev => ({ ...prev, highlightColor: color.value }))}
+                                    className="w-full h-9"
                                   >
-                                    {emoji}
+                                    {color.name}
                                   </Button>
                                 ))}
                               </div>
-                            </PopoverContent>
-                          </Popover>
+                            </div>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => setReplyToShout(shout)}
-                            title="Reply"
-                          >
-                            <Reply className="h-3.5 w-3.5" />
-                          </Button>
+                            <div className="space-y-3">
+                              <Label className="text-sm font-semibold">Text Color</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {TEXT_COLORS.map(color => (
+                                  <Button
+                                    key={color.name}
+                                    variant={settings.textColor === color.value ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSettings(prev => ({ ...prev, textColor: color.value }))}
+                                    className="w-full h-9"
+                                  >
+                                    {color.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handlePinShout(shout.id)}
-                            title="Pin"
-                          >
-                            <Pin className="h-3.5 w-3.5" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleBookmark(shout.id)}
-                            title="Bookmark"
-                          >
-                            <Bookmark className={`h-3.5 w-3.5 ${bookmarkedShouts.includes(shout.id) ? 'fill-current' : ''}`} />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-500"
-                            onClick={() => handleDeleteShout(shout.id)}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-
-              {/* Typing indicator */}
-              {typingUsers.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-xs text-muted-foreground italic px-2"
-                >
-                  {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
-                </motion.div>
-              )}
-            </div>
-          </div>
-
-          {/* Input Area */}
-          <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 border-t-2 border-primary/10">
-            {/* Reply indicator */}
-            {replyToShout && (
-              <div className="mb-2 p-2 bg-primary/5 rounded-lg border border-primary/20 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <Reply className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">
-                    Replying to <span className="font-semibold text-foreground">{replyToShout.user.name}</span>
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setReplyToShout(null)}
-                  className="h-6 w-6 p-0"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-
-            <form onSubmit={handleSendShout} className="space-y-2">
-              <div className="flex gap-2">
-                <Textarea
-                  ref={inputRef}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message... (max 500 characters)"
-                  className="flex-1 min-h-[44px] max-h-32 text-sm bg-background/50 border-primary/20 focus:border-primary resize-none"
-                  maxLength={500}
-                  disabled={isSending}
-                  rows={1}
-                />
-                
-                <div className="flex flex-col gap-2">
-                  {/* Emoji Picker */}
-                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-11 w-11 p-0 border-primary/20"
-                      >
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-2">
-                      <Tabs defaultValue="Smileys">
-                        <TabsList className="w-full justify-start overflow-x-auto">
-                          {Object.keys(EMOJI_CATEGORIES).map(category => (
-                            <TabsTrigger key={category} value={category} className="text-xs">
-                              {category}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
-                          <TabsContent key={category} value={category}>
-                            <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-                              {emojis.map(emoji => (
-                                <Button
-                                  key={emoji}
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-lg hover:bg-primary/10"
-                                  onClick={() => handleEmojiSelect(emoji)}
-                                >
-                                  {emoji}
-                                </Button>
-                              ))}
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-center gap-2">
+                                <Type className="h-4 w-4 text-primary" />
+                                <Label htmlFor="compact-mode" className="font-medium cursor-pointer">
+                                  Compact Mode
+                                </Label>
+                              </div>
+                              <Switch
+                                id="compact-mode"
+                                checked={settings.compactMode}
+                                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, compactMode: checked }))}
+                              />
                             </div>
                           </TabsContent>
-                        ))}
-                      </Tabs>
-                    </PopoverContent>
-                  </Popover>
+                          
+                          <TabsContent value="behavior" className="space-y-4 mt-4">
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-center gap-2">
+                                <Volume2 className="h-4 w-4 text-primary" />
+                                <Label htmlFor="play-sound" className="font-medium cursor-pointer">
+                                  Sound Notifications
+                                </Label>
+                              </div>
+                              <Switch
+                                id="play-sound"
+                                checked={settings.playSound}
+                                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, playSound: checked }))}
+                              />
+                            </div>
 
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={isSending || !message.trim()}
-                    className="h-11 w-11 p-0 bg-primary hover:bg-primary/90"
-                  >
-                    {isSending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-primary" />
+                                <Label htmlFor="show-timestamps" className="font-medium cursor-pointer">
+                                  Show Timestamps
+                                </Label>
+                              </div>
+                              <Switch
+                                id="show-timestamps"
+                                checked={settings.showTimestamps}
+                                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, showTimestamps: checked }))}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-center gap-2">
+                                <Palette className="h-4 w-4 text-primary" />
+                                <Label htmlFor="enable-colors" className="font-medium cursor-pointer">
+                                  Enable Text Colors
+                                </Label>
+                              </div>
+                              <Switch
+                                id="enable-colors"
+                                checked={settings.enableColors}
+                                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableColors: checked }))}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-center gap-2">
+                                <ChevronDown className="h-4 w-4 text-primary" />
+                                <Label htmlFor="auto-scroll" className="font-medium cursor-pointer">
+                                  Auto-scroll to New Messages
+                                </Label>
+                              </div>
+                              <Switch
+                                id="auto-scroll"
+                                checked={settings.autoScroll}
+                                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoScroll: checked }))}
+                              />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3" />
-                    {displayShouts.length} shout{displayShouts.length !== 1 ? 's' : ''}
-                  </span>
-                  {bookmarkedShouts.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Bookmark className="h-3 w-3" />
-                      {bookmarkedShouts.length} bookmarked
-                    </span>
+            {/* Messages Area - Professional Design */}
+            <div 
+              ref={scrollRef}
+              className="h-[600px] overflow-y-auto bg-gradient-to-b from-background/50 to-background"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'oklch(0.50 0.20 240) transparent'
+              }}
+            >
+              <div className="p-6 space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {displayShouts.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-20"
+                    >
+                      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto mb-6 ring-8 ring-primary/5">
+                        <MessageSquare className="h-12 w-12 text-primary" />
+                      </div>
+                      <h3 className="font-display font-bold text-xl mb-2">No Messages Yet</h3>
+                      <p className="text-muted-foreground font-medium">
+                        Be the first to start the conversation! 🚀
+                      </p>
+                    </motion.div>
+                  ) : (
+                    displayShouts.map((shout, index) => (
+                      <motion.div
+                        key={shout.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="group relative"
+                      >
+                        <div className={`${settings.highlightColor} ${
+                          settings.compactMode ? 'p-3' : 'p-4'
+                        } rounded-xl border-2 hover:border-primary/30 hover:shadow-lg transition-all duration-200`}>
+                          {/* Pinned Badge */}
+                          {shout.isPinned && (
+                            <div className="absolute -top-2 -right-2 z-10">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg ring-4 ring-background">
+                                <Pin className="h-4 w-4 text-white" />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bookmark Badge */}
+                          {bookmarkedShouts.includes(shout.id) && (
+                            <div className="absolute -top-2 -left-2 z-10">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-600 flex items-center justify-center shadow-lg ring-4 ring-background">
+                                <Bookmark className="h-4 w-4 text-white fill-white" />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-4">
+                            {/* Avatar */}
+                            <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
+                              <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
+                                {getInitials(shout.user.name)}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <span className="font-bold text-base text-foreground">
+                                  {shout.user.name}
+                                </span>
+                                {settings.showTimestamps && (
+                                  <>
+                                    <span className="text-xs text-muted-foreground font-medium">
+                                      {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
+                                    </span>
+                                    {shout.editedAt && (
+                                      <Badge variant="outline" className="text-[10px] h-5 font-medium">
+                                        edited
+                                      </Badge>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+
+                              {/* Reply indicator */}
+                              {shout.replyToId && (
+                                <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground font-medium">
+                                  <Reply className="h-3.5 w-3.5" />
+                                  <span>Replying to a message</span>
+                                </div>
+                              )}
+
+                              <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
+                                settings.compactMode ? 'text-sm' : 'text-base'
+                              } break-words leading-relaxed font-medium`}>
+                                {shout.message}
+                              </p>
+
+                              {/* Reactions */}
+                              {shout.reactions && Object.keys(shout.reactions).length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {Object.entries(shout.reactions).map(([emoji, users]) => (
+                                    <Button
+                                      key={emoji}
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 px-3 text-xs gap-1.5 hover:bg-primary/10 hover:border-primary/30"
+                                      onClick={() => handleReaction(shout.id, emoji)}
+                                    >
+                                      <span className="text-base">{emoji}</span>
+                                      <span className="text-muted-foreground font-semibold">{users.length}</span>
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                                    title="Add reaction"
+                                  >
+                                    <Smile className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64 p-2 glass-card">
+                                  <div className="grid grid-cols-6 gap-1">
+                                    {['❤️', '👍', '😂', '😮', '😢', '🎉', '🔥', '⭐', '✨', '💯', '👏', '🚀'].map(emoji => (
+                                      <Button
+                                        key={emoji}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 w-9 p-0 text-lg hover:bg-primary/10 hover:scale-110 transition-transform"
+                                        onClick={() => handleReaction(shout.id, emoji)}
+                                      >
+                                        {emoji}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                                onClick={() => setReplyToShout(shout)}
+                                title="Reply"
+                              >
+                                <Reply className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-orange-500/10 hover:text-orange-500"
+                                onClick={() => handlePinShout(shout.id)}
+                                title="Pin"
+                              >
+                                <Pin className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-yellow-500/10 hover:text-yellow-500"
+                                onClick={() => handleBookmark(shout.id)}
+                                title="Bookmark"
+                              >
+                                <Bookmark className={`h-4 w-4 ${bookmarkedShouts.includes(shout.id) ? 'fill-current' : ''}`} />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                                onClick={() => handleDeleteShout(shout.id)}
+                                title="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
                   )}
-                </div>
-                <span className={message.length > 450 ? 'text-orange-500 font-semibold' : ''}>
-                  {message.length}/500
-                </span>
+                </AnimatePresence>
+
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-sm text-muted-foreground italic px-2"
+                  >
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span>
+                      {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                    </span>
+                  </motion.div>
+                )}
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* Input Area - Professional Design */}
+            <div className="relative overflow-hidden border-t-2 border-primary/10">
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
+              <div className="relative p-5">
+                {/* Reply indicator */}
+                {replyToShout && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-3 p-3 bg-primary/10 rounded-lg border-2 border-primary/20 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <Reply className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground font-medium">
+                        Replying to <span className="font-bold text-foreground">{replyToShout.user.name}</span>
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setReplyToShout(null)}
+                      className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                )}
+
+                <form onSubmit={handleSendShout} className="space-y-3">
+                  <div className="flex gap-3">
+                    <Textarea
+                      ref={inputRef}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Share your thoughts with the team... (max 500 characters)"
+                      className="flex-1 min-h-[52px] max-h-32 text-sm bg-background border-2 border-primary/20 focus:border-primary/40 resize-none font-medium placeholder:text-muted-foreground/50"
+                      maxLength={500}
+                      disabled={isSending}
+                      rows={1}
+                    />
+                    
+                    <div className="flex flex-col gap-2">
+                      {/* Emoji Picker */}
+                      <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-[52px] w-12 p-0 border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                          >
+                            <Smile className="h-5 w-5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-3 glass-card" align="end">
+                          <Tabs defaultValue="Smileys">
+                            <TabsList className="w-full justify-start overflow-x-auto h-9">
+                              {Object.keys(EMOJI_CATEGORIES).map(category => (
+                                <TabsTrigger key={category} value={category} className="text-xs font-medium">
+                                  {category}
+                                </TabsTrigger>
+                              ))}
+                            </TabsList>
+                            {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                              <TabsContent key={category} value={category} className="mt-3">
+                                <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                                  {emojis.map(emoji => (
+                                    <Button
+                                      key={emoji}
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-9 w-9 p-0 text-lg hover:bg-primary/10 hover:scale-110 transition-transform"
+                                      onClick={() => handleEmojiSelect(emoji)}
+                                    >
+                                      {emoji}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </TabsContent>
+                            ))}
+                          </Tabs>
+                        </PopoverContent>
+                      </Popover>
+
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={isSending || !message.trim()}
+                        className="h-[52px] w-12 p-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all"
+                      >
+                        {isSending ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        {displayShouts.length} message{displayShouts.length !== 1 ? 's' : ''}
+                      </span>
+                      {bookmarkedShouts.length > 0 && (
+                        <span className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium">
+                          <Bookmark className="h-3.5 w-3.5" />
+                          {bookmarkedShouts.length} bookmarked
+                        </span>
+                      )}
+                    </div>
+                    <span className={`text-xs font-semibold ${
+                      message.length > 450 ? 'text-orange-500' : 'text-muted-foreground'
+                    }`}>
+                      {message.length}/500
+                    </span>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="glass-card p-4 border-2 border-blue-500/20">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Zap className="h-5 w-5 text-blue-500" />
+        {/* Sidebar - Online Users & Features */}
+        <div className="xl:col-span-3 space-y-4">
+          {/* Online Users */}
+          <Card className="glass-card border-2 border-green-500/20 overflow-hidden shadow-lg">
+            <div className="bg-gradient-to-r from-green-600/10 to-green-500/5 px-4 py-4 border-b-2 border-green-500/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-green-500/10 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h4 className="font-display font-bold text-base">Online Now</h4>
+                  <p className="text-xs text-muted-foreground font-medium">{onlineUsers.length} user{onlineUsers.length !== 1 ? 's' : ''} active</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Real-time Updates</h4>
-                <p className="text-xs text-muted-foreground">
-                  Messages refresh every 5 seconds automatically
-                </p>
-              </div>
+            </div>
+
+            <div className="p-3 space-y-2 max-h-[350px] overflow-y-auto">
+              {onlineUsers.map(user => (
+                <div
+                  key={user.id}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-primary/5 transition-all border border-transparent hover:border-primary/20"
+                >
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 ring-2 ring-green-500/20 shadow-sm">
+                      <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm ${
+                      user.status === 'online' ? 'bg-green-500' :
+                      user.status === 'away' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{user.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize font-medium">{user.status}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
 
-          <Card className="glass-card p-4 border-2 border-purple-500/20">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                <Heart className="h-5 w-5 text-purple-500" />
+          {/* Feature Highlights */}
+          <div className="space-y-3">
+            <Card className="glass-card p-4 border-2 border-blue-500/20 hover:border-blue-500/30 transition-all hover:shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 flex items-center justify-center shrink-0 shadow-sm">
+                  <Zap className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm mb-1">Real-time Updates</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Messages refresh every 5 seconds automatically
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Reactions</h4>
-                <p className="text-xs text-muted-foreground">
-                  React to messages with emojis and express yourself
-                </p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="glass-card p-4 border-2 border-green-500/20">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                <Star className="h-5 w-5 text-green-500" />
+            <Card className="glass-card p-4 border-2 border-purple-500/20 hover:border-purple-500/30 transition-all hover:shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/10 flex items-center justify-center shrink-0 shadow-sm">
+                  <Heart className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm mb-1">Emoji Reactions</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    React to messages with emojis and express yourself
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Pin & Bookmark</h4>
-                <p className="text-xs text-muted-foreground">
-                  Save important messages for quick access later
-                </p>
+            </Card>
+
+            <Card className="glass-card p-4 border-2 border-orange-500/20 hover:border-orange-500/30 transition-all hover:shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/10 flex items-center justify-center shrink-0 shadow-sm">
+                  <Star className="h-5 w-5 text-orange-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm mb-1">Pin & Bookmark</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Save important messages for quick access later
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
-      </div>
-
-      {/* Sidebar - Online Users */}
-      <div className="lg:col-span-1">
-        <Card className="glass-card border-2 border-primary/20 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-white" />
-              <h4 className="font-display font-bold text-white text-sm">
-                Online ({onlineUsers.length})
-              </h4>
-            </div>
-          </div>
-
-          <div className="p-3 space-y-2 max-h-[600px] overflow-y-auto">
-            {onlineUsers.map(user => (
-              <div
-                key={user.id}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors"
-              >
-                <div className="relative">
-                  <Avatar className="h-8 w-8 border-2 border-primary/30">
-                    <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                      {getInitials(user.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
-                    user.status === 'online' ? 'bg-green-500' :
-                    user.status === 'away' ? 'bg-yellow-500' :
-                    'bg-red-500'
-                  }`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{user.name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.status}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
     </div>
   )
