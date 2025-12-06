@@ -1012,7 +1012,7 @@ export default function Home() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Your Tasks</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Manage and organize all your tasks
                             </p>
                           </div>
@@ -1060,7 +1060,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">Calendar</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             View and manage tasks in calendar format
                           </p>
                         </div>
@@ -1090,7 +1090,7 @@ export default function Home() {
                         <div className="space-y-6">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Kanban Board</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Visualize and manage tasks with drag-and-drop
                             </p>
                           </div>
@@ -1132,7 +1132,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">📊 Task Dependencies</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Visualize task relationships, identify critical paths, and detect circular dependencies
                           </p>
                         </div>
@@ -1154,7 +1154,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">☀️ Daily Planning</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Start your day with purpose: morning planning, evening reflection, and weekly goals
                           </p>
                         </div>
@@ -1208,7 +1208,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">🎯 Focus Mode</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Select a task to enter distraction-free deep work mode with timer and ambient sounds
                           </p>
                         </div>
@@ -1222,7 +1222,7 @@ export default function Home() {
                                 <h3 className="font-display text-xl font-semibold">
                                   No Task Selected
                                 </h3>
-                                <p className="text-muted-foreground">
+                                <p className="text-foreground/70 font-medium">
                                   Choose a task below to enter focus mode
                                 </p>
                               </div>
@@ -1260,7 +1260,7 @@ export default function Home() {
                                 </Button>
                               ))}
                               {sortedTasks.filter(t => t.status !== 'completed').length === 0 && (
-                                <p className="text-center text-muted-foreground py-8">
+                                <p className="text-center text-foreground/70 font-medium py-8">
                                   No active tasks available. Create a task to get started!
                                 </p>
                               )}
@@ -1282,7 +1282,7 @@ export default function Home() {
                         <div className="space-y-6">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Pomodoro Timer</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Focus with structured work/break intervals and track time against tasks
                             </p>
                           </div>
@@ -1315,7 +1315,7 @@ export default function Home() {
                         <div className="space-y-6">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Time Blocking</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Schedule and organize your tasks throughout the week
                             </p>
                           </div>
@@ -1339,7 +1339,7 @@ export default function Home() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Analytics & Insights</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Comprehensive analytics including time tracking and productivity insights
                             </p>
                           </div>
@@ -1404,7 +1404,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">🏆 Achievements & Progress</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Track your productivity journey with XP, levels, streaks, and achievement badges
                           </p>
                         </div>
@@ -1420,7 +1420,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">🎨 Avatar Studio</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Personalize your profile with custom avatars, frames, and visual effects
                           </p>
                         </div>
@@ -1436,7 +1436,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">Activity Logs</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Track all changes and updates to your tasks
                           </p>
                         </div>
@@ -1459,7 +1459,7 @@ export default function Home() {
                       <div className="space-y-6">
                         <div>
                           <h1 className="font-display text-3xl font-bold mb-2">Owner Panel</h1>
-                          <p className="text-muted-foreground">
+                          <p className="text-foreground/70 font-medium">
                             Manage tags, categories, and organize your workspace
                           </p>
                         </div>
@@ -1491,7 +1491,7 @@ export default function Home() {
                         <div className="space-y-6">
                           <div>
                             <h1 className="font-display text-3xl font-bold mb-2">Message System</h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-foreground/70 font-medium">
                               Team communication and collaboration hub
                             </p>
                           </div>
