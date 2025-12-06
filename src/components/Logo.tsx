@@ -17,8 +17,8 @@ export function Logo({ className = '' }: LogoProps) {
       onMouseLeave={() => setIsHovered(false)}
       whileHover={{ scale: 1.05 }}
     >
-      {/* Glass squared container with border outline - minimal padding for perfect fit */}
-      <div className="rounded-lg p-0.5 flex items-center justify-center bg-background/50 backdrop-blur-sm border border-input shadow-sm">
+      {/* Glass squared container with border outline - tight fit */}
+      <div className="rounded-lg p-1 flex items-center justify-center bg-background/50 backdrop-blur-sm border border-input shadow-sm w-fit">
         <motion.div
           animate={{
             rotate: isHovered ? 360 : 0
@@ -31,7 +31,7 @@ export function Logo({ className = '' }: LogoProps) {
           <img 
             src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/document-uploads/cT1Jbvl-1761150151881.jpeg?width=8000&height=8000&resize=contain"
             alt="9TD Logo"
-            className="h-10 w-10 object-contain rounded-md"
+            className="h-8 w-8 object-contain rounded-md"
           />
         </motion.div>
       </div>
