@@ -93,123 +93,123 @@ export const GuestTrialBanner = ({ className, compact = false }: GuestTrialBanne
 
   return (
     <Card className={cn(
-      "glass-card p-6",
+      "glass-card p-3 max-w-2xl",
       isUrgent && "border-destructive/50 bg-destructive/5",
       isWarning && !isUrgent && "border-yellow-500/50 bg-yellow-500/5",
       className
     )}>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
-              isUrgent ? "bg-destructive/10" : 
-              isWarning ? "bg-yellow-500/10" : "bg-primary/10"
-            )}>
-              <Zap className={cn(
-                "h-5 w-5",
-                isUrgent ? "text-destructive" : 
-                isWarning ? "text-yellow-500" : "text-primary"
-              )} />
-            </div>
-            <div>
-              <h3 className="font-display font-semibold">Guest Trial Mode</h3>
-              <p className="text-xs text-muted-foreground">Explore 9TD features for free</p>
-            </div>
+      <div className="flex items-center gap-4">
+        {/* Icon and Title */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center",
+            isUrgent ? "bg-destructive/10" : 
+            isWarning ? "bg-yellow-500/10" : "bg-primary/10"
+          )}>
+            <Zap className={cn(
+              "h-4 w-4",
+              isUrgent ? "text-destructive" : 
+              isWarning ? "text-yellow-500" : "text-primary"
+            )} />
+          </div>
+          <div>
+            <h3 className="font-display font-semibold text-sm">Guest Trial</h3>
+            <p className="text-xs text-muted-foreground">Limited access</p>
           </div>
         </div>
 
-        {/* Time Remaining */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Clock className={cn(
-                "h-4 w-4",
-                isUrgent ? "text-destructive" : 
-                isWarning ? "text-yellow-500" : "text-primary"
-              )} />
-              <span className="text-muted-foreground">Time Remaining</span>
+        {/* Stats - Horizontal Layout */}
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          {/* Time Remaining */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-1">
+                <Clock className={cn(
+                  "h-3 w-3",
+                  isUrgent ? "text-destructive" : 
+                  isWarning ? "text-yellow-500" : "text-primary"
+                )} />
+                <span className="text-muted-foreground">Time</span>
+              </div>
+              <span className={cn(
+                "font-mono font-semibold text-xs",
+                isUrgent ? "text-destructive animate-pulse" : 
+                isWarning ? "text-yellow-600 dark:text-yellow-400" : "text-foreground"
+              )}>
+                {formatTimeRemaining()}
+              </span>
             </div>
-            <span className={cn(
-              "font-mono font-semibold",
-              isUrgent ? "text-destructive animate-pulse" : 
-              isWarning ? "text-yellow-600 dark:text-yellow-400" : "text-foreground"
-            )}>
-              {formatTimeRemaining()}
-            </span>
+            <Progress 
+              value={percentageRemaining} 
+              className={cn(
+                "h-1.5",
+                isUrgent ? "[&>div]:bg-destructive" : 
+                isWarning ? "[&>div]:bg-yellow-500" : ""
+              )}
+            />
           </div>
-          <Progress 
-            value={percentageRemaining} 
-            className={cn(
-              "h-2",
-              isUrgent ? "[&>div]:bg-destructive" : 
-              isWarning ? "[&>div]:bg-yellow-500" : ""
-            )}
-          />
-        </div>
 
-        {/* Tasks Remaining */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Sparkles className={cn(
-                "h-4 w-4",
+          {/* Tasks Remaining */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <div className="flex items-center gap-1">
+                <Sparkles className={cn(
+                  "h-3 w-3",
+                  tasksRemaining === 0 ? "text-destructive" : 
+                  tasksRemaining <= 2 ? "text-yellow-500" : "text-primary"
+                )} />
+                <span className="text-muted-foreground">Tasks</span>
+              </div>
+              <span className={cn(
+                "font-mono font-semibold text-xs",
                 tasksRemaining === 0 ? "text-destructive" : 
-                tasksRemaining <= 2 ? "text-yellow-500" : "text-primary"
-              )} />
-              <span className="text-muted-foreground">Demo Tasks</span>
+                tasksRemaining <= 2 ? "text-yellow-600 dark:text-yellow-400" : "text-foreground"
+              )}>
+                {tasksRemaining}/{trialData.maxTasks}
+              </span>
             </div>
-            <span className={cn(
-              "font-mono font-semibold",
-              tasksRemaining === 0 ? "text-destructive" : 
-              tasksRemaining <= 2 ? "text-yellow-600 dark:text-yellow-400" : "text-foreground"
-            )}>
-              {tasksRemaining}/{trialData.maxTasks}
-            </span>
+            <Progress 
+              value={(tasksRemaining / trialData.maxTasks) * 100} 
+              className={cn(
+                "h-1.5",
+                tasksRemaining === 0 ? "[&>div]:bg-destructive" : 
+                tasksRemaining <= 2 ? "[&>div]:bg-yellow-500" : ""
+              )}
+            />
           </div>
-          <Progress 
-            value={(tasksRemaining / trialData.maxTasks) * 100} 
-            className={cn(
-              "h-2",
-              tasksRemaining === 0 ? "[&>div]:bg-destructive" : 
-              tasksRemaining <= 2 ? "[&>div]:bg-yellow-500" : ""
-            )}
-          />
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 flex-shrink-0">
           <Button 
             onClick={() => router.push('/register')}
-            className="flex-1 gap-2"
             size="sm"
+            className="h-7 text-xs px-3"
           >
-            <Sparkles className="h-4 w-4" />
-            Sign Up Free
+            Sign Up
           </Button>
           <Button 
             onClick={() => router.push('/login')}
             variant="outline"
-            className="flex-1"
             size="sm"
+            className="h-7 text-xs px-3"
           >
             Sign In
           </Button>
         </div>
-
-        {/* Warning Messages */}
-        {isUrgent && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-destructive font-medium">
-              {tasksRemaining === 0 
-                ? "Task limit reached! Sign up to create unlimited tasks."
-                : "Trial ending soon! Sign up now to save your progress."}
-            </p>
-          </div>
-        )}
       </div>
+
+      {/* Warning Message - Only if urgent */}
+      {isUrgent && (
+        <div className="flex items-start gap-2 mt-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+          <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-destructive font-medium">
+            {tasksRemaining === 0 
+              ? "Task limit reached! Sign up to create unlimited tasks."
+              : "Trial ending soon! Sign up now to save your progress."}
+          </p>
+        </div>
+      )}
     </Card>
   )
 }
