@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Card } from '@/components/ui/card'
 import { Logo } from '@/components/Logo'
-import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react'
+import { Mail, User, Lock, KeyRound, Eye, EyeOff, Shield, Fingerprint, Cpu, CheckCircle2, XCircle, Loader2, ArrowRight, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -24,7 +24,9 @@ export default function LoginPage() {
   const [licenseKey, setLicenseKey] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showLicenseKey, setShowLicenseKey] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [capsLockOn, setCapsLockOn] = useState(false)
   
   // Validation states
   const [emailValid, setEmailValid] = useState<boolean | null>(null)
@@ -33,12 +35,63 @@ export default function LoginPage() {
   const [licenseKeyValid, setLicenseKeyValid] = useState<boolean | null>(null)
   const [isValidating, setIsValidating] = useState(false)
 
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState<{
+    score: number
+    label: string
+    color: string
+  }>({ score: 0, label: '', color: '' })
+
   // Current authentication step (1, 2, 3)
   const [currentStep, setCurrentStep] = useState(1)
 
   // Holographic grid canvas
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [particles, setParticles] = useState<Array<{ x: number; y: number; vx: number; vy: number }>>([])
+
+  // Password strength calculator
+  const calculatePasswordStrength = (password: string) => {
+    if (!password) {
+      return { score: 0, label: '', color: '' }
+    }
+
+    let score = 0
+    
+    // Length check
+    if (password.length >= 8) score += 1
+    if (password.length >= 12) score += 1
+    
+    // Complexity checks
+    if (/[a-z]/.test(password)) score += 1
+    if (/[A-Z]/.test(password)) score += 1
+    if (/[0-9]/.test(password)) score += 1
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1
+
+    if (score <= 2) {
+      return { score: 1, label: 'Weak', color: 'bg-red-500' }
+    } else if (score <= 4) {
+      return { score: 2, label: 'Medium', color: 'bg-yellow-500' }
+    } else {
+      return { score: 3, label: 'Strong', color: 'bg-green-500' }
+    }
+  }
+
+  // Caps lock detection
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.getModifierState && e.getModifierState('CapsLock')) {
+      setCapsLockOn(true)
+    } else {
+      setCapsLockOn(false)
+    }
+  }
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    if (e.getModifierState && e.getModifierState('CapsLock')) {
+      setCapsLockOn(true)
+    } else {
+      setCapsLockOn(false)
+    }
+  }
 
   // Initialize holographic grid background
   useEffect(() => {
@@ -190,8 +243,10 @@ export default function LoginPage() {
   useEffect(() => {
     if (password.length > 0) {
       setPasswordValid(password.length >= 6)
+      setPasswordStrength(calculatePasswordStrength(password))
     } else {
       setPasswordValid(null)
+      setPasswordStrength({ score: 0, label: '', color: '' })
     }
   }, [password])
 
@@ -210,6 +265,10 @@ export default function LoginPage() {
     
     const formatted = value.match(/.{1,4}/g)?.join('-') || value
     setLicenseKey(formatted)
+  }
+
+  const handleForgotPassword = () => {
+    toast.info('Password recovery feature coming soon! Please contact support for assistance.')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -547,6 +606,8 @@ export default function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onKeyUp={handleKeyUp}
                       placeholder="••••••••"
                       className="pl-10 pr-20 h-10 text-sm rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                       autoComplete="off"
@@ -568,6 +629,70 @@ export default function LoginPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Password Strength Meter */}
+                  <AnimatePresence>
+                    {password.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-1.5 pt-1"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">Password Strength</span>
+                          <span className={`text-[10px] font-semibold ${
+                            passwordStrength.score === 1 ? 'text-red-500' :
+                            passwordStrength.score === 2 ? 'text-yellow-500' :
+                            'text-green-500'
+                          }`}>
+                            {passwordStrength.label}
+                          </span>
+                        </div>
+                        <div className="flex gap-1.5">
+                          {[1, 2, 3].map((level) => (
+                            <motion.div
+                              key={level}
+                              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                                level <= passwordStrength.score
+                                  ? passwordStrength.color
+                                  : 'bg-muted'
+                              }`}
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1 }}
+                              transition={{ duration: 0.3, delay: level * 0.05 }}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Caps Lock Warning */}
+                  <AnimatePresence>
+                    {capsLockOn && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="flex items-center gap-1.5 text-yellow-600 dark:text-yellow-500 text-[10px] pt-1"
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Caps Lock is ON</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Forgot Password Link */}
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-[10px] text-primary hover:underline font-semibold transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                 </motion.div>
 
                 {/* Step 3: License Key */}
@@ -583,17 +708,29 @@ export default function LoginPage() {
                       <KeyRound className="h-4 w-4" />
                     </div>
                     <Input
-                      type="text"
+                      type={showLicenseKey ? 'text' : 'password'}
                       value={licenseKey}
                       onChange={handleLicenseKeyChange}
                       placeholder="XXXX-XXXX-XXXX-XXXX"
-                      className="pl-10 pr-10 h-10 text-sm font-mono tracking-wide rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
+                      className="pl-10 pr-20 h-10 text-sm font-mono tracking-wide rounded-lg border transition-all duration-300 focus:border-primary focus:shadow-md focus:shadow-primary/10"
                       disabled={isLoading}
                       required
                       maxLength={19}
+                      autoComplete="off"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                       <ValidationIcon valid={licenseKeyValid} isValidating={false} />
+                      <button
+                        type="button"
+                        onClick={() => setShowLicenseKey(!showLicenseKey)}
+                        className="text-muted-foreground hover:text-primary transition-colors p-0.5"
+                      >
+                        {showLicenseKey ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </motion.div>
