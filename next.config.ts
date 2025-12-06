@@ -24,11 +24,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Disable all caching to force fresh builds
-  onDemandEntries: {
-    maxInactiveAge: 0,
-    pagesBufferLength: 0,
-  },
   turbopack: {
     rules: {
       "*.{jsx,tsx}": {
@@ -38,12 +33,10 @@ const nextConfig: NextConfig = {
   }
 };
 
-// DISABLE PWA COMPLETELY - IT WAS CACHING OLD VERSION
 export default withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: true, // DISABLED TO PREVENT CACHE ISSUES
+  disable: true,
   buildExcludes: [/middleware-manifest\.json$/],
 })(nextConfig);
-// Orchids restart: 1761148720525
