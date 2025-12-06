@@ -835,35 +835,37 @@ export function NavigationSidebar({
                 </span>
               </div>
 
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full h-6 px-2 text-[9px] gap-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85"
-                onClick={() => router.push('/login')}
-              >
-                <LogIn className="h-2.5 w-2.5" />
-                Sign In
-              </Button>
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-6 px-2 text-[9px] gap-1 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85"
+                  onClick={() => router.push('/login')}
+                >
+                  <LogIn className="h-2.5 w-2.5" />
+                  Sign In
+                </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-6 px-2 text-[9px] gap-1"
-                onClick={() => router.push('/register')}
-              >
-                <Sparkles className="h-2.5 w-2.5 text-primary" />
-                Register
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[9px] gap-1"
+                  onClick={() => router.push('/register')}
+                >
+                  <Sparkles className="h-2.5 w-2.5 text-primary" />
+                  Register
+                </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-6 px-2 text-[9px] gap-1"
-                onClick={() => router.push('/pricing')}
-              >
-                <Fingerprint className="h-2.5 w-2.5 text-primary" />
-                Get License Key
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 text-[9px] gap-1"
+                  onClick={() => router.push('/pricing')}
+                >
+                  <Fingerprint className="h-2.5 w-2.5 text-primary" />
+                  Get License Key
+                </Button>
+              </div>
             </div>
           )}
         </div>
