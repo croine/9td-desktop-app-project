@@ -799,11 +799,11 @@ export function Shoutbox() {
                       className="group relative"
                     >
                       <div className={`${settings.highlightColor} ${
-                        settings.compactMode ? 'p-3' : 'p-4'
-                      } rounded-xl border-2 hover:border-primary/30 hover:shadow-lg transition-all duration-200`}>
-                        <div className="flex gap-4">
+                        settings.compactMode ? 'p-2' : 'p-2.5'
+                      } rounded-lg border hover:border-primary/30 hover:shadow-md transition-all duration-200`}>
+                        <div className="flex gap-2.5">
                           {/* Avatar */}
-                          <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
+                          <Avatar className={`${settings.compactMode ? 'h-7 w-7' : 'h-8 w-8'} shrink-0 ring-1 ring-primary/10`}>
                             <AvatarImage 
                               src={avatarUrl || ''} 
                               alt={shout.user.name}
@@ -816,24 +816,24 @@ export function Shoutbox() {
                                 console.log(`✅ Successfully loaded avatar image for user ${shout.user.id}:`, avatarUrl)
                               }}
                             />
-                            <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
+                            <AvatarFallback className="font-semibold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-[10px]">
                               {getInitials(shout.user.name)}
                             </AvatarFallback>
                           </Avatar>
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <span className="font-bold text-base text-foreground">
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                              <span className="font-semibold text-xs text-foreground">
                                 {shout.user.name}
                               </span>
                               {settings.showTimestamps && (
                                 <>
-                                  <span className="text-xs text-muted-foreground font-medium">
+                                  <span className="text-[10px] text-muted-foreground font-medium">
                                     {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
                                   </span>
                                   {shout.editedAt && (
-                                    <Badge variant="outline" className="text-[10px] h-5 font-medium">
+                                    <Badge variant="outline" className="text-[9px] h-4 font-medium px-1">
                                       edited
                                     </Badge>
                                   )}
@@ -843,39 +843,39 @@ export function Shoutbox() {
 
                             {/* Reply indicator */}
                             {shout.replyToId && (
-                              <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground font-medium">
-                                <Reply className="h-3.5 w-3.5" />
+                              <div className="flex items-center gap-1 mb-1 text-[10px] text-muted-foreground font-medium">
+                                <Reply className="h-2.5 w-2.5" />
                                 <span>Replying to a message</span>
                               </div>
                             )}
 
                             <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
-                              settings.compactMode ? 'text-sm' : 'text-base'
+                              settings.compactMode ? 'text-[11px]' : 'text-xs'
                             } break-words leading-relaxed font-medium`}>
                               {shout.message}
                             </p>
                           </div>
 
                           {/* Actions */}
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                              className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
                               onClick={() => setReplyToShout(shout)}
                               title="Reply"
                             >
-                              <Reply className="h-4 w-4" />
+                              <Reply className="h-3 w-3" />
                             </Button>
 
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                              className="h-6 w-6 p-0 hover:bg-red-500/10 hover:text-red-500"
                               onClick={() => handleDeleteShout(shout.id)}
                               title="Delete"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
