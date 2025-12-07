@@ -589,3 +589,39 @@ export const messageBookmarks = sqliteTable('message_bookmarks', {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+// Add new messaging feature tables at the end
+export const messageReadReceipts = sqliteTable('message_read_receipts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  messageId: integer('message_id')
+    .notNull()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  readAt: text('read_at').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const customEmojis = sqliteTable('custom_emojis', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  imageUrl: text('image_url').notNull(),
+  category: text('category').notNull(),
+  isAnimated: integer('is_animated', { mode: 'boolean' }).notNull().default(false),
+  uploadedBy: text('uploaded_by')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: text('created_at').notNull(),
+});
+
+export const userPrivacySettings = sqliteTable('user_privacy_settings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  showReadReceipts: integer('show_read_receipts', { mode: 'boolean' }).notNull().default(true),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

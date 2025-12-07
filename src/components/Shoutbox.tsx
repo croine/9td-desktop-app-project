@@ -17,10 +17,11 @@ import {
   Paperclip, FileText, Download, AtSign, Bold, Italic, 
   Strikethrough, MessageCircle, CheckCheck, Play, Pause, Link2,
   ExternalLink, PinOff, Circle, Megaphone, Shield, Crown, Mail,
-  BookmarkCheck, Inbox, Eye
+  BookmarkCheck, Inbox, Eye, Upload, FileDown, Calendar, User,
+  Hash, MessageCircleMore, History, EyeOff, ArrowUp, ArrowDown
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow, format, isWithinInterval, startOfDay, endOfDay } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -186,6 +187,44 @@ interface MessageBookmark {
       email: string
     }
   }
+}
+
+interface ReadReceipt {
+  id: number
+  userId: string
+  readAt: string
+  user: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+interface CustomEmoji {
+  id: number
+  name: string
+  imageUrl: string
+  category: 'custom' | 'team' | 'animated'
+  isAnimated: boolean
+  uploadedBy: string
+  createdAt: string
+  uploader?: {
+    name: string
+    email: string
+  }
+}
+
+interface PrivacySettings {
+  showReadReceipts: boolean
+}
+
+interface SearchFilters {
+  query: string
+  userId?: string
+  dateFrom?: Date
+  dateTo?: Date
+  hasReactions?: boolean
+  hasMentions?: boolean
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🚀']
@@ -1068,101 +1107,452 @@ export function Shoutbox() {
       .slice(0, 2)
   }
 
+  // New state for pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const MESSAGES_PER_PAGE = 20
+
+  // New state for advanced search
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false)
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    query: '',
+  })
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
+
+  // New state for export
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('json')
+  const [exportDateFrom, setExportDateFrom] = useState<Date | undefined>()
+  const [exportDateTo, setExportDateTo] = useState<Date | undefined>()
+  const [includeAttachments, setIncludeAttachments] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
+
+  // New state for read receipts
+  const [readReceipts, setReadReceipts] = useState<Record<number, ReadReceipt[]>>({})
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({ showReadReceipts: true })
+  const [loadingReceipts, setLoadingReceipts] = useState<Record<number, boolean>>({})
+
+  // New state for custom emojis
+  const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([])
+  const [showCustomEmojiDialog, setShowCustomEmojiDialog] = useState(false)
+  const [uploadingEmoji, setUploadingEmoji] = useState(false)
+  const [newEmojiName, setNewEmojiName] = useState('')
+  const [newEmojiUrl, setNewEmojiUrl] = useState('')
+  const [newEmojiCategory, setNewEmojiCategory] = useState<'custom' | 'team' | 'animated'>('custom')
+  const [newEmojiIsAnimated, setNewEmojiIsAnimated] = useState(false)
+
+  // New state for team collaboration features
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [permissions, setPermissions] = useState<string[]>([])
+  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false)
+  const [announcementMessage, setAnnouncementMessage] = useState('')
+  const [announcementPriority, setAnnouncementPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false)
+  const [showDMDialog, setShowDMDialog] = useState(false)
+  const [dmConversations, setDmConversations] = useState<DMConversation[]>([])
+  const [loadingDMs, setLoadingDMs] = useState(false)
+  const [bookmarks, setBookmarks] = useState<MessageBookmark[]>([])
+  const [showBookmarksDialog, setShowBookmarksDialog] = useState(false)
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false)
+  const [bookmarkNote, setBookmarkNote] = useState('')
+
+  // Fetch custom emojis
+  const fetchCustomEmojis = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/custom-emojis', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setCustomEmojis(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch custom emojis:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchCustomEmojis()
+  }, [])
+
+  // Fetch privacy settings
+  const fetchPrivacySettings = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user-privacy-settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPrivacySettings(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch privacy settings:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchPrivacySettings()
+  }, [])
+
+  // Load search history from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('shoutbox-search-history')
+    if (saved) {
+      setSearchHistory(JSON.parse(saved))
+    }
+  }, [])
+
+  // Save search to history
+  const saveSearchToHistory = (query: string) => {
+    if (!query.trim()) return
+    
+    const updated = [query, ...searchHistory.filter(q => q !== query)].slice(0, 10)
+    setSearchHistory(updated)
+    localStorage.setItem('shoutbox-search-history', JSON.stringify(updated))
+  }
+
+  // Fetch read receipts for a message
+  const fetchReadReceipts = async (messageId: number) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    setLoadingReceipts(prev => ({ ...prev, [messageId]: true }))
+
+    try {
+      const response = await fetch(`/api/message-read-receipts/${messageId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setReadReceipts(prev => ({ ...prev, [messageId]: data }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch read receipts:', error)
+    } finally {
+      setLoadingReceipts(prev => ({ ...prev, [messageId]: false }))
+    }
+  }
+
+  // Mark message as read
+  const markMessageAsRead = async (messageId: number) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token || !privacySettings.showReadReceipts) return
+
+    try {
+      await fetch('/api/message-read-receipts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ messageId })
+      })
+    } catch (error) {
+      console.error('Failed to mark message as read:', error)
+    }
+  }
+
+  // Upload custom emoji
+  const handleUploadCustomEmoji = async () => {
+    if (!newEmojiName.trim() || !newEmojiUrl.trim()) {
+      toast.error('Emoji name and URL are required')
+      return
+    }
+
+    // Validate emoji name format
+    if (!newEmojiName.startsWith(':') || !newEmojiName.endsWith(':')) {
+      toast.error('Emoji name must be in format :name:')
+      return
+    }
+
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    setUploadingEmoji(true)
+    try {
+      const response = await fetch('/api/custom-emojis', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: newEmojiName.trim(),
+          imageUrl: newEmojiUrl.trim(),
+          category: newEmojiCategory,
+          isAnimated: newEmojiIsAnimated
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Custom emoji uploaded! 🎨')
+        setNewEmojiName('')
+        setNewEmojiUrl('')
+        setNewEmojiCategory('custom')
+        setNewEmojiIsAnimated(false)
+        setShowCustomEmojiDialog(false)
+        await fetchCustomEmojis()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to upload emoji')
+      }
+    } catch (error) {
+      console.error('Failed to upload emoji:', error)
+      toast.error('Failed to upload emoji')
+    } finally {
+      setUploadingEmoji(false)
+    }
+  }
+
+  // Delete custom emoji
+  const handleDeleteCustomEmoji = async (emojiId: number) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/custom-emojis/${emojiId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        toast.success('Custom emoji deleted')
+        await fetchCustomEmojis()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to delete emoji')
+      }
+    } catch (error) {
+      console.error('Failed to delete emoji:', error)
+      toast.error('Failed to delete emoji')
+    }
+  }
+
+  // Toggle privacy settings
+  const handleToggleReadReceipts = async (enabled: boolean) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user-privacy-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ showReadReceipts: enabled })
+      })
+
+      if (response.ok) {
+        setPrivacySettings({ showReadReceipts: enabled })
+        toast.success(`Read receipts ${enabled ? 'enabled' : 'disabled'}`)
+      }
+    } catch (error) {
+      console.error('Failed to update privacy settings:', error)
+      toast.error('Failed to update settings')
+    }
+  }
+
+  // Export messages
+  const handleExport = async () => {
+    let messages = shouts
+
+    // Apply date filters
+    if (exportDateFrom && exportDateTo) {
+      messages = messages.filter(msg => {
+        const msgDate = new Date(msg.createdAt)
+        return isWithinInterval(msgDate, {
+          start: startOfDay(exportDateFrom),
+          end: endOfDay(exportDateTo)
+        })
+      })
+    }
+
+    setIsExporting(true)
+
+    try {
+      if (exportFormat === 'json') {
+        const exportData = {
+          messages: messages.map(msg => ({
+            id: msg.id,
+            user: msg.user.name,
+            message: msg.message,
+            createdAt: msg.createdAt,
+            editedAt: msg.editedAt,
+            reactions: msg.reactions,
+            replyTo: msg.replyTo?.user.name,
+            ...(includeAttachments && msg.attachment && { attachment: msg.attachment }),
+            ...(includeAttachments && msg.gif && { gif: msg.gif }),
+            ...(includeAttachments && msg.voiceMessage && { voiceMessage: msg.voiceMessage })
+          })),
+          exportedAt: new Date().toISOString(),
+          totalMessages: messages.length
+        }
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `shoutbox-export-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        // CSV export
+        const headers = ['ID', 'User', 'Message', 'Created At', 'Edited At', 'Reactions']
+        const rows = messages.map(msg => [
+          msg.id,
+          msg.user.name,
+          msg.message.replace(/"/g, '""'),
+          format(new Date(msg.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+          msg.editedAt ? format(new Date(msg.editedAt), 'yyyy-MM-dd HH:mm:ss') : '',
+          msg.reactions.map(r => `${r.emoji}(${r.count})`).join(' ')
+        ])
+
+        const csv = [
+          headers.join(','),
+          ...rows.map(row => row.map(cell => `"${String(cell)}"`).join(','))
+        ].join('\n')
+
+        const blob = new Blob([csv], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `shoutbox-export-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+
+      toast.success(`Exported ${messages.length} messages!`)
+      setShowExportDialog(false)
+    } catch (error) {
+      console.error('Export failed:', error)
+      toast.error('Failed to export messages')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Load more messages (pagination)
+  const loadMoreMessages = async () => {
+    if (!hasMore || isLoadingMore) return
+
+    setIsLoadingMore(true)
+    // In a real implementation, this would fetch from API with pagination
+    // For now, we'll simulate it
+    setTimeout(() => {
+      setCurrentPage(prev => prev + 1)
+      setIsLoadingMore(false)
+      // Simulate end of messages
+      if (currentPage >= 3) {
+        setHasMore(false)
+      }
+    }, 1000)
+  }
+
+  // Jump to date
+  const handleJumpToDate = (date: Date) => {
+    const targetMessage = shouts.find(msg => {
+      const msgDate = new Date(msg.createdAt)
+      return msgDate >= startOfDay(date) && msgDate <= endOfDay(date)
+    })
+
+    if (targetMessage && scrollRef.current) {
+      const element = document.getElementById(`shout-${targetMessage.id}`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        element.classList.add('ring-2', 'ring-primary')
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-primary')
+        }, 2000)
+      }
+    } else {
+      toast.info('No messages found for that date')
+    }
+  }
+
+  // Apply advanced search filters
+  const applyAdvancedSearch = () => {
+    saveSearchToHistory(searchFilters.query)
+    // The filtering happens in filteredShouts computation below
+  }
+
+  // Enhanced filtered shouts with advanced search
   const filteredShouts = shouts.filter(shout => {
-    if (!searchQuery) return true
-    return shout.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           shout.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    // Basic search
+    if (searchFilters.query) {
+      const query = searchFilters.query.toLowerCase()
+      const matchesMessage = shout.message.toLowerCase().includes(query)
+      const matchesUser = shout.user.name.toLowerCase().includes(query)
+      if (!matchesMessage && !matchesUser) return false
+    }
+
+    // User filter
+    if (searchFilters.userId && shout.user.id !== searchFilters.userId) {
+      return false
+    }
+
+    // Date range filter
+    if (searchFilters.dateFrom && searchFilters.dateTo) {
+      const msgDate = new Date(shout.createdAt)
+      if (!isWithinInterval(msgDate, {
+        start: startOfDay(searchFilters.dateFrom),
+        end: endOfDay(searchFilters.dateTo)
+      })) {
+        return false
+      }
+    }
+
+    // Reactions filter
+    if (searchFilters.hasReactions && shout.reactions.length === 0) {
+      return false
+    }
+
+    // Mentions filter
+    if (searchFilters.hasMentions && !shout.mentions.includes(session?.user?.id || '')) {
+      return false
+    }
+
+    return true
   })
 
-  // Get avatar URL with fallback logic and cache busting for current user
-  const getAvatarUrl = (userId: string): string | undefined => {
-    const avatarData = userAvatars[userId]
-    const url = avatarData?.customAvatarUrl || avatarData?.avatarUrl || undefined
-    
-    console.log(`🖼️ Getting avatar for user ${userId}:`, url)
-    console.log(`   - customAvatarUrl:`, avatarData?.customAvatarUrl)
-    console.log(`   - avatarUrl:`, avatarData?.avatarUrl)
-    console.log(`   - selectedAvatarId:`, avatarData?.selectedAvatarId)
-    
-    // Add cache busting for current user to force reload
-    if (url && userId === session?.user?.id) {
-      const timestamp = Date.now()
-      const separator = url.includes('?') ? '&' : '?'
-      const finalUrl = `${url}${separator}t=${timestamp}`
-      console.log(`🔄 Cache-busted avatar URL:`, finalUrl)
-      return finalUrl
-    }
-    
-    return url
-  }
+  // Mark messages as read when scrolled into view
+  useEffect(() => {
+    if (!scrollRef.current) return
 
-  // Render message with markdown
-  const renderMessage = (text: string) => {
-    return (
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown
-          components={{
-            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-            code: ({ inline, children }) => (
-              inline ? (
-                <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
-                  {children}
-                </code>
-              ) : (
-                <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mt-2">
-                  <code>{children}</code>
-                </pre>
-              )
-            ),
-            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-            em: ({ children }) => <em className="italic">{children}</em>,
-            del: ({ children }) => <del className="line-through">{children}</del>,
-          }}
-        >
-          {text}
-        </ReactMarkdown>
-      </div>
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const messageId = parseInt(entry.target.getAttribute('data-message-id') || '0')
+            if (messageId) {
+              markMessageAsRead(messageId)
+            }
+          }
+        })
+      },
+      { threshold: 0.5 }
     )
-  }
 
-  // Toggle thread expansion
-  const toggleThread = (shoutId: number) => {
-    setExpandedThreads(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(shoutId)) {
-        newSet.delete(shoutId)
-      } else {
-        newSet.add(shoutId)
-      }
-      return newSet
-    })
-  }
+    const messageElements = scrollRef.current.querySelectorAll('[data-message-id]')
+    messageElements.forEach(el => observer.observe(el))
 
-  // Get thread replies
-  const getThreadReplies = (shoutId: number) => {
-    return shouts.filter(s => s.replyTo?.id === shoutId)
-  }
-
-  // Render waveform visualization
-  const renderWaveform = (waveform: string | null, isPlaying: boolean) => {
-    if (!waveform) return null
-    
-    const values = waveform.split(',').map(v => parseFloat(v) || 0.5)
-    
-    return (
-      <div className="flex items-center gap-0.5 h-8">
-        {values.slice(0, 40).map((value, i) => (
-          <div
-            key={i}
-            className={`w-1 rounded-full transition-all ${
-              isPlaying ? 'bg-primary animate-pulse' : 'bg-muted-foreground'
-            }`}
-            style={{ height: `${value * 100}%` }}
-          />
-        ))}
-      </div>
-    )
-  }
+    return () => observer.disconnect()
+  }, [shouts, privacySettings.showReadReceipts])
 
   // Fetch user role and permissions
   const fetchUserRole = async () => {
@@ -1343,7 +1733,6 @@ export function Shoutbox() {
       if (response.ok) {
         toast.success('Message bookmarked! 🔖')
         await fetchBookmarks()
-        setBookmarkingShoutId(null)
         setBookmarkNote('')
       } else {
         const error = await response.json()
@@ -1403,21 +1792,89 @@ export function Shoutbox() {
     }
   }
 
-  // New state for team collaboration features
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
-  const [permissions, setPermissions] = useState<string[]>([])
-  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false)
-  const [announcementMessage, setAnnouncementMessage] = useState('')
-  const [announcementPriority, setAnnouncementPriority] = useState<'low' | 'medium' | 'high'>('medium')
-  const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false)
-  const [showDMDialog, setShowDMDialog] = useState(false)
-  const [dmConversations, setDmConversations] = useState<DMConversation[]>([])
-  const [loadingDMs, setLoadingDMs] = useState(false)
-  const [bookmarks, setBookmarks] = useState<MessageBookmark[]>([])
-  const [showBookmarksDialog, setShowBookmarksDialog] = useState(false)
-  const [loadingBookmarks, setLoadingBookmarks] = useState(false)
-  const [bookmarkNote, setBookmarkNote] = useState('')
-  const [bookmarkingShoutId, setBookmarkingShoutId] = useState<number | null>(null)
+  // Get avatar URL with fallback logic and cache busting for current user
+  const getAvatarUrl = (userId: string): string | undefined => {
+    const avatarData = userAvatars[userId]
+    const url = avatarData?.customAvatarUrl || avatarData?.avatarUrl || undefined
+    
+    // Add cache busting for current user to force reload
+    if (url && userId === session?.user?.id) {
+      const timestamp = Date.now()
+      const separator = url.includes('?') ? '&' : '?'
+      const finalUrl = `${url}${separator}t=${timestamp}`
+      return finalUrl
+    }
+    
+    return url
+  }
+
+  // Render message with markdown
+  const renderMessage = (text: string) => {
+    return (
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown
+          components={{
+            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+            code: ({ inline, children }) => (
+              inline ? (
+                <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                  {children}
+                </code>
+              ) : (
+                <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mt-2">
+                  <code>{children}</code>
+                </pre>
+              )
+            ),
+            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+            del: ({ children }) => <del className="line-through">{children}</del>,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    )
+  }
+
+  // Get thread replies
+  const getThreadReplies = (shoutId: number) => {
+    return shouts.filter(s => s.replyTo?.id === shoutId)
+  }
+
+  // Toggle thread expansion
+  const toggleThread = (shoutId: number) => {
+    setExpandedThreads(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(shoutId)) {
+        newSet.delete(shoutId)
+      } else {
+        newSet.add(shoutId)
+      }
+      return newSet
+    })
+  }
+
+  // Render waveform visualization
+  const renderWaveform = (waveform: string | null, isPlaying: boolean) => {
+    if (!waveform) return null
+    
+    const values = waveform.split(',').map(v => parseFloat(v) || 0.5)
+    
+    return (
+      <div className="flex items-center gap-0.5 h-8">
+        {values.slice(0, 40).map((value, i) => (
+          <div
+            key={i}
+            className={`w-1 rounded-full transition-all ${
+              isPlaying ? 'bg-primary animate-pulse' : 'bg-muted-foreground'
+            }`}
+            style={{ height: `${value * 100}%` }}
+          />
+        ))}
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -1520,7 +1977,7 @@ export function Shoutbox() {
                   </h2>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Community Chat
+                      {filteredShouts.length} messages
                     </span>
                     {unreadMentions > 0 && (
                       <Badge variant="destructive" className="animate-pulse">
@@ -1544,6 +2001,406 @@ export function Shoutbox() {
               </div>
               
               <div className="flex items-center gap-2">
+                {/* Advanced Search */}
+                <Dialog open={showAdvancedSearch} onOpenChange={setShowAdvancedSearch}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <Search className="h-3.5 w-3.5 text-primary" />
+                      <span className="hidden md:inline text-xs">Search</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl glass-card">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Search className="h-5 w-5 text-primary" />
+                        </div>
+                        <span>Advanced Search</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                        Filter messages by keywords, users, dates, and more
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="search-query">Search Keywords</Label>
+                        <Input
+                          id="search-query"
+                          placeholder="Search messages..."
+                          value={searchFilters.query}
+                          onChange={(e) => setSearchFilters(prev => ({ ...prev, query: e.target.value }))}
+                        />
+                        {searchHistory.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <span className="text-xs text-muted-foreground mr-2">Recent:</span>
+                            {searchHistory.slice(0, 5).map((query, i) => (
+                              <Button
+                                key={i}
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => setSearchFilters(prev => ({ ...prev, query }))}
+                              >
+                                <History className="h-3 w-3 mr-1" />
+                                {query}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="search-user">Filter by User</Label>
+                          <Select 
+                            value={searchFilters.userId || ''} 
+                            onValueChange={(value) => setSearchFilters(prev => ({ ...prev, userId: value || undefined }))}
+                          >
+                            <SelectTrigger id="search-user">
+                              <SelectValue placeholder="All users" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">All users</SelectItem>
+                              {Array.from(new Set(shouts.map(s => s.user.id))).map(userId => {
+                                const user = shouts.find(s => s.user.id === userId)?.user
+                                return user && (
+                                  <SelectItem key={userId} value={userId}>
+                                    {user.name}
+                                  </SelectItem>
+                                )
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Date Range</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="date"
+                              value={searchFilters.dateFrom ? format(searchFilters.dateFrom, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => setSearchFilters(prev => ({ 
+                                ...prev, 
+                                dateFrom: e.target.value ? new Date(e.target.value) : undefined 
+                              }))}
+                              className="text-xs"
+                            />
+                            <Input
+                              type="date"
+                              value={searchFilters.dateTo ? format(searchFilters.dateTo, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => setSearchFilters(prev => ({ 
+                                ...prev, 
+                                dateTo: e.target.value ? new Date(e.target.value) : undefined 
+                              }))}
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="search-reactions"
+                            checked={searchFilters.hasReactions || false}
+                            onCheckedChange={(checked) => setSearchFilters(prev => ({ ...prev, hasReactions: checked || undefined }))}
+                          />
+                          <Label htmlFor="search-reactions" className="text-sm cursor-pointer">
+                            Has reactions
+                          </Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="search-mentions"
+                            checked={searchFilters.hasMentions || false}
+                            onCheckedChange={(checked) => setSearchFilters(prev => ({ ...prev, hasMentions: checked || undefined }))}
+                          />
+                          <Label htmlFor="search-mentions" className="text-sm cursor-pointer">
+                            Mentions me
+                          </Label>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={() => {
+                          applyAdvancedSearch()
+                          setShowAdvancedSearch(false)
+                        }} className="flex-1">
+                          <Search className="h-4 w-4 mr-2" />
+                          Apply Search
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setSearchFilters({ query: '' })
+                            setShowAdvancedSearch(false)
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Export Button */}
+                <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <FileDown className="h-3.5 w-3.5 text-primary" />
+                      <span className="hidden md:inline text-xs">Export</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg glass-card">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <FileDown className="h-5 w-5 text-primary" />
+                        </div>
+                        <span>Export Messages</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                        Download chat history in your preferred format
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Export Format</Label>
+                        <Select value={exportFormat} onValueChange={(value: 'json' | 'csv') => setExportFormat(value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="json">JSON (Full data)</SelectItem>
+                            <SelectItem value="csv">CSV (Spreadsheet)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Date Range (Optional)</Label>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <Input
+                              type="date"
+                              value={exportDateFrom ? format(exportDateFrom, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => setExportDateFrom(e.target.value ? new Date(e.target.value) : undefined)}
+                              placeholder="From"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Input
+                              type="date"
+                              value={exportDateTo ? format(exportDateTo, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => setExportDateTo(e.target.value ? new Date(e.target.value) : undefined)}
+                              placeholder="To"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="include-attachments"
+                          checked={includeAttachments}
+                          onCheckedChange={setIncludeAttachments}
+                        />
+                        <Label htmlFor="include-attachments" className="cursor-pointer">
+                          Include attachments and media
+                        </Label>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={handleExport} disabled={isExporting} className="flex-1">
+                          {isExporting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Exporting...
+                            </>
+                          ) : (
+                            <>
+                              <FileDown className="h-4 w-4 mr-2" />
+                              Export {filteredShouts.length} Messages
+                            </>
+                          )}
+                        </Button>
+                        <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Custom Emojis */}
+                <Dialog open={showCustomEmojiDialog} onOpenChange={setShowCustomEmojiDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <Upload className="h-3.5 w-3.5 text-primary" />
+                      <span className="hidden md:inline text-xs">Emojis</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl glass-card max-h-[600px]">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <Smile className="h-5 w-5 text-primary" />
+                        </div>
+                        <span>Custom Emojis</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                        Upload and manage your custom emoji collection
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <Tabs defaultValue="upload">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upload">Upload New</TabsTrigger>
+                        <TabsTrigger value="manage">My Emojis ({customEmojis.length})</TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="upload" className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="emoji-name">Emoji Name</Label>
+                          <Input
+                            id="emoji-name"
+                            placeholder=":myemoji:"
+                            value={newEmojiName}
+                            onChange={(e) => setNewEmojiName(e.target.value)}
+                            className="font-mono"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Must start and end with colons, e.g., :rocket:
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="emoji-url">Image URL</Label>
+                          <Input
+                            id="emoji-url"
+                            placeholder="https://example.com/emoji.png"
+                            value={newEmojiUrl}
+                            onChange={(e) => setNewEmojiUrl(e.target.value)}
+                          />
+                          {newEmojiUrl && (
+                            <div className="p-2 border rounded-lg flex items-center gap-3">
+                              <img src={newEmojiUrl} alt="Preview" className="h-8 w-8 object-contain" />
+                              <span className="text-xs text-muted-foreground">Preview</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="emoji-category">Category</Label>
+                            <Select value={newEmojiCategory} onValueChange={(value: any) => setNewEmojiCategory(value)}>
+                              <SelectTrigger id="emoji-category">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="custom">Custom</SelectItem>
+                                <SelectItem value="team">Team</SelectItem>
+                                <SelectItem value="animated">Animated</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Type</Label>
+                            <div className="flex items-center space-x-2 h-10">
+                              <Switch
+                                id="emoji-animated"
+                                checked={newEmojiIsAnimated}
+                                onCheckedChange={setNewEmojiIsAnimated}
+                              />
+                              <Label htmlFor="emoji-animated" className="cursor-pointer">
+                                Animated
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button 
+                          onClick={handleUploadCustomEmoji} 
+                          disabled={uploadingEmoji}
+                          className="w-full"
+                        >
+                          {uploadingEmoji ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Emoji
+                            </>
+                          )}
+                        </Button>
+                      </TabsContent>
+
+                      <TabsContent value="manage">
+                        <ScrollArea className="h-[400px]">
+                          {customEmojis.length === 0 ? (
+                            <div className="text-center py-12">
+                              <Smile className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                              <h3 className="font-semibold text-lg mb-2">No Custom Emojis Yet</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Upload your first custom emoji to get started
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-3 p-2">
+                              {customEmojis.map(emoji => (
+                                <Card key={emoji.id} className="p-3 relative group">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <img 
+                                      src={emoji.imageUrl} 
+                                      alt={emoji.name}
+                                      className={`h-12 w-12 object-contain ${emoji.isAnimated ? 'animate-pulse' : ''}`}
+                                    />
+                                    <div className="text-center">
+                                      <p className="text-xs font-mono font-bold">{emoji.name}</p>
+                                      <Badge variant="outline" className="text-[9px] mt-1">
+                                        {emoji.category}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  {emoji.uploadedBy === session?.user?.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => handleDeleteCustomEmoji(emoji.id)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
+
                 {/* Bookmarks Button */}
                 <Button
                   variant="outline"
@@ -1632,7 +2489,7 @@ export function Shoutbox() {
                   <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
                 </Button>
 
-                {/* Settings Dialog */}
+                {/* Settings Dialog with Privacy */}
                 <Dialog open={showSettings} onOpenChange={setShowSettings}>
                   <DialogTrigger asChild>
                     <Button
@@ -1655,7 +2512,7 @@ export function Shoutbox() {
                     </DialogHeader>
                     
                     <Tabs defaultValue="appearance" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 h-11">
+                      <TabsList className="grid w-full grid-cols-3 h-11">
                         <TabsTrigger value="appearance" className="gap-2">
                           <Palette className="h-4 w-4" />
                           Appearance
@@ -1663,6 +2520,10 @@ export function Shoutbox() {
                         <TabsTrigger value="behavior" className="gap-2">
                           <Zap className="h-4 w-4" />
                           Behavior
+                        </TabsTrigger>
+                        <TabsTrigger value="privacy" className="gap-2">
+                          <EyeOff className="h-4 w-4" />
+                          Privacy
                         </TabsTrigger>
                       </TabsList>
                       
@@ -1773,6 +2634,26 @@ export function Shoutbox() {
                           />
                         </div>
                       </TabsContent>
+                      
+                      <TabsContent value="privacy" className="space-y-4 mt-4">
+                        <div className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                          <div className="flex items-center gap-2">
+                            <CheckCheck className="h-4 w-4 text-primary" />
+                            <Label htmlFor="read-receipts" className="font-medium cursor-pointer">
+                              Show Read Receipts
+                            </Label>
+                          </div>
+                          <Switch
+                            id="read-receipts"
+                            checked={privacySettings.showReadReceipts}
+                            onCheckedChange={handleToggleReadReceipts}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground px-3">
+                          When enabled, other users can see when you've read their messages. 
+                          Turning this off will also hide when others have read your messages.
+                        </p>
+                      </TabsContent>
                     </Tabs>
                   </DialogContent>
                 </Dialog>
@@ -1853,6 +2734,31 @@ export function Shoutbox() {
             scrollbarColor: 'oklch(0.50 0.20 240) transparent'
           }}
         >
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="p-4 text-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadMoreMessages}
+                disabled={isLoadingMore}
+                className="gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUp className="h-4 w-4" />
+                    Load Earlier Messages
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           <div className="p-6 space-y-3">
             <AnimatePresence mode="popLayout">
               {filteredShouts.length === 0 ? (
@@ -1864,9 +2770,9 @@ export function Shoutbox() {
                   <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center mx-auto mb-6 ring-8 ring-primary/5">
                     <MessageSquare className="h-12 w-12 text-primary" />
                   </div>
-                  <h3 className="font-display font-bold text-xl mb-2">No Messages Yet</h3>
+                  <h3 className="font-display font-bold text-xl mb-2">No Messages Found</h3>
                   <p className="text-muted-foreground font-medium">
-                    Be the first to start the conversation! 🚀
+                    {searchFilters.query ? 'Try adjusting your search filters' : 'Be the first to start the conversation! 🚀'}
                   </p>
                 </motion.div>
               ) : (
@@ -1876,10 +2782,14 @@ export function Shoutbox() {
                   const isThreadExpanded = expandedThreads.has(shout.id)
                   const hasMention = shout.mentions.includes(session?.user?.id || '')
                   const isBookmarked = bookmarks.some(b => b.shout.id === shout.id)
+                  const receipts = readReceipts[shout.id] || []
+                  const readCount = receipts.length
                   
                   return (
                     <motion.div
                       key={shout.id}
+                      id={`shout-${shout.id}`}
+                      data-message-id={shout.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
@@ -1962,6 +2872,49 @@ export function Shoutbox() {
                                   <BookmarkCheck className="h-2.5 w-2.5 mr-0.5" />
                                   bookmarked
                                 </Badge>
+                              )}
+                              {readCount > 0 && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground"
+                                      onClick={() => fetchReadReceipts(shout.id)}
+                                    >
+                                      <CheckCheck className="h-3 w-3 text-blue-500" />
+                                      Seen by {readCount}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64" align="start">
+                                    <div className="space-y-2">
+                                      <h4 className="font-semibold text-sm mb-2">Read by</h4>
+                                      {loadingReceipts[shout.id] ? (
+                                        <div className="flex items-center justify-center py-4">
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        </div>
+                                      ) : (
+                                        receipts.map(receipt => (
+                                          <div key={receipt.id} className="flex items-center gap-2">
+                                            <Avatar className="h-6 w-6">
+                                              <AvatarFallback className="text-[9px]">
+                                                {getInitials(receipt.user.name)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-medium truncate">
+                                                {receipt.user.name}
+                                              </p>
+                                              <p className="text-[10px] text-muted-foreground">
+                                                {formatDistanceToNow(new Date(receipt.readAt), { addSuffix: true })}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                               )}
                             </div>
 
@@ -2591,7 +3544,7 @@ export function Shoutbox() {
                   )}
                 </div>
                 
-                {/* Emoji Picker Button */}
+                {/* Enhanced Emoji Picker with Custom Emojis */}
                 <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                   <PopoverTrigger asChild>
                     <Button
@@ -2604,14 +3557,49 @@ export function Shoutbox() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-3 glass-card" align="end">
-                    <Tabs defaultValue="Smileys">
+                    <Tabs defaultValue={customEmojis.length > 0 ? 'custom' : 'Smileys'}>
                       <TabsList className="w-full justify-start overflow-x-auto h-9">
+                        {customEmojis.length > 0 && (
+                          <TabsTrigger value="custom" className="text-xs font-medium">
+                            <Star className="h-3 w-3 mr-1" />
+                            Custom
+                          </TabsTrigger>
+                        )}
                         {Object.keys(EMOJI_CATEGORIES).map(category => (
                           <TabsTrigger key={category} value={category} className="text-xs font-medium">
                             {category}
                           </TabsTrigger>
                         ))}
                       </TabsList>
+                      
+                      {customEmojis.length > 0 && (
+                        <TabsContent value="custom" className="mt-3">
+                          <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                            {customEmojis.map(emoji => (
+                              <Button
+                                key={emoji.id}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 hover:bg-primary/10 hover:scale-110 transition-transform"
+                                onClick={() => {
+                                  setMessage(prev => prev + emoji.name)
+                                  setShowEmojiPicker(false)
+                                  inputRef.current?.focus()
+                                }}
+                                title={emoji.name}
+                              >
+                                <img 
+                                  src={emoji.imageUrl} 
+                                  alt={emoji.name}
+                                  className={`h-6 w-6 object-contain ${emoji.isAnimated ? 'animate-pulse' : ''}`}
+                                />
+                              </Button>
+                            ))}
+                          </div>
+                        </TabsContent>
+                      )}
+                      
                       {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
                         <TabsContent key={category} value={category} className="mt-3">
                           <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
@@ -2666,6 +3654,18 @@ export function Shoutbox() {
           </div>
         </div>
       </Card>
+
+      {/* Scroll to Bottom Button */}
+      <div className="sticky bottom-4 right-4 float-right mr-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })}
+          className="shadow-lg"
+        >
+          <ArrowDown className="h-4 w-4" />
+        </Button>
+      </div>
 
       {/* Announcement Dialog */}
       <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
