@@ -494,10 +494,10 @@ export function Shoutbox() {
 
   return (
     <div className="space-y-6">
-      {/* Main Shoutbox - Full Width */}
-      <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden">
+      {/* Main Shoutbox - Full Width & Full Height */}
+      <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
         {/* Professional Header */}
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
           <div className="relative px-6 py-5 border-b-2 border-primary/10">
             <div className="flex items-center justify-between">
@@ -767,10 +767,10 @@ export function Shoutbox() {
           )}
         </AnimatePresence>
 
-        {/* Messages Area - Professional Design */}
+        {/* Messages Area - Flexible Height with Independent Scroll */}
         <div 
           ref={scrollRef}
-          className="h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto bg-gradient-to-b from-background/50 to-background"
+          className="flex-1 overflow-y-auto bg-gradient-to-b from-background/50 to-background"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'oklch(0.50 0.20 240) transparent'
@@ -913,8 +913,8 @@ export function Shoutbox() {
           </div>
         </div>
 
-        {/* Input Area - Redesigned Single Line */}
-        <div className="relative overflow-hidden border-t-2 border-primary/10">
+        {/* Input Area - Sticky at Bottom */}
+        <div className="relative overflow-hidden border-t-2 border-primary/10 shrink-0 mt-auto">
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
           <div className="relative px-4 py-3">
             {/* Reply indicator */}
