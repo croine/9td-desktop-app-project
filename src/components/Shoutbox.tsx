@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
@@ -12,7 +13,9 @@ import {
   Smile, Pin, Heart, ThumbsUp, Reply, Edit2, Bookmark,
   Users, Volume2, VolumeX, Palette, Clock, Type,
   ChevronDown, ChevronUp, Search, Filter, Mic, Gift,
-  Zap, TrendingUp, Star, Award, Image, Code, BarChart3, X
+  Zap, TrendingUp, Star, Award, Image, Code, BarChart3, X,
+  Paperclip, FileText, Download, AtSign, Bold, Italic, 
+  Strikethrough, MessageCircle, CheckCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -32,8 +35,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
 import { useSession } from '@/lib/auth-client'
+import ReactMarkdown from 'react-markdown'
+
+interface Reaction {
+  emoji: string
+  count: number
+  users: Array<{ id: string; name: string }>
+  hasReacted: boolean
+}
+
+interface Attachment {
+  url: string
+  type: string | null
+  name: string | null
+}
+
+interface ReplyToShout {
+  id: number
+  message: string
+  user: {
+    id: string
+    name: string
+  }
+  createdAt: string
+}
 
 interface Shout {
   id: number
@@ -44,8 +70,11 @@ interface Shout {
     name: string
     email: string
   }
-  replyToId?: number
+  replyTo?: ReplyToShout | null
   editedAt?: string
+  attachment?: Attachment | null
+  reactions: Reaction[]
+  mentions: string[]
 }
 
 interface ShoutboxSettings {
@@ -70,6 +99,8 @@ interface UserAvatarData {
   selectedAvatarId?: string | null
   customAvatarUrl?: string | null
 }
+
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🚀']
 
 const EMOJI_CATEGORIES = {
   'Smileys': ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
@@ -112,9 +143,18 @@ export function Shoutbox() {
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [showOnlineUsers, setShowOnlineUsers] = useState(false)
   const [userAvatars, setUserAvatars] = useState<Record<string, UserAvatarData>>({})
+  const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set())
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionCursorPos, setMentionCursorPos] = useState(0)
+  const [unreadMentions, setUnreadMentions] = useState(0)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const [showFormatting, setShowFormatting] = useState(false)
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Settings with localStorage persistence
   const [settings, setSettings] = useState<ShoutboxSettings>(() => {
@@ -142,6 +182,187 @@ export function Shoutbox() {
   useEffect(() => {
     localStorage.setItem('shoutbox-settings', JSON.stringify(settings))
   }, [settings])
+
+  // Fetch mentions count
+  const fetchUnreadMentions = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/shoutbox/mentions?limit=1', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUnreadMentions(data.unreadCount)
+      }
+    } catch (error) {
+      console.error('Failed to fetch mentions:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchUnreadMentions()
+    const interval = setInterval(fetchUnreadMentions, 30000) // Every 30s
+    return () => clearInterval(interval)
+  }, [])
+
+  // Handle mention input
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    const cursorPos = e.target.selectionStart || 0
+    
+    setMessage(value)
+    setMentionCursorPos(cursorPos)
+
+    // Check for @ mention trigger
+    const textBeforeCursor = value.slice(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1)
+      if (!textAfterAt.includes(' ')) {
+        setMentionQuery(textAfterAt)
+        setShowMentionSuggestions(true)
+        return
+      }
+    }
+    
+    setShowMentionSuggestions(false)
+  }
+
+  // Insert mention
+  const insertMention = (userName: string) => {
+    const textBeforeCursor = message.slice(0, mentionCursorPos)
+    const textAfterCursor = message.slice(mentionCursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const beforeAt = message.slice(0, lastAtIndex)
+      const newValue = `${beforeAt}@${userName} ${textAfterCursor}`
+      setMessage(newValue)
+      setShowMentionSuggestions(false)
+      
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newCursorPos = lastAtIndex + userName.length + 2
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(newCursorPos, newCursorPos)
+        }
+      }, 0)
+    }
+  }
+
+  // Extract mentions from message
+  const extractMentions = (text: string): string[] => {
+    const mentionRegex = /@(\w+)/g
+    const mentions: string[] = []
+    let match
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const userName = match[1]
+      // Find user ID by name (you'll need to maintain a users list)
+      // For now, we'll just collect unique usernames
+      if (!mentions.includes(userName)) {
+        mentions.push(userName)
+      }
+    }
+    
+    return mentions
+  }
+
+  // Toggle reaction
+  const handleReaction = async (shoutId: number, emoji: string) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/shoutbox/${shoutId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ emoji })
+      })
+
+      if (response.ok) {
+        await fetchShouts(false)
+        const result = await response.json()
+        if (result.action === 'added') {
+          toast.success(`Reacted with ${emoji}`)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to react:', error)
+      toast.error('Failed to add reaction')
+    }
+  }
+
+  // Handle file upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB')
+        return
+      }
+      setAttachmentFile(file)
+      toast.success(`File selected: ${file.name}`)
+    }
+  }
+
+  // Upload attachment (mock - implement with your file storage)
+  const uploadAttachment = async (file: File): Promise<{ url: string; type: string; name: string } | null> => {
+    // TODO: Implement actual file upload to your storage service
+    // For now, return mock data
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          url: URL.createObjectURL(file),
+          type: file.type,
+          name: file.name
+        })
+      }, 1000)
+    })
+  }
+
+  // Insert formatting
+  const insertFormatting = (format: 'bold' | 'italic' | 'code' | 'strike') => {
+    if (!inputRef.current) return
+    
+    const start = inputRef.current.selectionStart
+    const end = inputRef.current.selectionEnd
+    const selectedText = message.slice(start, end)
+    
+    let formattedText = ''
+    switch (format) {
+      case 'bold':
+        formattedText = `**${selectedText}**`
+        break
+      case 'italic':
+        formattedText = `*${selectedText}*`
+        break
+      case 'code':
+        formattedText = `\`${selectedText}\``
+        break
+      case 'strike':
+        formattedText = `~~${selectedText}~~`
+        break
+    }
+    
+    const newMessage = message.slice(0, start) + formattedText + message.slice(end)
+    setMessage(newMessage)
+    
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+        inputRef.current.setSelectionRange(start + formattedText.length, start + formattedText.length)
+      }
+    }, 0)
+  }
 
   // Fetch user avatar with comprehensive data
   const fetchUserAvatar = async (userId: string, force = false) => {
@@ -339,8 +560,8 @@ export function Shoutbox() {
   const handleSendShout = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!message.trim()) {
-      toast.error('Message cannot be empty')
+    if (!message.trim() && !attachmentFile) {
+      toast.error('Message or attachment required')
       return
     }
 
@@ -358,6 +579,18 @@ export function Shoutbox() {
     setIsSending(true)
 
     try {
+      let attachmentData = null
+      
+      // Upload attachment if exists
+      if (attachmentFile) {
+        setUploadingAttachment(true)
+        attachmentData = await uploadAttachment(attachmentFile)
+        setUploadingAttachment(false)
+      }
+
+      // Extract mentions (note: you'll need user IDs, not just names)
+      const mentionedNames = extractMentions(message)
+
       const response = await fetch('/api/shoutbox', {
         method: 'POST',
         headers: {
@@ -366,7 +599,13 @@ export function Shoutbox() {
         },
         body: JSON.stringify({ 
           message: message.trim(),
-          replyToId: replyToShout?.id 
+          replyToId: replyToShout?.id,
+          mentions: [], // TODO: Convert names to user IDs
+          ...(attachmentData && {
+            attachmentUrl: attachmentData.url,
+            attachmentType: attachmentData.type,
+            attachmentName: attachmentData.name
+          })
         })
       })
 
@@ -377,9 +616,6 @@ export function Shoutbox() {
 
       const newShout = await response.json()
       
-      console.log('📨 New shout sent, ensuring avatar is loaded...')
-      
-      // Force refresh current user's avatar before adding the shout
       if (session?.user?.id) {
         await fetchUserAvatar(session.user.id, true)
       }
@@ -387,15 +623,18 @@ export function Shoutbox() {
       setShouts(prev => [...prev, newShout])
       setMessage('')
       setReplyToShout(null)
+      setAttachmentFile(null)
       
       inputRef.current?.focus()
       
       toast.success('Shout sent! 💬')
+      fetchUnreadMentions()
     } catch (error) {
       console.error('Failed to send shout:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to send shout')
     } finally {
       setIsSending(false)
+      setUploadingAttachment(false)
     }
   }
 
@@ -484,6 +723,52 @@ export function Shoutbox() {
     return url
   }
 
+  // Render message with markdown
+  const renderMessage = (text: string) => {
+    return (
+      <ReactMarkdown
+        className="prose prose-sm dark:prose-invert max-w-none"
+        components={{
+          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+          code: ({ inline, children }) => (
+            inline ? (
+              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                {children}
+              </code>
+            ) : (
+              <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mt-2">
+                <code>{children}</code>
+              </pre>
+            )
+          ),
+          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          del: ({ children }) => <del className="line-through">{children}</del>,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    )
+  }
+
+  // Toggle thread expansion
+  const toggleThread = (shoutId: number) => {
+    setExpandedThreads(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(shoutId)) {
+        newSet.delete(shoutId)
+      } else {
+        newSet.add(shoutId)
+      }
+      return newSet
+    })
+  }
+
+  // Get thread replies
+  const getThreadReplies = (shoutId: number) => {
+    return shouts.filter(s => s.replyTo?.id === shoutId)
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -492,11 +777,16 @@ export function Shoutbox() {
     )
   }
 
+  const availableUsers = Array.from(new Set(shouts.map(s => s.user.name)))
+  const filteredUsers = availableUsers.filter(name =>
+    name.toLowerCase().includes(mentionQuery.toLowerCase())
+  )
+
   return (
     <div className="space-y-6">
-      {/* Main Shoutbox - Full Width & Full Height */}
+      {/* Main Shoutbox */}
       <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
-        {/* Professional Header */}
+        {/* Header with mentions badge */}
         <div className="relative overflow-hidden shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
           <div className="relative px-6 py-5 border-b-2 border-primary/10">
@@ -511,8 +801,13 @@ export function Shoutbox() {
                   </h2>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Shoutbox - Community
+                      Community Chat
                     </span>
+                    {unreadMentions > 0 && (
+                      <Badge variant="destructive" className="animate-pulse">
+                        {unreadMentions} new mention{unreadMentions > 1 ? 's' : ''}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -793,8 +1088,11 @@ export function Shoutbox() {
                   </p>
                 </motion.div>
               ) : (
-                filteredShouts.map((shout, index) => {
+                filteredShouts.filter(s => !s.replyTo).map((shout, index) => {
                   const avatarUrl = getAvatarUrl(shout.user.id)
+                  const threadReplies = getThreadReplies(shout.id)
+                  const isThreadExpanded = expandedThreads.has(shout.id)
+                  const hasMention = shout.mentions.includes(session?.user?.id || '')
                   
                   return (
                     <motion.div
@@ -805,7 +1103,7 @@ export function Shoutbox() {
                       transition={{ delay: index * 0.03 }}
                       className="group relative"
                     >
-                      <div className={`${settings.highlightColor} ${
+                      <div className={`${hasMention ? 'bg-blue-500/10 border-blue-500/30' : settings.highlightColor} ${
                         settings.compactMode ? 'p-2' : 'p-2.5'
                       } rounded-lg border hover:border-primary/30 hover:shadow-md transition-all duration-200`}>
                         <div className="flex gap-2.5">
@@ -815,13 +1113,6 @@ export function Shoutbox() {
                               src={avatarUrl || ''} 
                               alt={shout.user.name}
                               className="object-cover w-full h-full"
-                              onError={(e) => {
-                                console.error(`❌ Failed to load avatar image for user ${shout.user.id}:`, avatarUrl)
-                                e.currentTarget.style.display = 'none'
-                              }}
-                              onLoad={() => {
-                                console.log(`✅ Successfully loaded avatar image for user ${shout.user.id}:`, avatarUrl)
-                              }}
                             />
                             <AvatarFallback className="font-semibold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-[10px]">
                               {getInitials(shout.user.name)}
@@ -846,21 +1137,118 @@ export function Shoutbox() {
                                   )}
                                 </>
                               )}
+                              {hasMention && (
+                                <Badge variant="outline" className="text-[9px] h-4 font-medium px-1 bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
+                                  <AtSign className="h-2.5 w-2.5 mr-0.5" />
+                                  mentioned you
+                                </Badge>
+                              )}
                             </div>
 
-                            {/* Reply indicator */}
-                            {shout.replyToId && (
-                              <div className="flex items-center gap-1 mb-1 text-[10px] text-muted-foreground font-medium">
-                                <Reply className="h-2.5 w-2.5" />
-                                <span>Replying to a message</span>
+                            {/* Message with markdown */}
+                            <div className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
+                              settings.compactMode ? 'text-[11px]' : 'text-xs'
+                            } break-words leading-relaxed font-medium`}>
+                              {renderMessage(shout.message)}
+                            </div>
+
+                            {/* Attachment */}
+                            {shout.attachment && (
+                              <div className="mt-2 p-2 rounded-lg border bg-muted/50 flex items-center gap-2">
+                                {shout.attachment.type?.startsWith('image/') ? (
+                                  <div className="relative group/img">
+                                    <img 
+                                      src={shout.attachment.url} 
+                                      alt={shout.attachment.name || 'Attachment'}
+                                      className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(shout.attachment!.url, '_blank')}
+                                    />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium truncate">{shout.attachment.name}</p>
+                                      <p className="text-[10px] text-muted-foreground">{shout.attachment.type}</p>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => window.open(shout.attachment!.url, '_blank')}
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             )}
 
-                            <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
-                              settings.compactMode ? 'text-[11px]' : 'text-xs'
-                            } break-words leading-relaxed font-medium`}>
-                              {shout.message}
-                            </p>
+                            {/* Reactions */}
+                            {shout.reactions.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {shout.reactions.map(reaction => (
+                                  <Popover key={reaction.emoji}>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={`h-6 px-2 gap-1 hover:scale-110 transition-transform ${
+                                          reaction.hasReacted ? 'bg-primary/10 border-primary/30' : ''
+                                        }`}
+                                        onClick={() => handleReaction(shout.id, reaction.emoji)}
+                                      >
+                                        <span className="text-sm">{reaction.emoji}</span>
+                                        <span className="text-[10px] font-bold">{reaction.count}</span>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2" align="start">
+                                      <div className="space-y-1">
+                                        {reaction.users.map(user => (
+                                          <div key={user.id} className="text-xs font-medium">
+                                            {user.name}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Quick reactions */}
+                            <div className="flex gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {QUICK_REACTIONS.map(emoji => (
+                                <Button
+                                  key={emoji}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:scale-125 transition-transform"
+                                  onClick={() => handleReaction(shout.id, emoji)}
+                                  title={`React with ${emoji}`}
+                                >
+                                  <span className="text-sm">{emoji}</span>
+                                </Button>
+                              ))}
+                            </div>
+
+                            {/* Thread indicator */}
+                            {threadReplies.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 gap-1 mt-2 text-xs text-primary hover:text-primary"
+                                onClick={() => toggleThread(shout.id)}
+                              >
+                                <MessageCircle className="h-3 w-3" />
+                                {threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}
+                                {isThreadExpanded ? (
+                                  <ChevronUp className="h-3 w-3" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3" />
+                                )}
+                              </Button>
+                            )}
                           </div>
 
                           {/* Actions */}
@@ -887,6 +1275,48 @@ export function Shoutbox() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Thread replies */}
+                      <AnimatePresence>
+                        {isThreadExpanded && threadReplies.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="ml-12 mt-2 space-y-2 border-l-2 border-primary/20 pl-4"
+                          >
+                            {threadReplies.map(reply => {
+                              const replyAvatarUrl = getAvatarUrl(reply.user.id)
+                              return (
+                                <div key={reply.id} className="group/reply">
+                                  <div className="p-2 rounded-lg border bg-card/50 hover:border-primary/30 transition-all">
+                                    <div className="flex gap-2">
+                                      <Avatar className="h-6 w-6 shrink-0">
+                                        <AvatarImage src={replyAvatarUrl || ''} alt={reply.user.name} />
+                                        <AvatarFallback className="text-[9px]">
+                                          {getInitials(reply.user.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                          <span className="font-semibold text-[10px]">{reply.user.name}</span>
+                                          <span className="text-[9px] text-muted-foreground">
+                                            {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
+                                          </span>
+                                        </div>
+                                        <div className="text-[11px] break-words">
+                                          {renderMessage(reply.message)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )
                 })
@@ -941,19 +1371,137 @@ export function Shoutbox() {
               </motion.div>
             )}
 
+            {/* Attachment preview */}
+            {attachmentFile && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-2 px-3 py-2 bg-muted/50 rounded-md border flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium">{attachmentFile.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    ({(attachmentFile.size / 1024).toFixed(1)} KB)
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAttachmentFile(null)}
+                  className="h-5 w-5 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </motion.div>
+            )}
+
             <form onSubmit={handleSendShout}>
-              <div className="flex items-center gap-2">
-                {/* Input Field */}
-                <Input
-                  ref={inputRef as any}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={handleKeyDown as any}
-                  placeholder="Type a message... (Press Enter to send)"
-                  className="flex-1 h-10 text-sm bg-background border-2 border-primary/20 focus:border-primary/40 font-medium placeholder:text-muted-foreground/50"
-                  maxLength={500}
-                  disabled={isSending}
+              {/* Formatting toolbar */}
+              <div className="flex items-center gap-1 mb-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => insertFormatting('bold')}
+                  title="Bold"
+                >
+                  <Bold className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => insertFormatting('italic')}
+                  title="Italic"
+                >
+                  <Italic className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => insertFormatting('strike')}
+                  title="Strikethrough"
+                >
+                  <Strikethrough className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => insertFormatting('code')}
+                  title="Code"
+                >
+                  <Code className="h-3 w-3" />
+                </Button>
+                
+                <div className="h-4 w-px bg-border mx-1" />
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept="image/*,.pdf,.doc,.docx,.txt"
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach file"
+                >
+                  <Paperclip className="h-3 w-3" />
+                </Button>
+              </div>
+
+              <div className="flex items-end gap-2 relative">
+                {/* Textarea with mention support */}
+                <div className="flex-1 relative">
+                  <Textarea
+                    ref={inputRef}
+                    value={message}
+                    onChange={handleMessageChange}
+                    onKeyDown={handleKeyDown as any}
+                    placeholder="Type a message... (@mention, **bold**, *italic*)"
+                    className="resize-none h-20 text-sm bg-background border-2 border-primary/20 focus:border-primary/40 font-medium placeholder:text-muted-foreground/50"
+                    maxLength={500}
+                    disabled={isSending || uploadingAttachment}
+                  />
+                  
+                  {/* Mention suggestions */}
+                  {showMentionSuggestions && filteredUsers.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-2 w-full max-w-[300px] rounded-lg border bg-popover shadow-lg z-10">
+                      <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                          <AtSign className="h-3 w-3" />
+                          Mention user
+                        </div>
+                        {filteredUsers.map(userName => (
+                          <button
+                            key={userName}
+                            type="button"
+                            onClick={() => insertMention(userName)}
+                            className="w-full px-3 py-2 text-sm text-left rounded-md hover:bg-accent transition-colors flex items-center gap-2"
+                          >
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-xs font-semibold text-primary">
+                                {userName.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="font-medium">{userName}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Emoji Picker Button */}
                 <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
@@ -1002,10 +1550,10 @@ export function Shoutbox() {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isSending || !message.trim()}
+                  disabled={isSending || uploadingAttachment || (!message.trim() && !attachmentFile)}
                   className="h-10 w-10 p-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all shrink-0"
                 >
-                  {isSending ? (
+                  {isSending || uploadingAttachment ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="h-4 w-4" />
@@ -1016,7 +1564,9 @@ export function Shoutbox() {
               {/* Info Bar */}
               <div className="flex items-center justify-between mt-2 px-1">
                 <span className="text-[10px] text-muted-foreground font-medium">
-                  Press <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] font-bold">Enter</kbd> to send
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] font-bold">Enter</kbd> to send • 
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] font-bold mx-1">@</kbd> mention • 
+                  <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] font-bold">**bold**</kbd>
                 </span>
                 <span className={`text-[10px] font-semibold ${
                   message.length > 450 ? 'text-orange-500' : 'text-muted-foreground'

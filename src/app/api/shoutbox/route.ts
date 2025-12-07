@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { shouts, user, session } from '@/db/schema';
-import { eq, and, desc, gt } from 'drizzle-orm';
+import { shouts, user, session, messageReactions, messageMentions } from '@/db/schema';
+import { eq, and, desc, gt, inArray } from 'drizzle-orm';
 
 async function authenticateRequest(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
@@ -47,9 +47,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const results = await db.select({
+    // Get shouts with user details
+    const shoutsData = await db.select({
       id: shouts.id,
       message: shouts.message,
+      replyToId: shouts.replyToId,
+      editedAt: shouts.editedAt,
+      attachmentUrl: shouts.attachmentUrl,
+      attachmentType: shouts.attachmentType,
+      attachmentName: shouts.attachmentName,
       createdAt: shouts.createdAt,
       user: {
         id: user.id,
@@ -62,6 +68,109 @@ export async function GET(request: NextRequest) {
       .where(eq(shouts.isDeleted, false))
       .orderBy(desc(shouts.createdAt))
       .limit(50);
+
+    // Get all shout IDs
+    const shoutIds = shoutsData.map(s => s.id);
+
+    // Get all reactions for these shouts
+    const reactionsData = await db.select({
+      shoutId: messageReactions.shoutId,
+      emoji: messageReactions.emoji,
+      userId: messageReactions.userId,
+      userName: user.name,
+    })
+      .from(messageReactions)
+      .leftJoin(user, eq(messageReactions.userId, user.id))
+      .where(inArray(messageReactions.shoutId, shoutIds));
+
+    // Get all mentions for these shouts
+    const mentionsData = await db.select({
+      shoutId: messageMentions.shoutId,
+      mentionedUserId: messageMentions.mentionedUserId,
+    })
+      .from(messageMentions)
+      .where(inArray(messageMentions.shoutId, shoutIds));
+
+    // Get reply-to shouts
+    const replyToIds = shoutsData.filter(s => s.replyToId).map(s => s.replyToId!);
+    let replyToData: any = {};
+    
+    if (replyToIds.length > 0) {
+      const replyShouts = await db.select({
+        id: shouts.id,
+        message: shouts.message,
+        userId: shouts.userId,
+        userName: user.name,
+        createdAt: shouts.createdAt,
+      })
+        .from(shouts)
+        .leftJoin(user, eq(shouts.userId, user.id))
+        .where(inArray(shouts.id, replyToIds));
+
+      replyToData = Object.fromEntries(
+        replyShouts.map(r => [r.id, {
+          id: r.id,
+          message: r.message,
+          user: { id: r.userId, name: r.userName },
+          createdAt: r.createdAt
+        }])
+      );
+    }
+
+    // Group reactions by shout and emoji
+    const reactionsMap = new Map<number, Map<string, { count: number; users: any[]; hasReacted: boolean }>>();
+    
+    for (const reaction of reactionsData) {
+      if (!reactionsMap.has(reaction.shoutId)) {
+        reactionsMap.set(reaction.shoutId, new Map());
+      }
+      
+      const emojiMap = reactionsMap.get(reaction.shoutId)!;
+      
+      if (!emojiMap.has(reaction.emoji)) {
+        emojiMap.set(reaction.emoji, { count: 0, users: [], hasReacted: false });
+      }
+      
+      const emojiData = emojiMap.get(reaction.emoji)!;
+      emojiData.count++;
+      emojiData.users.push({ id: reaction.userId, name: reaction.userName });
+      
+      if (reaction.userId === userId) {
+        emojiData.hasReacted = true;
+      }
+    }
+
+    // Group mentions by shout
+    const mentionsMap = new Map<number, string[]>();
+    
+    for (const mention of mentionsData) {
+      if (!mentionsMap.has(mention.shoutId)) {
+        mentionsMap.set(mention.shoutId, []);
+      }
+      mentionsMap.get(mention.shoutId)!.push(mention.mentionedUserId);
+    }
+
+    // Build final response
+    const results = shoutsData.map(shout => ({
+      id: shout.id,
+      message: shout.message,
+      replyTo: shout.replyToId ? replyToData[shout.replyToId] || null : null,
+      editedAt: shout.editedAt,
+      attachment: shout.attachmentUrl ? {
+        url: shout.attachmentUrl,
+        type: shout.attachmentType,
+        name: shout.attachmentName,
+      } : null,
+      createdAt: shout.createdAt,
+      user: shout.user,
+      reactions: Array.from(reactionsMap.get(shout.id)?.entries() || []).map(([emoji, data]) => ({
+        emoji,
+        count: data.count,
+        users: data.users,
+        hasReacted: data.hasReacted,
+      })),
+      mentions: mentionsMap.get(shout.id) || [],
+    }));
 
     return NextResponse.json(results, { status: 200 });
   } catch (error) {
@@ -85,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { message } = body;
+    const { message, replyToId, mentions, attachmentUrl, attachmentType, attachmentName } = body;
 
     if ('userId' in body || 'user_id' in body) {
       return NextResponse.json(
@@ -127,11 +236,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate replyToId if provided
+    if (replyToId !== undefined && replyToId !== null) {
+      if (typeof replyToId !== 'number' || isNaN(replyToId)) {
+        return NextResponse.json(
+          { error: 'replyToId must be a valid number', code: 'INVALID_REPLY_TO_ID' },
+          { status: 400 }
+        );
+      }
+
+      const replyShout = await db.select()
+        .from(shouts)
+        .where(and(eq(shouts.id, replyToId), eq(shouts.isDeleted, false)))
+        .limit(1);
+
+      if (replyShout.length === 0) {
+        return NextResponse.json(
+          { error: 'Reply-to shout not found', code: 'REPLY_TO_NOT_FOUND' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Validate mentions if provided
+    if (mentions !== undefined && mentions !== null) {
+      if (!Array.isArray(mentions)) {
+        return NextResponse.json(
+          { error: 'Mentions must be an array', code: 'INVALID_MENTIONS' },
+          { status: 400 }
+        );
+      }
+
+      if (mentions.length > 0) {
+        const validUsers = await db.select({ id: user.id })
+          .from(user)
+          .where(inArray(user.id, mentions));
+
+        if (validUsers.length !== mentions.length) {
+          return NextResponse.json(
+            { error: 'One or more mentioned users not found', code: 'INVALID_MENTIONED_USERS' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validate attachment fields
+    if (attachmentUrl && (!attachmentType || !attachmentName)) {
+      return NextResponse.json(
+        { error: 'attachmentType and attachmentName required when attachmentUrl provided', code: 'INCOMPLETE_ATTACHMENT' },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const newShout = await db.insert(shouts)
       .values({
         userId,
         message: trimmedMessage,
+        replyToId: replyToId || null,
+        attachmentUrl: attachmentUrl || null,
+        attachmentType: attachmentType || null,
+        attachmentName: attachmentName || null,
         createdAt: now,
         updatedAt: now,
         isDeleted: false,
@@ -145,9 +311,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create mention records if mentions provided
+    if (mentions && mentions.length > 0) {
+      const mentionRecords = mentions.map((mentionedUserId: string) => ({
+        shoutId: newShout[0].id,
+        mentionedUserId,
+        mentionedByUserId: userId,
+        isRead: false,
+        createdAt: now,
+      }));
+
+      await db.insert(messageMentions).values(mentionRecords);
+    }
+
     const createdShoutWithUser = await db.select({
       id: shouts.id,
       message: shouts.message,
+      replyToId: shouts.replyToId,
+      editedAt: shouts.editedAt,
+      attachmentUrl: shouts.attachmentUrl,
+      attachmentType: shouts.attachmentType,
+      attachmentName: shouts.attachmentName,
       createdAt: shouts.createdAt,
       user: {
         id: user.id,
@@ -167,7 +351,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(createdShoutWithUser[0], { status: 201 });
+    const responseShout = {
+      ...createdShoutWithUser[0],
+      replyTo: null,
+      attachment: createdShoutWithUser[0].attachmentUrl ? {
+        url: createdShoutWithUser[0].attachmentUrl,
+        type: createdShoutWithUser[0].attachmentType,
+        name: createdShoutWithUser[0].attachmentName,
+      } : null,
+      reactions: [],
+      mentions: mentions || [],
+    };
+
+    return NextResponse.json(responseShout, { status: 201 });
   } catch (error) {
     console.error('POST error:', error);
     return NextResponse.json(

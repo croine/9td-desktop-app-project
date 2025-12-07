@@ -78,6 +78,13 @@
       "when": 1765062501657,
       "tag": "0010_stale_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1765068293881,
+      "tag": "0011_wild_nekra",
+      "breakpoints": true
     }
   ]
 }

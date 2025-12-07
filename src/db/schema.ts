@@ -445,6 +445,11 @@ export const shouts = sqliteTable('shouts', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   message: text('message').notNull(),
+  replyToId: integer('reply_to_id').references(() => shouts.id, { onDelete: 'cascade' }),
+  editedAt: integer('edited_at', { mode: 'timestamp' }),
+  attachmentUrl: text('attachment_url'),
+  attachmentType: text('attachment_type'),
+  attachmentName: text('attachment_name'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -454,4 +459,37 @@ export const shouts = sqliteTable('shouts', {
   isDeleted: integer('is_deleted', { mode: 'boolean' })
     .notNull()
     .default(false),
+});
+
+export const messageReactions = sqliteTable('message_reactions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  shoutId: integer('shout_id')
+    .notNull()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  emoji: text('emoji').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const messageMentions = sqliteTable('message_mentions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  shoutId: integer('shout_id')
+    .notNull()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  mentionedUserId: text('mentioned_user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  mentionedByUserId: text('mentioned_by_user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  isRead: integer('is_read', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
 });
