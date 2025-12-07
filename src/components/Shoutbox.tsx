@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card } from '@/components/ui/card'
 import { 
   MessageSquare, Send, Trash2, RefreshCw, Loader2, Settings, 
@@ -64,6 +64,11 @@ interface OnlineUser {
   lastSeen: string
 }
 
+interface UserAvatarData {
+  avatarUrl?: string
+  avatarId?: string
+}
+
 const EMOJI_CATEGORIES = {
   'Smileys': ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
   'Gestures': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💪', '🦾'],
@@ -103,6 +108,7 @@ export function Shoutbox() {
   const [replyToShout, setReplyToShout] = useState<Shout | null>(null)
   const [typingUsers, setTypingUsers] = useState<string[]>([])
   const [showOnlineUsers, setShowOnlineUsers] = useState(false)
+  const [userAvatars, setUserAvatars] = useState<Record<string, UserAvatarData>>({})
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -134,6 +140,33 @@ export function Shoutbox() {
     localStorage.setItem('shoutbox-settings', JSON.stringify(settings))
   }, [settings])
 
+  // Fetch user avatars
+  const fetchUserAvatar = async (userId: string) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token || userAvatars[userId]) return
+
+    try {
+      const response = await fetch(`/api/user/avatar-customization?userId=${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserAvatars(prev => ({
+          ...prev,
+          [userId]: {
+            avatarUrl: data.avatarUrl,
+            avatarId: data.selectedAvatarId
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch user avatar:', error)
+    }
+  }
+
   // Fetch shouts
   const fetchShouts = async (showLoader = true) => {
     if (showLoader) setIsLoading(true)
@@ -159,6 +192,10 @@ export function Shoutbox() {
       const data = await response.json()
       
       setShouts(data)
+      
+      // Fetch avatars for all users in shouts
+      const uniqueUserIds = [...new Set(data.map((shout: Shout) => shout.user.id))]
+      uniqueUserIds.forEach(userId => fetchUserAvatar(userId))
     } catch (error) {
       console.error('Failed to fetch shouts:', error)
       toast.error('Failed to load shoutbox')
@@ -308,8 +345,8 @@ export function Shoutbox() {
           <div className="relative px-6 py-5 border-b-2 border-primary/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 flex items-center justify-center shadow-lg ring-4 ring-primary/10">
-                  <MessageSquare className="h-7 w-7 text-white" />
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 flex items-center justify-center shadow-lg ring-4 ring-primary/10">
+                  <MessageSquare className="h-5 w-5 text-white" />
                 </div>
                 <div>
                   <h2 className="font-display font-bold text-2xl text-foreground mb-1">
@@ -329,12 +366,12 @@ export function Shoutbox() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowOnlineUsers(!showOnlineUsers)}
-                  className={`h-9 gap-2 border-green-500/20 hover:border-green-500/40 ${
+                  className={`h-8 gap-2 border-green-500/20 hover:border-green-500/40 ${
                     showOnlineUsers ? 'bg-green-500/10 border-green-500/30' : 'hover:bg-green-500/5'
                   }`}
                 >
-                  <Users className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="hidden md:inline">Online ({onlineUsers.length})</span>
+                  <Users className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                  <span className="hidden md:inline text-xs">Online ({onlineUsers.length})</span>
                 </Button>
 
                 {/* Sound Toggle */}
@@ -342,12 +379,12 @@ export function Shoutbox() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSettings(prev => ({ ...prev, playSound: !prev.playSound }))}
-                  className={`h-9 w-9 p-0 border-primary/20 hover:border-primary/40 ${
+                  className={`h-8 w-8 p-0 border-primary/20 hover:border-primary/40 ${
                     settings.playSound ? 'bg-primary/10 border-primary/30' : 'hover:bg-primary/5'
                   }`}
                   title={settings.playSound ? 'Mute notifications' : 'Unmute notifications'}
                 >
-                  {settings.playSound ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+                  {settings.playSound ? <Volume2 className="h-3.5 w-3.5 text-primary" /> : <VolumeX className="h-3.5 w-3.5" />}
                 </Button>
 
                 {/* Refresh */}
@@ -356,9 +393,9 @@ export function Shoutbox() {
                   size="sm"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="h-9 w-9 p-0 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                  className="h-8 w-8 p-0 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+                  <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
                 </Button>
 
                 {/* Settings Dialog */}
@@ -367,10 +404,10 @@ export function Shoutbox() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                      className="h-8 gap-1.5 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
                     >
-                      <Settings className="h-4 w-4" />
-                      <span className="hidden md:inline">Settings</span>
+                      <Settings className="h-3.5 w-3.5" />
+                      <span className="hidden md:inline text-xs">Settings</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-lg glass-card">
@@ -536,6 +573,9 @@ export function Shoutbox() {
                     >
                       <div className="relative">
                         <Avatar className="h-8 w-8 ring-2 ring-green-500/20">
+                          {userAvatars[user.id]?.avatarUrl && (
+                            <AvatarImage src={userAvatars[user.id].avatarUrl} alt={user.name} />
+                          )}
                           <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400">
                             {getInitials(user.name)}
                           </AvatarFallback>
@@ -599,6 +639,9 @@ export function Shoutbox() {
                       <div className="flex gap-4">
                         {/* Avatar */}
                         <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
+                          {userAvatars[shout.user.id]?.avatarUrl && (
+                            <AvatarImage src={userAvatars[shout.user.id].avatarUrl} alt={shout.user.name} />
+                          )}
                           <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
                             {getInitials(shout.user.name)}
                           </AvatarFallback>
