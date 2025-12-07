@@ -270,6 +270,8 @@ export const userStatus = sqliteTable('user_status', {
   lastActivity: integer('last_activity', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),
+  // New presence mode field
+  presenceMode: text('presence_mode').notNull().default('online'),
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -450,6 +452,14 @@ export const shouts = sqliteTable('shouts', {
   attachmentUrl: text('attachment_url'),
   attachmentType: text('attachment_type'),
   attachmentName: text('attachment_name'),
+  // New GIF support fields
+  gifUrl: text('gif_url'),
+  gifTitle: text('gif_title'),
+  gifProvider: text('gif_provider'),
+  // New voice message support fields
+  voiceMessageUrl: text('voice_message_url'),
+  voiceMessageDuration: integer('voice_message_duration'),
+  voiceMessageWaveform: text('voice_message_waveform'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -492,4 +502,36 @@ export const messageMentions = sqliteTable('message_mentions', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .$defaultFn(() => new Date())
     .notNull(),
+});
+
+// New linkPreviews table
+export const linkPreviews = sqliteTable('link_previews', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  shoutId: integer('shout_id')
+    .notNull()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  title: text('title'),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  siteName: text('site_name'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+// New pinnedMessages table
+export const pinnedMessages = sqliteTable('pinned_messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  shoutId: integer('shout_id')
+    .notNull()
+    .unique()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  pinnedBy: text('pinned_by')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  pinnedAt: integer('pinned_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  order: integer('order').notNull().default(0),
 });

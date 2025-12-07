@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { shouts, user, session, messageReactions, messageMentions } from '@/db/schema';
-import { eq, and, desc, gt, inArray } from 'drizzle-orm';
+import { shouts, user, session, messageReactions, messageMentions, linkPreviews, pinnedMessages } from '@/db/schema';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
 async function authenticateRequest(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
@@ -56,6 +56,12 @@ export async function GET(request: NextRequest) {
       attachmentUrl: shouts.attachmentUrl,
       attachmentType: shouts.attachmentType,
       attachmentName: shouts.attachmentName,
+      gifUrl: shouts.gifUrl,
+      gifTitle: shouts.gifTitle,
+      gifProvider: shouts.gifProvider,
+      voiceMessageUrl: shouts.voiceMessageUrl,
+      voiceMessageDuration: shouts.voiceMessageDuration,
+      voiceMessageWaveform: shouts.voiceMessageWaveform,
       createdAt: shouts.createdAt,
       user: {
         id: user.id,
@@ -90,6 +96,28 @@ export async function GET(request: NextRequest) {
     })
       .from(messageMentions)
       .where(inArray(messageMentions.shoutId, shoutIds));
+
+    // Get link previews for these shouts
+    const linkPreviewsData = await db.select({
+      shoutId: linkPreviews.shoutId,
+      url: linkPreviews.url,
+      title: linkPreviews.title,
+      description: linkPreviews.description,
+      imageUrl: linkPreviews.imageUrl,
+      siteName: linkPreviews.siteName,
+    })
+      .from(linkPreviews)
+      .where(inArray(linkPreviews.shoutId, shoutIds));
+
+    // Get pinned status for these shouts
+    const pinnedData = await db.select({
+      shoutId: pinnedMessages.shoutId,
+      pinnedBy: pinnedMessages.pinnedBy,
+      pinnedAt: pinnedMessages.pinnedAt,
+      order: pinnedMessages.order,
+    })
+      .from(pinnedMessages)
+      .where(inArray(pinnedMessages.shoutId, shoutIds));
 
     // Get reply-to shouts
     const replyToIds = shoutsData.filter(s => s.replyToId).map(s => s.replyToId!);
@@ -150,6 +178,33 @@ export async function GET(request: NextRequest) {
       mentionsMap.get(mention.shoutId)!.push(mention.mentionedUserId);
     }
 
+    // Group link previews by shout
+    const linkPreviewsMap = new Map<number, any[]>();
+    
+    for (const preview of linkPreviewsData) {
+      if (!linkPreviewsMap.has(preview.shoutId)) {
+        linkPreviewsMap.set(preview.shoutId, []);
+      }
+      linkPreviewsMap.get(preview.shoutId)!.push({
+        url: preview.url,
+        title: preview.title,
+        description: preview.description,
+        imageUrl: preview.imageUrl,
+        siteName: preview.siteName,
+      });
+    }
+
+    // Map pinned status by shout
+    const pinnedMap = new Map<number, any>();
+    
+    for (const pin of pinnedData) {
+      pinnedMap.set(pin.shoutId, {
+        pinnedBy: pin.pinnedBy,
+        pinnedAt: pin.pinnedAt,
+        order: pin.order,
+      });
+    }
+
     // Build final response
     const results = shoutsData.map(shout => ({
       id: shout.id,
@@ -161,6 +216,16 @@ export async function GET(request: NextRequest) {
         type: shout.attachmentType,
         name: shout.attachmentName,
       } : null,
+      gif: shout.gifUrl ? {
+        url: shout.gifUrl,
+        title: shout.gifTitle,
+        provider: shout.gifProvider,
+      } : null,
+      voiceMessage: shout.voiceMessageUrl ? {
+        url: shout.voiceMessageUrl,
+        duration: shout.voiceMessageDuration,
+        waveform: shout.voiceMessageWaveform,
+      } : null,
       createdAt: shout.createdAt,
       user: shout.user,
       reactions: Array.from(reactionsMap.get(shout.id)?.entries() || []).map(([emoji, data]) => ({
@@ -170,6 +235,8 @@ export async function GET(request: NextRequest) {
         hasReacted: data.hasReacted,
       })),
       mentions: mentionsMap.get(shout.id) || [],
+      linkPreviews: linkPreviewsMap.get(shout.id) || [],
+      pinned: pinnedMap.get(shout.id) || null,
     }));
 
     return NextResponse.json(results, { status: 200 });
@@ -194,7 +261,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { message, replyToId, mentions, attachmentUrl, attachmentType, attachmentName } = body;
+    const { 
+      message, 
+      replyToId, 
+      mentions, 
+      attachmentUrl, 
+      attachmentType, 
+      attachmentName,
+      gifUrl,
+      gifTitle,
+      gifProvider,
+      voiceMessageUrl,
+      voiceMessageDuration,
+      voiceMessageWaveform,
+      linkPreviewUrls
+    } = body;
 
     if ('userId' in body || 'user_id' in body) {
       return NextResponse.json(
@@ -234,6 +315,47 @@ export async function POST(request: NextRequest) {
         { error: 'Message length must not exceed 500 characters', code: 'MESSAGE_TOO_LONG' },
         { status: 400 }
       );
+    }
+
+    // Validate GIF fields if provided
+    if (gifUrl) {
+      if (typeof gifUrl !== 'string' || gifUrl.trim() === '') {
+        return NextResponse.json(
+          { error: 'gifUrl must be a non-empty string', code: 'INVALID_GIF_URL' },
+          { status: 400 }
+        );
+      }
+      
+      if (gifProvider && !['giphy', 'tenor'].includes(gifProvider)) {
+        return NextResponse.json(
+          { error: 'gifProvider must be either "giphy" or "tenor"', code: 'INVALID_GIF_PROVIDER' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate voice message fields if provided
+    if (voiceMessageUrl) {
+      if (typeof voiceMessageUrl !== 'string' || voiceMessageUrl.trim() === '') {
+        return NextResponse.json(
+          { error: 'voiceMessageUrl must be a non-empty string', code: 'INVALID_VOICE_URL' },
+          { status: 400 }
+        );
+      }
+      
+      if (voiceMessageDuration !== undefined && (typeof voiceMessageDuration !== 'number' || voiceMessageDuration <= 0)) {
+        return NextResponse.json(
+          { error: 'voiceMessageDuration must be a positive number', code: 'INVALID_VOICE_DURATION' },
+          { status: 400 }
+        );
+      }
+      
+      if (voiceMessageWaveform && typeof voiceMessageWaveform !== 'string') {
+        return NextResponse.json(
+          { error: 'voiceMessageWaveform must be a JSON string', code: 'INVALID_VOICE_WAVEFORM' },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate replyToId if provided
@@ -298,6 +420,12 @@ export async function POST(request: NextRequest) {
         attachmentUrl: attachmentUrl || null,
         attachmentType: attachmentType || null,
         attachmentName: attachmentName || null,
+        gifUrl: gifUrl || null,
+        gifTitle: gifTitle || null,
+        gifProvider: gifProvider || null,
+        voiceMessageUrl: voiceMessageUrl || null,
+        voiceMessageDuration: voiceMessageDuration || null,
+        voiceMessageWaveform: voiceMessageWaveform || null,
         createdAt: now,
         updatedAt: now,
         isDeleted: false,
@@ -324,6 +452,21 @@ export async function POST(request: NextRequest) {
       await db.insert(messageMentions).values(mentionRecords);
     }
 
+    // Create link preview records if provided
+    if (linkPreviewUrls && Array.isArray(linkPreviewUrls) && linkPreviewUrls.length > 0) {
+      const linkPreviewRecords = linkPreviewUrls.map((preview: any) => ({
+        shoutId: newShout[0].id,
+        url: preview.url,
+        title: preview.title || null,
+        description: preview.description || null,
+        imageUrl: preview.imageUrl || null,
+        siteName: preview.siteName || null,
+        createdAt: now,
+      }));
+
+      await db.insert(linkPreviews).values(linkPreviewRecords);
+    }
+
     const createdShoutWithUser = await db.select({
       id: shouts.id,
       message: shouts.message,
@@ -332,6 +475,12 @@ export async function POST(request: NextRequest) {
       attachmentUrl: shouts.attachmentUrl,
       attachmentType: shouts.attachmentType,
       attachmentName: shouts.attachmentName,
+      gifUrl: shouts.gifUrl,
+      gifTitle: shouts.gifTitle,
+      gifProvider: shouts.gifProvider,
+      voiceMessageUrl: shouts.voiceMessageUrl,
+      voiceMessageDuration: shouts.voiceMessageDuration,
+      voiceMessageWaveform: shouts.voiceMessageWaveform,
       createdAt: shouts.createdAt,
       user: {
         id: user.id,
@@ -359,8 +508,20 @@ export async function POST(request: NextRequest) {
         type: createdShoutWithUser[0].attachmentType,
         name: createdShoutWithUser[0].attachmentName,
       } : null,
+      gif: createdShoutWithUser[0].gifUrl ? {
+        url: createdShoutWithUser[0].gifUrl,
+        title: createdShoutWithUser[0].gifTitle,
+        provider: createdShoutWithUser[0].gifProvider,
+      } : null,
+      voiceMessage: createdShoutWithUser[0].voiceMessageUrl ? {
+        url: createdShoutWithUser[0].voiceMessageUrl,
+        duration: createdShoutWithUser[0].voiceMessageDuration,
+        waveform: createdShoutWithUser[0].voiceMessageWaveform,
+      } : null,
       reactions: [],
       mentions: mentions || [],
+      linkPreviews: linkPreviewUrls || [],
+      pinned: null,
     };
 
     return NextResponse.json(responseShout, { status: 201 });

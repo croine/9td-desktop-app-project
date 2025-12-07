@@ -85,6 +85,13 @@
       "when": 1765068293881,
       "tag": "0011_wild_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1765069028031,
+      "tag": "0012_fantastic_darkhawk",
+      "breakpoints": true
     }
   ]
 }

@@ -13,9 +13,10 @@ import {
   Smile, Pin, Heart, ThumbsUp, Reply, Edit2, Bookmark,
   Users, Volume2, VolumeX, Palette, Clock, Type,
   ChevronDown, ChevronUp, Search, Filter, Mic, Gift,
-  Zap, TrendingUp, Star, Award, Image, Code, BarChart3, X,
+  Zap, TrendingUp, Star, Award, Image as ImageIcon, Code, BarChart3, X,
   Paperclip, FileText, Download, AtSign, Bold, Italic, 
-  Strikethrough, MessageCircle, CheckCheck
+  Strikethrough, MessageCircle, CheckCheck, Play, Pause, Link2,
+  ExternalLink, PinOff, Circle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -51,6 +52,26 @@ interface Attachment {
   name: string | null
 }
 
+interface GifData {
+  url: string
+  title: string | null
+  provider: string | null
+}
+
+interface VoiceMessage {
+  url: string
+  duration: number | null
+  waveform: string | null
+}
+
+interface LinkPreview {
+  url: string
+  title: string | null
+  description: string | null
+  imageUrl: string | null
+  siteName: string | null
+}
+
 interface ReplyToShout {
   id: number
   message: string
@@ -59,6 +80,12 @@ interface ReplyToShout {
     name: string
   }
   createdAt: string
+}
+
+interface PinnedInfo {
+  pinnedBy: string
+  pinnedAt: string
+  order: number
 }
 
 interface Shout {
@@ -73,6 +100,10 @@ interface Shout {
   replyTo?: ReplyToShout | null
   editedAt?: string
   attachment?: Attachment | null
+  gif?: GifData | null
+  voiceMessage?: VoiceMessage | null
+  linkPreviews?: LinkPreview[]
+  pinned?: PinnedInfo | null
   reactions: Reaction[]
   mentions: string[]
 }
@@ -90,7 +121,7 @@ interface ShoutboxSettings {
 interface OnlineUser {
   id: string
   name: string
-  status: 'online' | 'away' | 'busy'
+  status: 'online' | 'away' | 'busy' | 'dnd'
   lastSeen: string
 }
 
@@ -128,6 +159,13 @@ const TEXT_COLORS = [
   { name: 'Pink', value: 'text-pink-500' }
 ]
 
+const PRESENCE_MODES = [
+  { value: 'online', label: 'Online', color: 'bg-green-500', icon: Circle },
+  { value: 'away', label: 'Away', color: 'bg-yellow-500', icon: Clock },
+  { value: 'busy', label: 'Busy', color: 'bg-red-500', icon: Circle },
+  { value: 'dnd', label: 'Do Not Disturb', color: 'bg-gray-500', icon: VolumeX },
+]
+
 export function Shoutbox() {
   const { data: session } = useSession()
   const [shouts, setShouts] = useState<Shout[]>([])
@@ -151,10 +189,26 @@ export function Shoutbox() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const [showFormatting, setShowFormatting] = useState(false)
+  const [showGifPicker, setShowGifPicker] = useState(false)
+  const [gifSearchQuery, setGifSearchQuery] = useState('')
+  const [gifResults, setGifResults] = useState<any[]>([])
+  const [loadingGifs, setLoadingGifs] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [playingVoiceId, setPlayingVoiceId] = useState<number | null>(null)
+  const [showPinnedMessages, setShowPinnedMessages] = useState(true)
+  const [pinnedMessages, setPinnedMessages] = useState<Shout[]>([])
+  const [userPresence, setUserPresence] = useState<'online' | 'away' | 'busy' | 'dnd'>('online')
+  const [customStatus, setCustomStatus] = useState('')
+  const [showStatusDialog, setShowStatusDialog] = useState(false)
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Settings with localStorage persistence
   const [settings, setSettings] = useState<ShoutboxSettings>(() => {
@@ -206,6 +260,29 @@ export function Shoutbox() {
     fetchUnreadMentions()
     const interval = setInterval(fetchUnreadMentions, 30000) // Every 30s
     return () => clearInterval(interval)
+  }, [])
+
+  // Fetch pinned messages
+  const fetchPinnedMessages = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/shoutbox/pinned', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPinnedMessages(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch pinned messages:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchPinnedMessages()
   }, [])
 
   // Handle mention input
@@ -557,11 +634,246 @@ export function Shoutbox() {
     }
   }, [shouts, settings.autoScroll])
 
+  // GIF Search (Giphy API)
+  const searchGifs = async (query: string) => {
+    if (!query.trim()) return
+    
+    setLoadingGifs(true)
+    try {
+      // Using Giphy public beta key for demo - replace with your own key
+      const GIPHY_API_KEY = 'YOUR_GIPHY_API_KEY' // Replace with actual key
+      const response = await fetch(
+        `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        setGifResults(data.data || [])
+      } else {
+        // Fallback: Use mock GIFs for demo
+        setGifResults([
+          { id: '1', images: { fixed_height: { url: 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif' } }, title: 'Excited' },
+          { id: '2', images: { fixed_height: { url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif' } }, title: 'Thumbs Up' },
+        ])
+      }
+    } catch (error) {
+      console.error('GIF search failed:', error)
+      toast.error('Failed to search GIFs')
+    } finally {
+      setLoadingGifs(false)
+    }
+  }
+
+  // Handle GIF selection
+  const handleGifSelect = async (gif: any) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) {
+      toast.error('Please sign in to send GIFs')
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const response = await fetch('/api/shoutbox', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: message || `Sent a GIF: ${gif.title}`,
+          gifUrl: gif.images.fixed_height.url,
+          gifTitle: gif.title,
+          gifProvider: 'giphy',
+          replyToId: replyToShout?.id
+        })
+      })
+
+      if (response.ok) {
+        const newShout = await response.json()
+        setShouts(prev => [...prev, newShout])
+        setMessage('')
+        setReplyToShout(null)
+        setShowGifPicker(false)
+        setGifSearchQuery('')
+        toast.success('GIF sent! 🎬')
+      }
+    } catch (error) {
+      console.error('Failed to send GIF:', error)
+      toast.error('Failed to send GIF')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // Voice Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+
+      recorder.ondataavailable = (e) => chunks.push(e.data)
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' })
+        setAudioBlob(blob)
+        stream.getTracks().forEach(track => track.stop())
+      }
+
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+      setRecordingTime(0)
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+
+      toast.success('Recording started 🎤')
+    } catch (error) {
+      console.error('Failed to start recording:', error)
+      toast.error('Microphone access denied')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current)
+      }
+      toast.info('Recording stopped')
+    }
+  }
+
+  const sendVoiceMessage = async () => {
+    if (!audioBlob) return
+
+    const token = localStorage.getItem('bearer_token')
+    if (!token) {
+      toast.error('Please sign in to send voice messages')
+      return
+    }
+
+    setIsSending(true)
+    try {
+      // In production, upload to storage service (S3, Cloudinary, etc.)
+      const voiceUrl = URL.createObjectURL(audioBlob)
+      
+      // Generate simple waveform data
+      const waveform = Array.from({ length: 50 }, () => Math.random()).toString()
+
+      const response = await fetch('/api/shoutbox', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: message || 'Sent a voice message',
+          voiceMessageUrl: voiceUrl,
+          voiceMessageDuration: recordingTime,
+          voiceMessageWaveform: waveform,
+          replyToId: replyToShout?.id
+        })
+      })
+
+      if (response.ok) {
+        const newShout = await response.json()
+        setShouts(prev => [...prev, newShout])
+        setMessage('')
+        setReplyToShout(null)
+        setAudioBlob(null)
+        setRecordingTime(0)
+        toast.success('Voice message sent! 🎤')
+      }
+    } catch (error) {
+      console.error('Failed to send voice message:', error)
+      toast.error('Failed to send voice message')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // Play/Pause voice message
+  const toggleVoicePlayback = (shout: Shout) => {
+    if (!shout.voiceMessage?.url) return
+
+    if (playingVoiceId === shout.id) {
+      audioRef.current?.pause()
+      setPlayingVoiceId(null)
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      const audio = new Audio(shout.voiceMessage.url)
+      audioRef.current = audio
+      audio.play()
+      setPlayingVoiceId(shout.id)
+      audio.onended = () => setPlayingVoiceId(null)
+    }
+  }
+
+  // Auto-detect and fetch link previews
+  const detectAndFetchLinkPreviews = async (text: string): Promise<LinkPreview[]> => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g
+    const urls = text.match(urlRegex)
+    
+    if (!urls || urls.length === 0) return []
+
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return []
+
+    const previews: LinkPreview[] = []
+
+    for (const url of urls.slice(0, 3)) { // Limit to 3 links
+      try {
+        const response = await fetch(`/api/shoutbox/link-preview?url=${encodeURIComponent(url)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (response.ok) {
+          const preview = await response.json()
+          previews.push(preview)
+        }
+      } catch (error) {
+        console.error('Failed to fetch link preview:', error)
+      }
+    }
+
+    return previews
+  }
+
+  // Pin/Unpin message
+  const handlePinToggle = async (shoutId: number) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/shoutbox/${shoutId}/pin`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        await fetchShouts(false)
+        await fetchPinnedMessages()
+        toast.success(result.pinned ? 'Message pinned! 📌' : 'Message unpinned')
+      }
+    } catch (error) {
+      console.error('Failed to toggle pin:', error)
+      toast.error('Failed to update pin status')
+    }
+  }
+
+  // Enhanced send with link preview detection
   const handleSendShout = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!message.trim() && !attachmentFile) {
-      toast.error('Message or attachment required')
+    if (!message.trim() && !attachmentFile && !audioBlob) {
+      toast.error('Message, attachment, or voice required')
       return
     }
 
@@ -579,6 +891,9 @@ export function Shoutbox() {
     setIsSending(true)
 
     try {
+      // Detect link previews
+      const linkPreviews = await detectAndFetchLinkPreviews(message)
+
       let attachmentData = null
       
       // Upload attachment if exists
@@ -601,6 +916,7 @@ export function Shoutbox() {
           message: message.trim(),
           replyToId: replyToShout?.id,
           mentions: [], // TODO: Convert names to user IDs
+          linkPreviewUrls: linkPreviews,
           ...(attachmentData && {
             attachmentUrl: attachmentData.url,
             attachmentType: attachmentData.type,
@@ -770,6 +1086,27 @@ export function Shoutbox() {
     return shouts.filter(s => s.replyTo?.id === shoutId)
   }
 
+  // Render waveform visualization
+  const renderWaveform = (waveform: string | null, isPlaying: boolean) => {
+    if (!waveform) return null
+    
+    const values = waveform.split(',').map(v => parseFloat(v) || 0.5)
+    
+    return (
+      <div className="flex items-center gap-0.5 h-8">
+        {values.slice(0, 40).map((value, i) => (
+          <div
+            key={i}
+            className={`w-1 rounded-full transition-all ${
+              isPlaying ? 'bg-primary animate-pulse' : 'bg-muted-foreground'
+            }`}
+            style={{ height: `${value * 100}%` }}
+          />
+        ))}
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -785,6 +1122,75 @@ export function Shoutbox() {
 
   return (
     <div className="space-y-6">
+      {/* Pinned Messages Section */}
+      {pinnedMessages.length > 0 && (
+        <Card className="glass-card border-2 border-amber-500/30 bg-amber-500/5">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Pin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <h3 className="font-display font-bold text-base">Pinned Messages</h3>
+                <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">
+                  {pinnedMessages.length}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+                className="h-6 w-6 p-0"
+              >
+                {showPinnedMessages ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            <AnimatePresence>
+              {showPinnedMessages && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2"
+                >
+                  {pinnedMessages.map(shout => (
+                    <div key={shout.id} className="p-3 rounded-lg border bg-card/50">
+                      <div className="flex gap-2">
+                        <Avatar className="h-6 w-6 shrink-0">
+                          <AvatarImage src={getAvatarUrl(shout.user.id) || ''} />
+                          <AvatarFallback className="text-[9px]">
+                            {getInitials(shout.user.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-semibold text-xs">{shout.user.name}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <p className="text-xs break-words">{shout.message}</p>
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePinToggle(shout.id)}
+                          className="h-6 w-6 p-0"
+                          title="Unpin"
+                        >
+                          <PinOff className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </Card>
+      )}
+
       {/* Main Shoutbox */}
       <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
         {/* Header with mentions badge */}
@@ -1105,6 +1511,8 @@ export function Shoutbox() {
                       className="group relative"
                     >
                       <div className={`${hasMention ? 'bg-blue-500/10 border-blue-500/30' : settings.highlightColor} ${
+                        shout.pinned ? 'ring-2 ring-amber-500/50' : ''
+                      } ${
                         settings.compactMode ? 'p-2' : 'p-2.5'
                       } rounded-lg border hover:border-primary/30 hover:shadow-md transition-all duration-200`}>
                         <div className="flex gap-2.5">
@@ -1152,6 +1560,95 @@ export function Shoutbox() {
                             } break-words leading-relaxed font-medium`}>
                               {renderMessage(shout.message)}
                             </div>
+
+                            {/* GIF Display */}
+                            {shout.gif && (
+                              <div className="mt-2">
+                                <img 
+                                  src={shout.gif.url} 
+                                  alt={shout.gif.title || 'GIF'}
+                                  className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
+                                  onClick={() => window.open(shout.gif!.url, '_blank')}
+                                />
+                                {shout.gif.title && (
+                                  <p className="text-[10px] text-muted-foreground mt-1">{shout.gif.title}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Voice Message Player */}
+                            {shout.voiceMessage && (
+                              <div className="mt-2 p-3 rounded-lg border bg-muted/30 flex items-center gap-3">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 rounded-full bg-primary/10 hover:bg-primary/20"
+                                  onClick={() => toggleVoicePlayback(shout)}
+                                >
+                                  {playingVoiceId === shout.id ? (
+                                    <Pause className="h-4 w-4" />
+                                  ) : (
+                                    <Play className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                
+                                <div className="flex-1">
+                                  {renderWaveform(shout.voiceMessage.waveform, playingVoiceId === shout.id)}
+                                </div>
+                                
+                                {shout.voiceMessage.duration && (
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {Math.floor(shout.voiceMessage.duration / 60)}:{(shout.voiceMessage.duration % 60).toString().padStart(2, '0')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Link Previews */}
+                            {shout.linkPreviews && shout.linkPreviews.length > 0 && (
+                              <div className="mt-2 space-y-2">
+                                {shout.linkPreviews.map((preview, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={preview.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors group/link"
+                                  >
+                                    <div className="flex gap-3">
+                                      {preview.imageUrl && (
+                                        <img 
+                                          src={preview.imageUrl} 
+                                          alt="" 
+                                          className="w-20 h-20 object-cover rounded"
+                                        />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        {preview.siteName && (
+                                          <p className="text-[10px] text-muted-foreground font-medium mb-1">
+                                            {preview.siteName}
+                                          </p>
+                                        )}
+                                        {preview.title && (
+                                          <p className="text-xs font-bold mb-1 line-clamp-2 group-hover/link:text-primary">
+                                            {preview.title}
+                                          </p>
+                                        )}
+                                        {preview.description && (
+                                          <p className="text-[10px] text-muted-foreground line-clamp-2">
+                                            {preview.description}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                          <Link2 className="h-3 w-3" />
+                                          {new URL(preview.url).hostname}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
 
                             {/* Attachment */}
                             {shout.attachment && (
@@ -1263,6 +1760,18 @@ export function Shoutbox() {
                             >
                               <Reply className="h-3 w-3" />
                             </Button>
+
+                            {shout.user.id === session?.user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-amber-500/10 hover:text-amber-600"
+                                onClick={() => handlePinToggle(shout.id)}
+                                title={shout.pinned ? 'Unpin' : 'Pin'}
+                              >
+                                {shout.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+                              </Button>
+                            )}
 
                             <Button
                               variant="ghost"
@@ -1397,6 +1906,39 @@ export function Shoutbox() {
               </motion.div>
             )}
 
+            {/* Voice Recording Preview */}
+            {audioBlob && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-2 px-3 py-2 bg-primary/10 rounded-md border border-primary/20 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Mic className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium">Voice message recorded ({recordingTime}s)</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={sendVoiceMessage}
+                    className="h-6 text-xs"
+                    disabled={isSending}
+                  >
+                    Send
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAudioBlob(null)}
+                    className="h-5 w-5 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
             <form onSubmit={handleSendShout}>
               {/* Formatting toolbar */}
               <div className="flex items-center gap-1 mb-2">
@@ -1443,6 +1985,79 @@ export function Shoutbox() {
                 
                 <div className="h-4 w-px bg-border mx-1" />
                 
+                {/* GIF Picker */}
+                <Dialog open={showGifPicker} onOpenChange={setShowGifPicker}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      title="Add GIF"
+                    >
+                      <Gift className="h-3 w-3" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl glass-card max-h-[600px]">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Gift className="h-5 w-5 text-primary" />
+                        Choose a GIF
+                      </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Search GIFs..."
+                          value={gifSearchQuery}
+                          onChange={(e) => setGifSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && searchGifs(gifSearchQuery)}
+                          className="flex-1"
+                        />
+                        <Button onClick={() => searchGifs(gifSearchQuery)} disabled={loadingGifs}>
+                          {loadingGifs ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
+                        {gifResults.map((gif) => (
+                          <button
+                            key={gif.id}
+                            type="button"
+                            onClick={() => handleGifSelect(gif)}
+                            className="relative aspect-square rounded-lg overflow-hidden hover:ring-2 ring-primary transition-all"
+                          >
+                            <img 
+                              src={gif.images.fixed_height.url} 
+                              alt={gif.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Voice Recording Button */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={`h-6 w-6 p-0 ${isRecording ? 'text-red-500 animate-pulse' : ''}`}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  title={isRecording ? 'Stop recording' : 'Record voice message'}
+                >
+                  <Mic className="h-3 w-3" />
+                </Button>
+
+                {isRecording && (
+                  <span className="text-xs text-red-500 font-mono animate-pulse">
+                    {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
+
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1551,7 +2166,7 @@ export function Shoutbox() {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isSending || uploadingAttachment || (!message.trim() && !attachmentFile)}
+                  disabled={isSending || uploadingAttachment || (!message.trim() && !attachmentFile && !audioBlob)}
                   className="h-10 w-10 p-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all shrink-0"
                 >
                   {isSending || uploadingAttachment ? (
