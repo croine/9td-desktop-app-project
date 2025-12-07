@@ -726,28 +726,29 @@ export function Shoutbox() {
   // Render message with markdown
   const renderMessage = (text: string) => {
     return (
-      <ReactMarkdown
-        className="prose prose-sm dark:prose-invert max-w-none"
-        components={{
-          p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-          code: ({ inline, children }) => (
-            inline ? (
-              <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
-                {children}
-              </code>
-            ) : (
-              <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mt-2">
-                <code>{children}</code>
-              </pre>
-            )
-          ),
-          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-          em: ({ children }) => <em className="italic">{children}</em>,
-          del: ({ children }) => <del className="line-through">{children}</del>,
-        }}
-      >
-        {text}
-      </ReactMarkdown>
+      <div className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown
+          components={{
+            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+            code: ({ inline, children }) => (
+              inline ? (
+                <code className="px-1 py-0.5 bg-muted rounded text-xs font-mono">
+                  {children}
+                </code>
+              ) : (
+                <pre className="bg-muted p-2 rounded text-xs font-mono overflow-x-auto mt-2">
+                  <code>{children}</code>
+                </pre>
+              )
+            ),
+            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+            em: ({ children }) => <em className="italic">{children}</em>,
+            del: ({ children }) => <del className="line-through">{children}</del>,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
     )
   }
 
