@@ -146,12 +146,19 @@ export function Shoutbox() {
   // Fetch user avatar with comprehensive data
   const fetchUserAvatar = async (userId: string, force = false) => {
     const token = localStorage.getItem('bearer_token')
-    if (!token) return
+    if (!token) {
+      console.log('❌ No bearer token found, cannot fetch avatar')
+      return
+    }
 
     // Skip if already cached and not forcing refresh
-    if (!force && userAvatars[userId]?.avatarUrl) return
+    if (!force && userAvatars[userId]?.avatarUrl) {
+      console.log(`✅ Using cached avatar for user ${userId}:`, userAvatars[userId]?.avatarUrl)
+      return
+    }
 
     try {
+      console.log(`🔍 Fetching avatar for user ${userId}, force=${force}`)
       const response = await fetch(`/api/user/avatar-customization?userId=${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -162,28 +169,32 @@ export function Shoutbox() {
       if (response.ok) {
         const data = await response.json()
         
-        // Store comprehensive avatar data
+        console.log(`📦 Avatar API response for user ${userId}:`, {
+          customAvatarUrl: data.customAvatarUrl,
+          avatarUrl: data.avatarUrl,
+          selectedAvatarId: data.selectedAvatarId
+        })
+        
+        // Store comprehensive avatar data with proper priority
+        // Priority: customAvatarUrl (uploaded) > avatarUrl (gallery selected)
+        const avatarUrl = data.customAvatarUrl || data.avatarUrl || null
+        
         setUserAvatars(prev => ({
           ...prev,
           [userId]: {
-            avatarUrl: data.avatarUrl || data.customAvatarUrl || null,
+            avatarUrl: avatarUrl,
             selectedAvatarId: data.selectedAvatarId,
             customAvatarUrl: data.customAvatarUrl
           }
         }))
+        
+        console.log(`✅ Avatar URL set for user ${userId}:`, avatarUrl)
       } else {
-        // Set empty data if fetch fails to prevent repeated attempts
-        setUserAvatars(prev => ({
-          ...prev,
-          [userId]: {
-            avatarUrl: null,
-            selectedAvatarId: null,
-            customAvatarUrl: null
-          }
-        }))
+        console.warn(`⚠️ Failed to fetch avatar for user ${userId}:`, response.status)
+        // Don't set empty data - allow retries
       }
     } catch (error) {
-      console.error('Failed to fetch user avatar:', error)
+      console.error(`❌ Error fetching avatar for user ${userId}:`, error)
     }
   }
 
@@ -197,17 +208,24 @@ export function Shoutbox() {
       ? userIds 
       : userIds.filter(id => !userAvatars[id]?.avatarUrl)
 
+    console.log(`📋 Fetching avatars for ${idsToFetch.length} users:`, idsToFetch)
+    
     // Fetch avatars in parallel
     await Promise.all(
       idsToFetch.map(userId => fetchUserAvatar(userId, force))
     )
+    
+    console.log('✅ Batch avatar fetch complete')
   }
 
   // Refetch current user's avatar (force refresh)
   const refetchCurrentUserAvatar = async () => {
     if (session?.user?.id) {
-      console.log('Force refetching current user avatar...')
+      console.log('🔄 FORCE REFRESH: Fetching current user avatar...', session.user.id)
       await fetchUserAvatar(session.user.id, true)
+      
+      // Force a re-render by updating shouts state
+      setShouts(prev => [...prev])
       
       // Also update online users list
       setOnlineUsers(prev => prev.map(u => 
@@ -215,17 +233,19 @@ export function Shoutbox() {
           ? { ...u, name: session.user.name || u.name }
           : u
       ))
+      
+      console.log('✅ Current user avatar refresh complete')
     }
   }
 
   // Listen for avatar update events
   useEffect(() => {
-    const handleAvatarUpdate = async () => {
-      console.log('Avatar updated event detected in Shoutbox, force refetching...')
-      await refetchCurrentUserAvatar()
+    const handleAvatarUpdate = async (event: Event) => {
+      console.log('🎨 AVATAR UPDATED EVENT DETECTED in Shoutbox')
+      const customEvent = event as CustomEvent
+      console.log('Event details:', customEvent.detail)
       
-      // Force refresh of messages to show updated avatar
-      setShouts(prev => [...prev])
+      await refetchCurrentUserAvatar()
     }
 
     // Listen for custom avatar update event
@@ -238,14 +258,20 @@ export function Shoutbox() {
       window.removeEventListener('avatarUpdated', handleAvatarUpdate)
       window.removeEventListener('focus', refetchCurrentUserAvatar)
     }
-  }, [session?.user?.id, userAvatars])
+  }, [session?.user?.id])
 
   // Force refetch current user's avatar on mount and when session changes
   useEffect(() => {
     if (session?.user?.id) {
+      console.log('🚀 INITIAL LOAD: Fetching current user avatar:', session.user.id)
       refetchCurrentUserAvatar()
     }
   }, [session?.user?.id])
+
+  // Log avatar state whenever it changes
+  useEffect(() => {
+    console.log('📸 Current avatar state:', userAvatars)
+  }, [userAvatars])
 
   // Fetch shouts
   const fetchShouts = async (showLoader = true) => {
@@ -273,8 +299,12 @@ export function Shoutbox() {
       
       setShouts(data)
       
+      console.log('📨 Fetched shouts:', data.length)
+      
       // Fetch avatars for all unique users
       const uniqueUserIds = [...new Set(data.map((shout: Shout) => shout.user.id))]
+      
+      console.log('👥 Unique users in shouts:', uniqueUserIds)
       
       // Force refresh for current user, normal fetch for others
       await fetchAllUserAvatars(
@@ -347,8 +377,10 @@ export function Shoutbox() {
 
       const newShout = await response.json()
       
-      // Ensure current user's avatar is loaded before adding the shout
-      if (session?.user?.id && !userAvatars[session.user.id]?.avatarUrl) {
+      console.log('📨 New shout sent, ensuring avatar is loaded...')
+      
+      // Force refresh current user's avatar before adding the shout
+      if (session?.user?.id) {
         await fetchUserAvatar(session.user.id, true)
       }
       
@@ -423,10 +455,23 @@ export function Shoutbox() {
            shout.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
-  // Get avatar URL with fallback logic
+  // Get avatar URL with fallback logic and cache busting for current user
   const getAvatarUrl = (userId: string): string | undefined => {
     const avatarData = userAvatars[userId]
-    return avatarData?.avatarUrl || avatarData?.customAvatarUrl || undefined
+    const url = avatarData?.customAvatarUrl || avatarData?.avatarUrl || undefined
+    
+    console.log(`🖼️ Getting avatar for user ${userId}:`, url)
+    
+    // Add cache busting for current user to force reload
+    if (url && userId === session?.user?.id) {
+      const timestamp = Date.now()
+      const separator = url.includes('?') ? '&' : '?'
+      const finalUrl = `${url}${separator}t=${timestamp}`
+      console.log(`🔄 Cache-busted avatar URL:`, finalUrl)
+      return finalUrl
+    }
+    
+    return url
   }
 
   if (isLoading) {
