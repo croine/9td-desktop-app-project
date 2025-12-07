@@ -399,6 +399,13 @@ export function Shoutbox() {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendShout(e as any)
+    }
+  }
+
   const handleDeleteShout = async (shoutId: number) => {
     const token = localStorage.getItem('bearer_token')
     if (!token) {
@@ -763,7 +770,7 @@ export function Shoutbox() {
         {/* Messages Area - Professional Design */}
         <div 
           ref={scrollRef}
-          className="h-[600px] overflow-y-auto bg-gradient-to-b from-background/50 to-background"
+          className="h-[calc(100vh-320px)] min-h-[500px] overflow-y-auto bg-gradient-to-b from-background/50 to-background"
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'oklch(0.50 0.20 240) transparent'
@@ -906,19 +913,19 @@ export function Shoutbox() {
           </div>
         </div>
 
-        {/* Input Area - Professional Design */}
+        {/* Input Area - Redesigned Single Line */}
         <div className="relative overflow-hidden border-t-2 border-primary/10">
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
-          <div className="relative p-5">
+          <div className="relative px-4 py-3">
             {/* Reply indicator */}
             {replyToShout && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 p-3 bg-primary/10 rounded-lg border-2 border-primary/20 flex items-center justify-between"
+                className="mb-2 px-3 py-1.5 bg-primary/10 rounded-md border border-primary/20 flex items-center justify-between text-xs"
               >
-                <div className="flex items-center gap-2 text-sm">
-                  <Reply className="h-4 w-4 text-primary" />
+                <div className="flex items-center gap-1.5">
+                  <Reply className="h-3 w-3 text-primary" />
                   <span className="text-muted-foreground font-medium">
                     Replying to <span className="font-bold text-foreground">{replyToShout.user.name}</span>
                   </span>
@@ -927,93 +934,91 @@ export function Shoutbox() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setReplyToShout(null)}
-                  className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-500"
+                  className="h-5 w-5 p-0 hover:bg-red-500/10 hover:text-red-500"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </Button>
               </motion.div>
             )}
 
-            <form onSubmit={handleSendShout} className="space-y-3">
-              <div className="flex gap-3">
-                <Textarea
-                  ref={inputRef}
+            <form onSubmit={handleSendShout}>
+              <div className="flex items-center gap-2">
+                {/* Input Field */}
+                <Input
+                  ref={inputRef as any}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Share your thoughts with the team... (max 500 characters)"
-                  className="flex-1 min-h-[52px] max-h-32 text-sm bg-background border-2 border-primary/20 focus:border-primary/40 resize-none font-medium placeholder:text-muted-foreground/50"
+                  onKeyDown={handleKeyDown as any}
+                  placeholder="Type a message... (Press Enter to send)"
+                  className="flex-1 h-10 text-sm bg-background border-2 border-primary/20 focus:border-primary/40 font-medium placeholder:text-muted-foreground/50"
                   maxLength={500}
                   disabled={isSending}
-                  rows={1}
                 />
                 
-                <div className="flex flex-col gap-2">
-                  {/* Emoji Picker */}
-                  <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-[52px] w-12 p-0 border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
-                      >
-                        <Smile className="h-5 w-5" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-3 glass-card" align="end">
-                      <Tabs defaultValue="Smileys">
-                        <TabsList className="w-full justify-start overflow-x-auto h-9">
-                          {Object.keys(EMOJI_CATEGORIES).map(category => (
-                            <TabsTrigger key={category} value={category} className="text-xs font-medium">
-                              {category}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
-                          <TabsContent key={category} value={category} className="mt-3">
-                            <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-                              {emojis.map(emoji => (
-                                <Button
-                                  key={emoji}
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-9 w-9 p-0 text-lg hover:bg-primary/10 hover:scale-110 transition-transform"
-                                  onClick={() => handleEmojiSelect(emoji)}
-                                >
-                                  {emoji}
-                                </Button>
-                              ))}
-                            </div>
-                          </TabsContent>
+                {/* Emoji Picker Button */}
+                <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-10 w-10 p-0 border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 shrink-0"
+                    >
+                      <Smile className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-3 glass-card" align="end">
+                    <Tabs defaultValue="Smileys">
+                      <TabsList className="w-full justify-start overflow-x-auto h-9">
+                        {Object.keys(EMOJI_CATEGORIES).map(category => (
+                          <TabsTrigger key={category} value={category} className="text-xs font-medium">
+                            {category}
+                          </TabsTrigger>
                         ))}
-                      </Tabs>
-                    </PopoverContent>
-                  </Popover>
+                      </TabsList>
+                      {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                        <TabsContent key={category} value={category} className="mt-3">
+                          <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                            {emojis.map(emoji => (
+                              <Button
+                                key={emoji}
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 text-lg hover:bg-primary/10 hover:scale-110 transition-transform"
+                                onClick={() => handleEmojiSelect(emoji)}
+                              >
+                                {emoji}
+                              </Button>
+                            ))}
+                          </div>
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </PopoverContent>
+                </Popover>
 
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={isSending || !message.trim()}
-                    className="h-[52px] w-12 p-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {isSending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Send className="h-5 w-5" />
-                    )}
-                  </Button>
-                </div>
+                {/* Send Button */}
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSending || !message.trim()}
+                  className="h-10 w-10 p-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all shrink-0"
+                >
+                  {isSending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {filteredShouts.length} message{filteredShouts.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <span className={`text-xs font-semibold ${
+              {/* Info Bar */}
+              <div className="flex items-center justify-between mt-2 px-1">
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  Press <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] font-bold">Enter</kbd> to send
+                </span>
+                <span className={`text-[10px] font-semibold ${
                   message.length > 450 ? 'text-orange-500' : 'text-muted-foreground'
                 }`}>
                   {message.length}/500
