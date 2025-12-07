@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { useSession } from '@/lib/auth-client'
 
 interface Shout {
   id: number
@@ -96,6 +97,7 @@ const TEXT_COLORS = [
 ]
 
 export function Shoutbox() {
+  const { data: session } = useSession()
   const [shouts, setShouts] = useState<Shout[]>([])
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -140,10 +142,13 @@ export function Shoutbox() {
     localStorage.setItem('shoutbox-settings', JSON.stringify(settings))
   }, [settings])
 
-  // Fetch user avatars
-  const fetchUserAvatar = async (userId: string) => {
+  // Fetch user avatars with force option to bypass cache
+  const fetchUserAvatar = async (userId: string, force = false) => {
     const token = localStorage.getItem('bearer_token')
-    if (!token || userAvatars[userId]) return
+    if (!token) return
+
+    // Skip if already cached and not forcing refresh
+    if (!force && userAvatars[userId]) return
 
     try {
       const response = await fetch(`/api/user/avatar-customization?userId=${userId}`, {
@@ -166,6 +171,39 @@ export function Shoutbox() {
       console.error('Failed to fetch user avatar:', error)
     }
   }
+
+  // Refetch current user's avatar (force refresh)
+  const refetchCurrentUserAvatar = async () => {
+    if (session?.user?.id) {
+      await fetchUserAvatar(session.user.id, true)
+    }
+  }
+
+  // Listen for avatar update events
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      console.log('Avatar updated, refetching...')
+      refetchCurrentUserAvatar()
+    }
+
+    // Listen for custom avatar update event
+    window.addEventListener('avatarUpdated', handleAvatarUpdate)
+
+    // Also refetch when window gains focus (user returns from avatar customization)
+    window.addEventListener('focus', refetchCurrentUserAvatar)
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate)
+      window.removeEventListener('focus', refetchCurrentUserAvatar)
+    }
+  }, [session?.user?.id])
+
+  // Force refetch current user's avatar on mount
+  useEffect(() => {
+    if (session?.user?.id) {
+      refetchCurrentUserAvatar()
+    }
+  }, [session?.user?.id])
 
   // Fetch shouts
   const fetchShouts = async (showLoader = true) => {
@@ -195,7 +233,11 @@ export function Shoutbox() {
       
       // Fetch avatars for all users in shouts
       const uniqueUserIds = [...new Set(data.map((shout: Shout) => shout.user.id))]
-      uniqueUserIds.forEach(userId => fetchUserAvatar(userId))
+      uniqueUserIds.forEach(userId => {
+        // Force refresh for current user, normal fetch for others
+        const forceRefresh = userId === session?.user?.id
+        fetchUserAvatar(userId, forceRefresh)
+      })
     } catch (error) {
       console.error('Failed to fetch shouts:', error)
       toast.error('Failed to load shoutbox')

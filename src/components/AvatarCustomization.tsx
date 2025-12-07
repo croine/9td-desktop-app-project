@@ -243,6 +243,12 @@ export function AvatarCustomization() {
       if (response.ok) {
         setPreferences(prev => ({ ...prev, ...updates }))
         toast.success('Avatar saved')
+        await fetchAllData()
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { userId: session?.user?.id }
+        }))
       }
     } catch (error) {
       toast.error('Failed to save')
@@ -320,6 +326,11 @@ export function AvatarCustomization() {
         })
         toast.success('Preset applied')
         await fetchData()
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { userId: session?.user?.id }
+        }))
       }
     } catch (error) {
       toast.error('Failed to apply')
@@ -339,6 +350,11 @@ export function AvatarCustomization() {
       if (response.ok) {
         toast.success('Frame activated')
         await fetchData()
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { userId: session?.user?.id }
+        }))
       }
     } catch (error) {
       toast.error('Failed to activate')
@@ -360,6 +376,11 @@ export function AvatarCustomization() {
         setPreferences(prev => ({ ...prev, avatarUrl: data.avatarUrl }))
         toast.success('Avatar updated')
         await fetchData()
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { userId: session?.user?.id }
+        }))
       }
     } catch (error) {
       toast.error('Failed to update')

@@ -164,6 +164,25 @@ export function UserAvatar({ session, onOpenSettings, onOpenAccountSettings }: U
     }
   }, [session])
 
+  // Listen for avatar update events for immediate sync
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      console.log('Avatar updated event received in UserAvatar, refetching...')
+      fetchAllData()
+    }
+
+    // Listen for custom avatar update event
+    window.addEventListener('avatarUpdated', handleAvatarUpdate)
+
+    // Also refetch when window gains focus (user returns from avatar customization)
+    window.addEventListener('focus', fetchAllData)
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate)
+      window.removeEventListener('focus', fetchAllData)
+    }
+  }, [session?.user])
+
   // Poll for updates every 5 seconds to stay in sync
   useEffect(() => {
     if (session?.user) {
