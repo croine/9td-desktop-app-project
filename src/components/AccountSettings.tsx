@@ -91,6 +91,28 @@ export function AccountSettings() {
     }
   }, [session])
 
+  // Listen for avatar updates from Avatar Customization
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      console.log('🎨 Avatar update detected in Account Settings')
+      fetchAccountSettings()
+    }
+
+    const handleFocus = () => {
+      console.log('👁️ Account Settings focused - refreshing avatar')
+      fetchAccountSettings()
+    }
+
+    // Listen for custom avatar update event
+    window.addEventListener('avatarUpdated', handleAvatarUpdate)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
+
   const fetchAccountSettings = async () => {
     try {
       const token = localStorage.getItem("bearer_token")
@@ -204,6 +226,12 @@ export function AccountSettings() {
           toast.success('Avatar uploaded successfully')
           await fetchAccountSettings()
           await refetchSession()
+          
+          // Dispatch avatar update event for other components
+          console.log('🚀 Dispatching avatarUpdated event from Account Settings')
+          window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+            detail: { source: 'account-settings', avatarUrl: base64String }
+          }))
         } else {
           toast.error('Failed to upload avatar')
         }
@@ -237,6 +265,12 @@ export function AccountSettings() {
         toast.success('Avatar updated successfully')
         await fetchAccountSettings()
         await refetchSession()
+        
+        // Dispatch avatar update event for other components
+        console.log('🚀 Dispatching avatarUpdated event from Account Settings')
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { 
+          detail: { source: 'account-settings', avatarUrl }
+        }))
       } else {
         toast.error('Failed to update avatar')
       }
