@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { conversationParticipants, session } from '@/db/schema';
+import { conversationParticipants, unreadMessages, session } from '@/db/schema';
 import { eq, and, lt } from 'drizzle-orm';
 
 async function authenticateRequest(request: NextRequest): Promise<string | null> {
@@ -112,6 +112,15 @@ export async function PUT(
         { status: 404 }
       );
     }
+
+    // Delete all unread message records for this user and conversation
+    await db.delete(unreadMessages)
+      .where(
+        and(
+          eq(unreadMessages.userId, userId),
+          eq(unreadMessages.conversationId, conversationIdInt)
+        )
+      );
 
     const updatedRecord = updated[0];
 

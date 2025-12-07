@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { messages, conversationParticipants, conversations, user, session } from '@/db/schema';
+import { messages, conversationParticipants, conversations, user, session, unreadMessages } from '@/db/schema';
 import { eq, and, isNull, desc, lt } from 'drizzle-orm';
 
 async function authenticateRequest(request: NextRequest) {
@@ -275,6 +275,24 @@ export async function POST(
     await db.update(conversations)
       .set({ updatedAt: now })
       .where(eq(conversations.id, conversationId));
+
+    // Create unread message records for all participants except sender
+    const participants = await db.select({ userId: conversationParticipants.userId })
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.conversationId, conversationId));
+
+    const unreadRecords = participants
+      .filter(p => p.userId !== userId)
+      .map(p => ({
+        userId: p.userId,
+        conversationId,
+        messageId: newMessage[0].id,
+        createdAt: now,
+      }));
+
+    if (unreadRecords.length > 0) {
+      await db.insert(unreadMessages).values(unreadRecords);
+    }
 
     const senderDetails = await db.select({
       id: user.id,

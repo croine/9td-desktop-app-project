@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { conversations, conversationParticipants, messages, user, session } from '@/db/schema';
+import { conversations, conversationParticipants, messages, user, session, unreadMessages } from '@/db/schema';
 import { eq, and, inArray, sql, desc, gt, ne } from 'drizzle-orm';
 
 async function authenticateRequest(request: NextRequest) {
@@ -109,24 +109,20 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Query unread counts using unreadMessages table
     const unreadCounts = new Map();
-    for (const conv of userConversations) {
-      const userLastRead = conv.lastReadAt;
-      
-      let unreadQuery = db.select({ count: sql<number>`count(*)` })
-        .from(messages)
-        .where(and(
-          eq(messages.conversationId, conv.conversationId),
-          ne(messages.senderId, authenticatedUser.id),
-          sql`${messages.deletedAt} IS NULL`
-        ));
+    for (const convId of conversationIds) {
+      const unreadQuery = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(unreadMessages)
+        .where(
+          and(
+            eq(unreadMessages.userId, authenticatedUser.id),
+            eq(unreadMessages.conversationId, convId)
+          )
+        );
 
-      if (userLastRead) {
-        unreadQuery = unreadQuery.where(gt(messages.createdAt, userLastRead));
-      }
-
-      const result = await unreadQuery;
-      unreadCounts.set(conv.conversationId, result[0]?.count || 0);
+      unreadCounts.set(convId, Number(unreadQuery[0]?.count ?? 0));
     }
 
     const participantsByConversation = new Map();

@@ -535,3 +535,57 @@ export const pinnedMessages = sqliteTable('pinned_messages', {
     .notNull(),
   order: integer('order').notNull().default(0),
 });
+
+// Add new team collaboration tables at the end
+
+export const userRoles = sqliteTable('user_roles', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('member'),
+  badgeColor: text('badge_color'),
+  assignedAt: integer('assigned_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  assignedBy: text('assigned_by').references(() => user.id, { onDelete: 'set null' }),
+});
+
+export const rolePermissions = sqliteTable('role_permissions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  role: text('role').notNull(),
+  permission: text('permission').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const unreadMessages = sqliteTable('unread_messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  conversationId: integer('conversation_id')
+    .notNull()
+    .references(() => conversations.id, { onDelete: 'cascade' }),
+  messageId: integer('message_id')
+    .notNull()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
+export const messageBookmarks = sqliteTable('message_bookmarks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  shoutId: integer('shout_id')
+    .notNull()
+    .references(() => shouts.id, { onDelete: 'cascade' }),
+  note: text('note'),
+  bookmarkedAt: integer('bookmarked_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});

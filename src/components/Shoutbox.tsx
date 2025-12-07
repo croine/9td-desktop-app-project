@@ -16,7 +16,8 @@ import {
   Zap, TrendingUp, Star, Award, Image as ImageIcon, Code, BarChart3, X,
   Paperclip, FileText, Download, AtSign, Bold, Italic, 
   Strikethrough, MessageCircle, CheckCheck, Play, Pause, Link2,
-  ExternalLink, PinOff, Circle
+  ExternalLink, PinOff, Circle, Megaphone, Shield, Crown, Mail,
+  BookmarkCheck, Inbox, Eye
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow, format } from 'date-fns'
@@ -26,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Popover,
@@ -38,6 +40,14 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { useSession } from '@/lib/auth-client'
 import ReactMarkdown from 'react-markdown'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Reaction {
   emoji: string
@@ -129,6 +139,53 @@ interface UserAvatarData {
   avatarUrl?: string | null
   selectedAvatarId?: string | null
   customAvatarUrl?: string | null
+}
+
+interface UserRole {
+  role: 'member' | 'moderator' | 'admin'
+  badgeColor: string | null
+  assignedAt: string | null
+  assignedBy: {
+    id: string
+    name: string
+    email: string
+  } | null
+}
+
+interface Permissions {
+  role: string
+  permissions: string[]
+}
+
+interface DMConversation {
+  id: number
+  name: string | null
+  isGroup: boolean
+  participants: Array<{ id: string; name: string; email: string }>
+  lastMessage: {
+    content: string
+    createdAt: string
+    senderName: string
+  } | null
+  unreadCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface MessageBookmark {
+  id: number
+  note: string | null
+  bookmarkedAt: string
+  shout: {
+    id: number
+    message: string
+    createdAt: string
+    user: {
+      id: string
+      name: string
+      email: string
+    }
+  }
 }
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '🚀']
@@ -1107,6 +1164,261 @@ export function Shoutbox() {
     )
   }
 
+  // Fetch user role and permissions
+  const fetchUserRole = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const [roleRes, permissionsRes] = await Promise.all([
+        fetch('/api/user-roles', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/user-roles/permissions', { headers: { 'Authorization': `Bearer ${token}` } })
+      ])
+
+      if (roleRes.ok) {
+        const roleData = await roleRes.json()
+        setUserRole(roleData)
+      }
+
+      if (permissionsRes.ok) {
+        const permData = await permissionsRes.json()
+        setPermissions(permData.permissions || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch role/permissions:', error)
+    }
+  }
+
+  // Fetch DM conversations
+  const fetchDMConversations = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    setLoadingDMs(true)
+    try {
+      const response = await fetch('/api/conversations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDmConversations(data.conversations || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch DM conversations:', error)
+    } finally {
+      setLoadingDMs(false)
+    }
+  }
+
+  // Fetch bookmarks
+  const fetchBookmarks = async () => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    setLoadingBookmarks(true)
+    try {
+      const response = await fetch('/api/message-bookmarks', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setBookmarks(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error)
+    } finally {
+      setLoadingBookmarks(false)
+    }
+  }
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchUserRole()
+      fetchDMConversations()
+      fetchBookmarks()
+    }
+  }, [session])
+
+  // Send announcement
+  const handleSendAnnouncement = async () => {
+    if (!announcementMessage.trim()) {
+      toast.error('Announcement message is required')
+      return
+    }
+
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    setIsSendingAnnouncement(true)
+    try {
+      const response = await fetch('/api/shoutbox/announcement', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: announcementMessage.trim(),
+          priority: announcementPriority
+        })
+      })
+
+      if (response.ok) {
+        const newAnnouncement = await response.json()
+        setShouts(prev => [...prev, newAnnouncement])
+        setAnnouncementMessage('')
+        setAnnouncementPriority('medium')
+        setShowAnnouncementDialog(false)
+        toast.success('📣 Announcement sent successfully!')
+        await fetchShouts(false)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to send announcement')
+      }
+    } catch (error) {
+      console.error('Failed to send announcement:', error)
+      toast.error('Failed to send announcement')
+    } finally {
+      setIsSendingAnnouncement(false)
+    }
+  }
+
+  // Create DM conversation
+  const handleCreateDM = async (participantId: string) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantIds: [participantId],
+          isGroup: false
+        })
+      })
+
+      if (response.ok) {
+        const conversation = await response.json()
+        toast.success('DM conversation created! 💬')
+        await fetchDMConversations()
+        // TODO: Navigate to DM view
+      } else {
+        const error = await response.json()
+        if (error.code === 'CONVERSATION_EXISTS') {
+          toast.info('Conversation already exists')
+        } else {
+          toast.error(error.error || 'Failed to create conversation')
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create DM:', error)
+      toast.error('Failed to create conversation')
+    }
+  }
+
+  // Bookmark message
+  const handleBookmarkMessage = async (shoutId: number, note?: string) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/message-bookmarks', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          shoutId,
+          note: note || null
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Message bookmarked! 🔖')
+        await fetchBookmarks()
+        setBookmarkingShoutId(null)
+        setBookmarkNote('')
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to bookmark message')
+      }
+    } catch (error) {
+      console.error('Failed to bookmark:', error)
+      toast.error('Failed to bookmark message')
+    }
+  }
+
+  // Remove bookmark
+  const handleRemoveBookmark = async (bookmarkId: number) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    try {
+      const response = await fetch(`/api/message-bookmarks/${bookmarkId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        toast.success('Bookmark removed')
+        await fetchBookmarks()
+      }
+    } catch (error) {
+      console.error('Failed to remove bookmark:', error)
+      toast.error('Failed to remove bookmark')
+    }
+  }
+
+  // Get role badge config
+  const getRoleBadgeConfig = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return {
+          icon: Crown,
+          color: 'bg-gradient-to-r from-amber-500 to-orange-500',
+          textColor: 'text-white',
+          ringColor: 'ring-amber-500/30'
+        }
+      case 'moderator':
+        return {
+          icon: Shield,
+          color: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+          textColor: 'text-white',
+          ringColor: 'ring-blue-500/30'
+        }
+      default:
+        return {
+          icon: Star,
+          color: 'bg-gradient-to-r from-slate-500 to-slate-600',
+          textColor: 'text-white',
+          ringColor: 'ring-slate-500/20'
+        }
+    }
+  }
+
+  // New state for team collaboration features
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [permissions, setPermissions] = useState<string[]>([])
+  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false)
+  const [announcementMessage, setAnnouncementMessage] = useState('')
+  const [announcementPriority, setAnnouncementPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false)
+  const [showDMDialog, setShowDMDialog] = useState(false)
+  const [dmConversations, setDmConversations] = useState<DMConversation[]>([])
+  const [loadingDMs, setLoadingDMs] = useState(false)
+  const [bookmarks, setBookmarks] = useState<MessageBookmark[]>([])
+  const [showBookmarksDialog, setShowBookmarksDialog] = useState(false)
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false)
+  const [bookmarkNote, setBookmarkNote] = useState('')
+  const [bookmarkingShoutId, setBookmarkingShoutId] = useState<number | null>(null)
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1193,7 +1505,7 @@ export function Shoutbox() {
 
       {/* Main Shoutbox */}
       <Card className="glass-card border-2 border-primary/20 shadow-xl overflow-hidden flex flex-col h-[calc(100vh-180px)]">
-        {/* Header with mentions badge */}
+        {/* Header */}
         <div className="relative overflow-hidden shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
           <div className="relative px-6 py-5 border-b-2 border-primary/10">
@@ -1215,11 +1527,74 @@ export function Shoutbox() {
                         {unreadMentions} new mention{unreadMentions > 1 ? 's' : ''}
                       </Badge>
                     )}
+                    {/* Role Badge */}
+                    {userRole && userRole.role !== 'member' && (
+                      <Badge 
+                        className={`${getRoleBadgeConfig(userRole.role).color} ${getRoleBadgeConfig(userRole.role).textColor} ring-2 ${getRoleBadgeConfig(userRole.role).ringColor} flex items-center gap-1`}
+                      >
+                        {(() => {
+                          const Icon = getRoleBadgeConfig(userRole.role).icon
+                          return <Icon className="h-3 w-3" />
+                        })()}
+                        {userRole.role}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
+                {/* Bookmarks Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowBookmarksDialog(true)
+                    fetchBookmarks()
+                  }}
+                  className="h-8 gap-2 border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/5"
+                >
+                  <Bookmark className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="hidden md:inline text-xs">Bookmarks</span>
+                  {bookmarks.length > 0 && (
+                    <Badge variant="outline" className="ml-1 h-5">
+                      {bookmarks.length}
+                    </Badge>
+                  )}
+                </Button>
+
+                {/* DM Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowDMDialog(true)
+                    fetchDMConversations()
+                  }}
+                  className="h-8 gap-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <Mail className="h-3.5 w-3.5 text-primary" />
+                  <span className="hidden md:inline text-xs">DMs</span>
+                  {dmConversations.reduce((sum, conv) => sum + conv.unreadCount, 0) > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-5 animate-pulse">
+                      {dmConversations.reduce((sum, conv) => sum + conv.unreadCount, 0)}
+                    </Badge>
+                  )}
+                </Button>
+
+                {/* Announcement Button (Moderator/Admin only) */}
+                {permissions.includes('send_announcements') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAnnouncementDialog(true)}
+                    className="h-8 gap-2 border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/5"
+                  >
+                    <Megaphone className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                    <span className="hidden md:inline text-xs">Announce</span>
+                  </Button>
+                )}
+
                 {/* Online Users Toggle */}
                 <Button
                   variant="outline"
@@ -1500,6 +1875,7 @@ export function Shoutbox() {
                   const threadReplies = getThreadReplies(shout.id)
                   const isThreadExpanded = expandedThreads.has(shout.id)
                   const hasMention = shout.mentions.includes(session?.user?.id || '')
+                  const isBookmarked = bookmarks.some(b => b.shout.id === shout.id)
                   
                   return (
                     <motion.div
@@ -1510,7 +1886,10 @@ export function Shoutbox() {
                       transition={{ delay: index * 0.03 }}
                       className="group relative"
                     >
-                      <div className={`${hasMention ? 'bg-blue-500/10 border-blue-500/30' : settings.highlightColor} ${
+                      <div className={`${
+                        (shout as any).isAnnouncement ? 'bg-gradient-to-r from-orange-500/20 to-orange-500/10 border-orange-500/40 ring-2 ring-orange-500/20' : 
+                        hasMention ? 'bg-blue-500/10 border-blue-500/30' : settings.highlightColor
+                      } ${
                         shout.pinned ? 'ring-2 ring-amber-500/50' : ''
                       } ${
                         settings.compactMode ? 'p-2' : 'p-2.5'
@@ -1534,6 +1913,32 @@ export function Shoutbox() {
                               <span className="font-semibold text-xs text-foreground">
                                 {shout.user.name}
                               </span>
+
+                              {/* Role Badge */}
+                              {userRole && shout.user.id === session?.user?.id && userRole.role !== 'member' && (
+                                <Badge 
+                                  className={`${getRoleBadgeConfig(userRole.role).color} ${getRoleBadgeConfig(userRole.role).textColor} h-4 text-[9px] px-1.5 flex items-center gap-0.5`}
+                                >
+                                  {(() => {
+                                    const Icon = getRoleBadgeConfig(userRole.role).icon
+                                    return <Icon className="h-2.5 w-2.5" />
+                                  })()}
+                                  {userRole.role}
+                                </Badge>
+                              )}
+
+                              {/* Announcement Badge */}
+                              {(shout as any).isAnnouncement && (
+                                <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-bold flex items-center gap-0.5 ${
+                                  (shout as any).announcementPriority === 'high' ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400' :
+                                  (shout as any).announcementPriority === 'medium' ? 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400' :
+                                  'bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400'
+                                }`}>
+                                  <Megaphone className="h-2.5 w-2.5" />
+                                  ANNOUNCEMENT
+                                </Badge>
+                              )}
+
                               {settings.showTimestamps && (
                                 <>
                                   <span className="text-[10px] text-muted-foreground font-medium">
@@ -1552,12 +1957,18 @@ export function Shoutbox() {
                                   mentioned you
                                 </Badge>
                               )}
+                              {isBookmarked && (
+                                <Badge variant="outline" className="text-[9px] h-4 font-medium px-1 bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400">
+                                  <BookmarkCheck className="h-2.5 w-2.5 mr-0.5" />
+                                  bookmarked
+                                </Badge>
+                              )}
                             </div>
 
                             {/* Message with markdown */}
                             <div className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
                               settings.compactMode ? 'text-[11px]' : 'text-xs'
-                            } break-words leading-relaxed font-medium`}>
+                            } ${(shout as any).isAnnouncement ? 'font-bold' : 'font-medium'} break-words leading-relaxed`}>
                               {renderMessage(shout.message)}
                             </div>
 
@@ -1760,6 +2171,67 @@ export function Shoutbox() {
                             >
                               <Reply className="h-3 w-3" />
                             </Button>
+
+                            {/* Bookmark Button */}
+                            {!isBookmarked ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-amber-500/10 hover:text-amber-600"
+                                    title="Bookmark"
+                                  >
+                                    <Bookmark className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                  <div className="space-y-3">
+                                    <h4 className="font-semibold text-sm">Bookmark Message</h4>
+                                    <Textarea
+                                      placeholder="Add a note (optional)..."
+                                      value={bookmarkNote}
+                                      onChange={(e) => setBookmarkNote(e.target.value)}
+                                      className="resize-none h-20"
+                                      maxLength={500}
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleBookmarkMessage(shout.id, bookmarkNote)}
+                                        className="flex-1"
+                                      >
+                                        <Bookmark className="h-3 w-3 mr-1" />
+                                        Save Bookmark
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-amber-500/10 hover:text-amber-600"
+                                title="Bookmarked"
+                                disabled
+                              >
+                                <BookmarkCheck className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                              </Button>
+                            )}
+
+                            {/* DM Button */}
+                            {shout.user.id !== session?.user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
+                                onClick={() => handleCreateDM(shout.user.id)}
+                                title="Send DM"
+                              >
+                                <Mail className="h-3 w-3" />
+                              </Button>
+                            )}
 
                             {shout.user.id === session?.user?.id && (
                               <Button
@@ -2194,6 +2666,227 @@ export function Shoutbox() {
           </div>
         </div>
       </Card>
+
+      {/* Announcement Dialog */}
+      <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
+        <DialogContent className="sm:max-w-lg glass-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                <Megaphone className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <span>Send Announcement</span>
+            </DialogTitle>
+            <DialogDescription>
+              Broadcast an important message to all users in the shoutbox
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="announcement-message">Message</Label>
+              <Textarea
+                id="announcement-message"
+                placeholder="Type your announcement..."
+                value={announcementMessage}
+                onChange={(e) => setAnnouncementMessage(e.target.value)}
+                className="resize-none h-32"
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                {announcementMessage.length}/500 characters
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="announcement-priority">Priority</Label>
+              <Select value={announcementPriority} onValueChange={(value: any) => setAnnouncementPriority(value)}>
+                <SelectTrigger id="announcement-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">🟢 Low Priority</SelectItem>
+                  <SelectItem value="medium">🟡 Medium Priority</SelectItem>
+                  <SelectItem value="high">🔴 High Priority</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSendAnnouncement}
+                disabled={isSendingAnnouncement || !announcementMessage.trim()}
+                className="flex-1"
+              >
+                {isSendingAnnouncement ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Megaphone className="h-4 w-4 mr-2" />
+                    Send Announcement
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => setShowAnnouncementDialog(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DM Conversations Dialog */}
+      <Dialog open={showDMDialog} onOpenChange={setShowDMDialog}>
+        <DialogContent className="sm:max-w-2xl glass-card max-h-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-primary" />
+              </div>
+              <span>Direct Messages</span>
+            </DialogTitle>
+            <DialogDescription>
+              Private conversations with other users
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {loadingDMs ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : dmConversations.length === 0 ? (
+              <div className="text-center py-12">
+                <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="font-semibold text-lg mb-2">No Conversations Yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click the mail icon on any message to start a private conversation
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-2">
+                  {dmConversations.map(conv => {
+                    const otherParticipant = conv.participants.find(p => p.id !== session?.user?.id)
+                    return (
+                      <Card key={conv.id} className="p-4 hover:border-primary/30 transition-colors cursor-pointer">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <Avatar className="h-10 w-10 shrink-0">
+                              <AvatarFallback>
+                                {getInitials(otherParticipant?.name || 'User')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-sm truncate">
+                                  {otherParticipant?.name || 'Unknown User'}
+                                </h4>
+                                {conv.unreadCount > 0 && (
+                                  <Badge variant="destructive" className="h-5 text-[10px]">
+                                    {conv.unreadCount}
+                                  </Badge>
+                                )}
+                              </div>
+                              {conv.lastMessage && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  <span className="font-medium">{conv.lastMessage.senderName}:</span> {conv.lastMessage.content}
+                                </p>
+                              )}
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {formatDistanceToNow(new Date(conv.updatedAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs">
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bookmarks Dialog */}
+      <Dialog open={showBookmarksDialog} onOpenChange={setShowBookmarksDialog}>
+        <DialogContent className="sm:max-w-2xl glass-card max-h-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Bookmark className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span>Bookmarked Messages</span>
+            </DialogTitle>
+            <DialogDescription>
+              Your saved messages for quick reference
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {loadingBookmarks ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : bookmarks.length === 0 ? (
+              <div className="text-center py-12">
+                <Bookmark className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="font-semibold text-lg mb-2">No Bookmarks Yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click the bookmark icon on any message to save it for later
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-2">
+                  {bookmarks.map(bookmark => (
+                    <Card key={bookmark.id} className="p-4 border-l-4 border-l-amber-500">
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm">{bookmark.shout.user.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(bookmark.shout.createdAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <p className="text-xs break-words">{bookmark.shout.message}</p>
+                            {bookmark.note && (
+                              <div className="mt-2 p-2 bg-muted/50 rounded text-xs italic">
+                                <span className="font-semibold">Note:</span> {bookmark.note}
+                              </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground mt-2">
+                              Bookmarked {formatDistanceToNow(new Date(bookmark.bookmarkedAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveBookmark(bookmark.id)}
+                            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                            title="Remove bookmark"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

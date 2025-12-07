@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
       voiceMessageUrl: shouts.voiceMessageUrl,
       voiceMessageDuration: shouts.voiceMessageDuration,
       voiceMessageWaveform: shouts.voiceMessageWaveform,
+      isAnnouncement: shouts.isAnnouncement,
+      announcementPriority: shouts.announcementPriority,
       createdAt: shouts.createdAt,
       user: {
         id: user.id,
@@ -226,6 +228,8 @@ export async function GET(request: NextRequest) {
         duration: shout.voiceMessageDuration,
         waveform: shout.voiceMessageWaveform,
       } : null,
+      isAnnouncement: shout.isAnnouncement,
+      announcementPriority: shout.announcementPriority,
       createdAt: shout.createdAt,
       user: shout.user,
       reactions: Array.from(reactionsMap.get(shout.id)?.entries() || []).map(([emoji, data]) => ({
