@@ -461,6 +461,9 @@ export function Shoutbox() {
     const url = avatarData?.customAvatarUrl || avatarData?.avatarUrl || undefined
     
     console.log(`🖼️ Getting avatar for user ${userId}:`, url)
+    console.log(`   - customAvatarUrl:`, avatarData?.customAvatarUrl)
+    console.log(`   - avatarUrl:`, avatarData?.avatarUrl)
+    console.log(`   - selectedAvatarId:`, avatarData?.selectedAvatarId)
     
     // Add cache busting for current user to force reload
     if (url && userId === session?.user?.id) {
@@ -722,13 +725,18 @@ export function Shoutbox() {
                       >
                         <div className="relative">
                           <Avatar className="h-8 w-8 ring-2 ring-green-500/20">
-                            {avatarUrl && (
-                              <AvatarImage 
-                                src={avatarUrl} 
-                                alt={user.name}
-                                className="object-cover"
-                              />
-                            )}
+                            <AvatarImage 
+                              src={avatarUrl || ''} 
+                              alt={user.name}
+                              className="object-cover w-full h-full"
+                              onError={(e) => {
+                                console.error(`❌ Failed to load avatar image for user ${user.id}:`, avatarUrl)
+                                e.currentTarget.style.display = 'none'
+                              }}
+                              onLoad={() => {
+                                console.log(`✅ Successfully loaded avatar image for user ${user.id}:`, avatarUrl)
+                              }}
+                            />
                             <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400">
                               {getInitials(user.name)}
                             </AvatarFallback>
@@ -796,13 +804,18 @@ export function Shoutbox() {
                         <div className="flex gap-4">
                           {/* Avatar */}
                           <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
-                            {avatarUrl && (
-                              <AvatarImage 
-                                src={avatarUrl} 
-                                alt={shout.user.name}
-                                className="object-cover"
-                              />
-                            )}
+                            <AvatarImage 
+                              src={avatarUrl || ''} 
+                              alt={shout.user.name}
+                              className="object-cover w-full h-full"
+                              onError={(e) => {
+                                console.error(`❌ Failed to load avatar image for user ${shout.user.id}:`, avatarUrl)
+                                e.currentTarget.style.display = 'none'
+                              }}
+                              onLoad={() => {
+                                console.log(`✅ Successfully loaded avatar image for user ${shout.user.id}:`, avatarUrl)
+                              }}
+                            />
                             <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
                               {getInitials(shout.user.name)}
                             </AvatarFallback>
