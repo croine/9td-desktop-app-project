@@ -66,8 +66,9 @@ interface OnlineUser {
 }
 
 interface UserAvatarData {
-  avatarUrl?: string
-  avatarId?: string
+  avatarUrl?: string | null
+  selectedAvatarId?: string | null
+  customAvatarUrl?: string | null
 }
 
 const EMOJI_CATEGORIES = {
@@ -132,9 +133,9 @@ export function Shoutbox() {
     }
   })
 
-  // Mock online users (in real app, this would come from WebSocket/API)
+  // Mock online users
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([
-    { id: '1', name: 'You', status: 'online', lastSeen: new Date().toISOString() }
+    { id: session?.user?.id || '1', name: session?.user?.name || 'You', status: 'online', lastSeen: new Date().toISOString() }
   ])
 
   // Save settings to localStorage
@@ -142,28 +143,42 @@ export function Shoutbox() {
     localStorage.setItem('shoutbox-settings', JSON.stringify(settings))
   }, [settings])
 
-  // Fetch user avatars with force option to bypass cache
+  // Fetch user avatar with comprehensive data
   const fetchUserAvatar = async (userId: string, force = false) => {
     const token = localStorage.getItem('bearer_token')
     if (!token) return
 
     // Skip if already cached and not forcing refresh
-    if (!force && userAvatars[userId]) return
+    if (!force && userAvatars[userId]?.avatarUrl) return
 
     try {
       const response = await fetch(`/api/user/avatar-customization?userId=${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        cache: force ? 'no-store' : 'default'
       })
 
       if (response.ok) {
         const data = await response.json()
+        
+        // Store comprehensive avatar data
         setUserAvatars(prev => ({
           ...prev,
           [userId]: {
-            avatarUrl: data.avatarUrl,
-            avatarId: data.selectedAvatarId
+            avatarUrl: data.avatarUrl || data.customAvatarUrl || null,
+            selectedAvatarId: data.selectedAvatarId,
+            customAvatarUrl: data.customAvatarUrl
+          }
+        }))
+      } else {
+        // Set empty data if fetch fails to prevent repeated attempts
+        setUserAvatars(prev => ({
+          ...prev,
+          [userId]: {
+            avatarUrl: null,
+            selectedAvatarId: null,
+            customAvatarUrl: null
           }
         }))
       }
@@ -172,33 +187,60 @@ export function Shoutbox() {
     }
   }
 
+  // Fetch avatars for all users in a batch
+  const fetchAllUserAvatars = async (userIds: string[], force = false) => {
+    const token = localStorage.getItem('bearer_token')
+    if (!token) return
+
+    // Filter out already cached avatars unless forcing refresh
+    const idsToFetch = force 
+      ? userIds 
+      : userIds.filter(id => !userAvatars[id]?.avatarUrl)
+
+    // Fetch avatars in parallel
+    await Promise.all(
+      idsToFetch.map(userId => fetchUserAvatar(userId, force))
+    )
+  }
+
   // Refetch current user's avatar (force refresh)
   const refetchCurrentUserAvatar = async () => {
     if (session?.user?.id) {
+      console.log('Force refetching current user avatar...')
       await fetchUserAvatar(session.user.id, true)
+      
+      // Also update online users list
+      setOnlineUsers(prev => prev.map(u => 
+        u.id === session.user.id 
+          ? { ...u, name: session.user.name || u.name }
+          : u
+      ))
     }
   }
 
   // Listen for avatar update events
   useEffect(() => {
-    const handleAvatarUpdate = () => {
-      console.log('Avatar updated, refetching...')
-      refetchCurrentUserAvatar()
+    const handleAvatarUpdate = async () => {
+      console.log('Avatar updated event detected in Shoutbox, force refetching...')
+      await refetchCurrentUserAvatar()
+      
+      // Force refresh of messages to show updated avatar
+      setShouts(prev => [...prev])
     }
 
     // Listen for custom avatar update event
     window.addEventListener('avatarUpdated', handleAvatarUpdate)
 
-    // Also refetch when window gains focus (user returns from avatar customization)
+    // Also refetch when window gains focus
     window.addEventListener('focus', refetchCurrentUserAvatar)
 
     return () => {
       window.removeEventListener('avatarUpdated', handleAvatarUpdate)
       window.removeEventListener('focus', refetchCurrentUserAvatar)
     }
-  }, [session?.user?.id])
+  }, [session?.user?.id, userAvatars])
 
-  // Force refetch current user's avatar on mount
+  // Force refetch current user's avatar on mount and when session changes
   useEffect(() => {
     if (session?.user?.id) {
       refetchCurrentUserAvatar()
@@ -231,13 +273,19 @@ export function Shoutbox() {
       
       setShouts(data)
       
-      // Fetch avatars for all users in shouts
+      // Fetch avatars for all unique users
       const uniqueUserIds = [...new Set(data.map((shout: Shout) => shout.user.id))]
-      uniqueUserIds.forEach(userId => {
-        // Force refresh for current user, normal fetch for others
-        const forceRefresh = userId === session?.user?.id
-        fetchUserAvatar(userId, forceRefresh)
-      })
+      
+      // Force refresh for current user, normal fetch for others
+      await fetchAllUserAvatars(
+        uniqueUserIds.filter(id => id !== session?.user?.id),
+        false
+      )
+      
+      // Always force refresh current user's avatar
+      if (session?.user?.id) {
+        await fetchUserAvatar(session.user.id, true)
+      }
     } catch (error) {
       console.error('Failed to fetch shouts:', error)
       toast.error('Failed to load shoutbox')
@@ -298,6 +346,12 @@ export function Shoutbox() {
       }
 
       const newShout = await response.json()
+      
+      // Ensure current user's avatar is loaded before adding the shout
+      if (session?.user?.id && !userAvatars[session.user.id]?.avatarUrl) {
+        await fetchUserAvatar(session.user.id, true)
+      }
+      
       setShouts(prev => [...prev, newShout])
       setMessage('')
       setReplyToShout(null)
@@ -368,6 +422,12 @@ export function Shoutbox() {
     return shout.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
            shout.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   })
+
+  // Get avatar URL with fallback logic
+  const getAvatarUrl = (userId: string): string | undefined => {
+    const avatarData = userAvatars[userId]
+    return avatarData?.avatarUrl || avatarData?.customAvatarUrl || undefined
+  }
 
   if (isLoading) {
     return (
@@ -608,32 +668,39 @@ export function Shoutbox() {
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {onlineUsers.map(user => (
-                    <div
-                      key={user.id}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/50 border border-green-500/20 hover:border-green-500/40 transition-all"
-                    >
-                      <div className="relative">
-                        <Avatar className="h-8 w-8 ring-2 ring-green-500/20">
-                          {userAvatars[user.id]?.avatarUrl && (
-                            <AvatarImage src={userAvatars[user.id].avatarUrl} alt={user.name} />
-                          )}
-                          <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400">
-                            {getInitials(user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
-                          user.status === 'online' ? 'bg-green-500' :
-                          user.status === 'away' ? 'bg-yellow-500' :
-                          'bg-red-500'
-                        }`} />
+                  {onlineUsers.map(user => {
+                    const avatarUrl = getAvatarUrl(user.id)
+                    return (
+                      <div
+                        key={user.id}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/50 border border-green-500/20 hover:border-green-500/40 transition-all"
+                      >
+                        <div className="relative">
+                          <Avatar className="h-8 w-8 ring-2 ring-green-500/20">
+                            {avatarUrl && (
+                              <AvatarImage 
+                                src={avatarUrl} 
+                                alt={user.name}
+                                className="object-cover"
+                              />
+                            )}
+                            <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${
+                            user.status === 'online' ? 'bg-green-500' :
+                            user.status === 'away' ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold">{user.name}</span>
+                          <span className="text-xs text-muted-foreground capitalize">{user.status}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold">{user.name}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{user.status}</span>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </motion.div>
@@ -666,90 +733,98 @@ export function Shoutbox() {
                   </p>
                 </motion.div>
               ) : (
-                filteredShouts.map((shout, index) => (
-                  <motion.div
-                    key={shout.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="group relative"
-                  >
-                    <div className={`${settings.highlightColor} ${
-                      settings.compactMode ? 'p-3' : 'p-4'
-                    } rounded-xl border-2 hover:border-primary/30 hover:shadow-lg transition-all duration-200`}>
-                      <div className="flex gap-4">
-                        {/* Avatar */}
-                        <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
-                          {userAvatars[shout.user.id]?.avatarUrl && (
-                            <AvatarImage src={userAvatars[shout.user.id].avatarUrl} alt={shout.user.name} />
-                          )}
-                          <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
-                            {getInitials(shout.user.name)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span className="font-bold text-base text-foreground">
-                              {shout.user.name}
-                            </span>
-                            {settings.showTimestamps && (
-                              <>
-                                <span className="text-xs text-muted-foreground font-medium">
-                                  {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
-                                </span>
-                                {shout.editedAt && (
-                                  <Badge variant="outline" className="text-[10px] h-5 font-medium">
-                                    edited
-                                  </Badge>
-                                )}
-                              </>
+                filteredShouts.map((shout, index) => {
+                  const avatarUrl = getAvatarUrl(shout.user.id)
+                  
+                  return (
+                    <motion.div
+                      key={shout.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="group relative"
+                    >
+                      <div className={`${settings.highlightColor} ${
+                        settings.compactMode ? 'p-3' : 'p-4'
+                      } rounded-xl border-2 hover:border-primary/30 hover:shadow-lg transition-all duration-200`}>
+                        <div className="flex gap-4">
+                          {/* Avatar */}
+                          <Avatar className={`${settings.compactMode ? 'h-10 w-10' : 'h-12 w-12'} shrink-0 ring-4 ring-primary/10 shadow-md`}>
+                            {avatarUrl && (
+                              <AvatarImage 
+                                src={avatarUrl} 
+                                alt={shout.user.name}
+                                className="object-cover"
+                              />
                             )}
+                            <AvatarFallback className="font-bold bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 text-primary text-sm">
+                              {getInitials(shout.user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <span className="font-bold text-base text-foreground">
+                                {shout.user.name}
+                              </span>
+                              {settings.showTimestamps && (
+                                <>
+                                  <span className="text-xs text-muted-foreground font-medium">
+                                    {formatDistanceToNow(new Date(shout.createdAt), { addSuffix: true })}
+                                  </span>
+                                  {shout.editedAt && (
+                                    <Badge variant="outline" className="text-[10px] h-5 font-medium">
+                                      edited
+                                    </Badge>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {/* Reply indicator */}
+                            {shout.replyToId && (
+                              <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground font-medium">
+                                <Reply className="h-3.5 w-3.5" />
+                                <span>Replying to a message</span>
+                              </div>
+                            )}
+
+                            <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
+                              settings.compactMode ? 'text-sm' : 'text-base'
+                            } break-words leading-relaxed font-medium`}>
+                              {shout.message}
+                            </p>
                           </div>
 
-                          {/* Reply indicator */}
-                          {shout.replyToId && (
-                            <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground font-medium">
-                              <Reply className="h-3.5 w-3.5" />
-                              <span>Replying to a message</span>
-                            </div>
-                          )}
+                          {/* Actions */}
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                              onClick={() => setReplyToShout(shout)}
+                              title="Reply"
+                            >
+                              <Reply className="h-4 w-4" />
+                            </Button>
 
-                          <p className={`${settings.enableColors ? settings.textColor : 'text-foreground'} ${
-                            settings.compactMode ? 'text-sm' : 'text-base'
-                          } break-words leading-relaxed font-medium`}>
-                            {shout.message}
-                          </p>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
-                            onClick={() => setReplyToShout(shout)}
-                            title="Reply"
-                          >
-                            <Reply className="h-4 w-4" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
-                            onClick={() => handleDeleteShout(shout.id)}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-500"
+                              onClick={() => handleDeleteShout(shout.id)}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  )
+                })
               )}
             </AnimatePresence>
 
